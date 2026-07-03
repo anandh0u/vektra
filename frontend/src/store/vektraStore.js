@@ -1,6 +1,10 @@
 import { create } from "zustand";
 
-const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8000";
+const API_BASE =
+  import.meta.env.VITE_API_URL ||
+  (typeof window !== "undefined" && !["localhost", "127.0.0.1"].includes(window.location.hostname)
+    ? ""
+    : "http://localhost:8000");
 
 // Standard sample policies
 const SAMPLE_IAM = `{
