@@ -1,7 +1,10 @@
 import json
 import logging
 import os
+import sys
+import types
 import uuid
+from pathlib import Path
 from typing import Dict, List, Optional
 
 import httpx
@@ -10,6 +13,13 @@ from fastapi import FastAPI, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
+
+# Vercel Services executes this file from inside the backend directory. Create a
+# lightweight package alias so existing backend.* imports work in both layouts.
+if "backend" not in sys.modules and (Path(__file__).resolve().parent / "agents").exists():
+    backend_package = types.ModuleType("backend")
+    backend_package.__path__ = [str(Path(__file__).resolve().parent)]
+    sys.modules["backend"] = backend_package
 
 from backend.agents.orchestrator import run_agents
 from backend.agents.sarvam_client import SARVAM_MODEL, SARVAM_URL
