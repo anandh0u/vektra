@@ -1,0 +1,58 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "AllowS3PutObject",
+      "Effect": "Allow",
+      "Action": ["s3:PutObject"],
+      "Resource": ["arn:aws:s3:::prod-bucket/*"]
+    },
+    {
+      "Sid": "DenyS3PutObject",
+      "Effect": "Deny",
+      "Action": ["s3:PutObject"],
+      "Resource": ["arn:aws:s3:::prod-bucket/*"]
+    },
+    {
+      "Sid": "AllowPolicyVersionEscalation",
+      "Effect": "Allow",
+      "Action": ["iam:CreatePolicyVersion"],
+      "Resource": ["arn:aws:iam::111122223333:policy/AppPolicy"]
+    },
+    {
+      "Sid": "AllowSensitiveDeleteWildcard",
+      "Effect": "Allow",
+      "Action": ["s3:DeleteBucket"],
+      "Resource": ["*"]
+    },
+    {
+      "Sid": "AllowAdminWildcard",
+      "Effect": "Allow",
+      "Action": ["*"],
+      "Resource": ["*"]
+    },
+    {
+      "Sid": "AllowS3WildcardSpecificBucket",
+      "Effect": "Allow",
+      "Action": ["s3:*"],
+      "Resource": ["arn:aws:s3:::prod-bucket/*"]
+    },
+    {
+      "Sid": "DenyGetObjectWithCondition",
+      "Effect": "Deny",
+      "Action": ["s3:GetObject"],
+      "Resource": ["arn:aws:s3:::prod-bucket/*"],
+      "Condition": {
+        "NotIpAddress": {
+          "aws:SourceIp": "203.0.113.0/24"
+        }
+      }
+    },
+    {
+      "Sid": "DenyUnusedDynamoDelete",
+      "Effect": "Deny",
+      "Action": ["dynamodb:DeleteTable"],
+      "Resource": ["arn:aws:dynamodb:us-east-1:111122223333:table/archive"]
+    }
+  ]
+}
