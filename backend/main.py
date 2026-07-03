@@ -57,6 +57,9 @@ async def health_check():
     }
 
 
+app.add_api_route("/health", health_check, methods=["GET"])
+
+
 @app.post("/api/analyze")
 async def analyze_policy(
     request: AnalyzeRequest,
@@ -142,6 +145,9 @@ async def analyze_policy(
     }
 
 
+app.add_api_route("/analyze", analyze_policy, methods=["POST"])
+
+
 @app.post("/api/chat")
 async def chat_sse(
     request: ChatRequest,
@@ -205,3 +211,6 @@ async def chat_sse(
             yield f"data: {json.dumps({'response': f'\\n[Error streaming from Sarvam: {exc}]'})}\n\n"
 
     return StreamingResponse(stream(), media_type="text/event-stream")
+
+
+app.add_api_route("/chat", chat_sse, methods=["POST"])
