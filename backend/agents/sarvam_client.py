@@ -10,10 +10,23 @@ logger = logging.getLogger("vektra.agents.sarvam")
 
 SARVAM_URL = "https://api.sarvam.ai/v1/chat/completions"
 SARVAM_MODEL = "sarvam-m"
+PLACEHOLDER_MARKERS = ("your-", "xxxxxxxx", "example", "placeholder", "-here")
+
+
+def is_usable_api_key(value: Optional[str]) -> bool:
+    cleaned = (value or "").strip()
+    if not cleaned:
+        return False
+    lowered = cleaned.lower()
+    return not any(marker in lowered for marker in PLACEHOLDER_MARKERS)
 
 
 def get_api_key(api_key: Optional[str] = None) -> Optional[str]:
-    return api_key or os.getenv("SARVAM_API_KEY")
+    if is_usable_api_key(api_key):
+        return api_key.strip()
+
+    env_key = os.getenv("SARVAM_API_KEY")
+    return env_key.strip() if is_usable_api_key(env_key) else None
 
 
 def parse_json_object(text: str) -> Dict[str, Any]:

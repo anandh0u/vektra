@@ -22,7 +22,7 @@ if "backend" not in sys.modules and (Path(__file__).resolve().parent / "agents")
     sys.modules["backend"] = backend_package
 
 from backend.agents.orchestrator import run_agents
-from backend.agents.sarvam_client import SARVAM_MODEL, SARVAM_URL
+from backend.agents.sarvam_client import SARVAM_MODEL, SARVAM_URL, get_api_key, is_usable_api_key
 from backend.graph.analyzer import build_and_analyze
 from backend.graph.neo4j_client import Neo4jClient
 from backend.parser.iam_parser import parse_iam_policy
@@ -78,11 +78,11 @@ async def shutdown_event():
 
 
 @app.get("/api/health")
-async def health_check():
+async def health_check(x_sarvam_api_key: Optional[str] = Header(None)):
     return {
         "status": "ok",
         "neo4j": await neo4j_client.ping(),
-        "sarvam": bool(os.getenv("SARVAM_API_KEY")),
+        "sarvam": is_usable_api_key(x_sarvam_api_key) or is_usable_api_key(os.getenv("SARVAM_API_KEY")),
     }
 
 
@@ -182,7 +182,7 @@ async def chat_sse(
     request: ChatRequest,
     x_sarvam_api_key: Optional[str] = Header(None),
 ):
-    sarvam_key = x_sarvam_api_key or os.getenv("SARVAM_API_KEY")
+    sarvam_key = get_api_key(x_sarvam_api_key)
     if not sarvam_key:
         raise HTTPException(status_code=400, detail="No Sarvam API key supplied. Set SARVAM_API_KEY or save one in Settings.")
 

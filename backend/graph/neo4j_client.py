@@ -22,6 +22,16 @@ ALLOWED_EDGE_TYPES = {
     "INHERITS_FROM",
 }
 
+PLACEHOLDER_MARKERS = ("your-", "xxxxxxxx", "example", "placeholder", "-here")
+
+
+def is_usable_setting(value: str | None) -> bool:
+    cleaned = (value or "").strip()
+    if not cleaned:
+        return False
+    lowered = cleaned.lower()
+    return not any(marker in lowered for marker in PLACEHOLDER_MARKERS)
+
 
 class Neo4jClient:
     def __init__(self):
@@ -34,7 +44,13 @@ class Neo4jClient:
     async def connect(self) -> bool:
         if self.connected and self.driver:
             return True
-        if not (self.uri and self.username and self.password):
+        if not all(
+            [
+                is_usable_setting(self.uri),
+                is_usable_setting(self.username),
+                is_usable_setting(self.password),
+            ]
+        ):
             self.connected = False
             return False
 

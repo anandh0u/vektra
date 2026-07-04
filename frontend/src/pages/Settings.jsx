@@ -1,10 +1,16 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useVektraStore } from "../store/vektraStore";
 import Sidebar from "../components/Sidebar";
 import TopBar from "../components/TopBar";
 import { Settings, Key, Database, RefreshCw, Trash2, ShieldCheck, Sparkles } from "lucide-react";
 
 const API = import.meta.env.VITE_API_URL || "";
+const PLACEHOLDER_MARKERS = ["your-", "xxxxxxxx", "example", "placeholder", "-here"];
+
+const hasUsableLocalKey = (value) => {
+  const cleaned = (value || "").trim().toLowerCase();
+  return Boolean(cleaned) && !PLACEHOLDER_MARKERS.some((marker) => cleaned.includes(marker));
+};
 
 export default function SettingsPage() {
   const { 
@@ -20,35 +26,44 @@ export default function SettingsPage() {
   const [neo4jUsername, setNeo4jUsername] = useState(localStorage.getItem("vektra_neo4j_username") || "neo4j");
   const [neo4jPassword, setNeo4jPassword] = useState(localStorage.getItem("vektra_neo4j_password") || "");
   const [dbStatus, setDbStatus] = useState("checking"); // "checking" | "connected" | "offline"
+  const [sarvamStatus, setSarvamStatus] = useState("checking"); // "checking" | "connected" | "offline"
   const [testingConnection, setTestingConnection] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [neo4jSaveSuccess, setNeo4jSaveSuccess] = useState(false);
 
-  const checkDbConnection = async () => {
+  const checkDbConnection = useCallback(async (overrideKey) => {
     setTestingConnection(true);
     try {
-      const res = await fetch(`${API}/api/health`);
+      const savedKey = (overrideKey ?? apiKey ?? "").trim();
+      const res = await fetch(`${API}/api/health`, {
+        headers: hasUsableLocalKey(savedKey) ? { "X-Sarvam-API-Key": savedKey } : {},
+      });
       if (res.ok) {
         const data = await res.json();
         setDbStatus(data.neo4j ? "connected" : "offline");
+        setSarvamStatus(data.sarvam ? "connected" : "offline");
       } else {
         setDbStatus("offline");
+        setSarvamStatus("offline");
       }
     } catch {
       setDbStatus("offline");
+      setSarvamStatus("offline");
     } finally {
       setTestingConnection(false);
     }
-  };
+  }, [apiKey]);
 
   useEffect(() => {
     checkDbConnection();
-  }, [sessionId]);
+  }, [checkDbConnection, sessionId]);
 
   const handleSaveKey = (e) => {
     e.preventDefault();
     setApiKey(inputKey);
     setSaveSuccess(true);
+    setSarvamStatus(hasUsableLocalKey(inputKey) ? "connected" : "offline");
+    void checkDbConnection(inputKey);
     setTimeout(() => setSaveSuccess(false), 2500);
   };
 
@@ -136,6 +151,26 @@ export default function SettingsPage() {
                   )}
                 </div>
               </form>
+
+              <div className="flex items-center gap-3 bg-[#0d0f1a] border border-[#1e2240] p-4 rounded-xl">
+                <div className={`w-3.5 h-3.5 rounded-full ${
+                  sarvamStatus === "connected"
+                    ? "bg-safe shadow-[0_0_12px_#10b981]"
+                    : (sarvamStatus === "checking" ? "bg-muted/40 animate-pulse" : "bg-danger shadow-[0_0_12px_#ef4444]")
+                }`} />
+                <div>
+                  <div className="text-xs font-bold text-slate-200">
+                    {sarvamStatus === "connected" && "Sarvam Key Configured"}
+                    {sarvamStatus === "offline" && "Sarvam Key Missing"}
+                    {sarvamStatus === "checking" && "Checking Sarvam key..."}
+                  </div>
+                  <div className="text-[10px] text-muted mt-0.5">
+                    {sarvamStatus === "connected" && "Analyses and chat requests will include the saved browser key."}
+                    {sarvamStatus === "offline" && "Save a real SARVAM_API_KEY here or set it as a production environment variable."}
+                    {sarvamStatus === "checking" && "Reading health metrics from the backend."}
+                  </div>
+                </div>
+              </div>
             </div>
 
             {/* ── NEO4J CONNECTION STATUS ── */}
