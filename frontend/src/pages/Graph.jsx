@@ -77,7 +77,7 @@ export default function GraphPage() {
           <div className="flex-1 flex flex-col p-6 space-y-4 overflow-y-auto min-w-0">
             
             {/* Header row */}
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
               <div>
                 <h2 className="font-heading font-bold text-2xl text-slate-100">
                   Policy Graph Analysis
@@ -88,7 +88,7 @@ export default function GraphPage() {
               </div>
               
               {/* Risk Badge */}
-              <div className={`px-4 py-1.5 rounded-lg border font-heading font-bold text-xs flex items-center gap-2 ${riskColorClass}`}>
+              <div className={`px-4 py-1.5 rounded-lg border font-heading font-bold text-xs flex items-center gap-2 w-fit ${riskColorClass}`}>
                 <Award className="w-4.5 h-4.5" />
                 <span>RISK SCORE: {risk_score} · {riskLabel}</span>
               </div>
@@ -115,7 +115,7 @@ export default function GraphPage() {
             )}
 
             {/* Vulnerability category cards */}
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               
               {/* Critical Card */}
               <button

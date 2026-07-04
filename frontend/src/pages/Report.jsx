@@ -93,7 +93,7 @@ export default function ReportPage() {
         <div className="flex-1 overflow-y-auto p-8 max-w-4xl mx-auto w-full space-y-6 print:p-0 print:max-w-full">
           
           {/* Action Row - hidden in print */}
-          <div className="flex justify-between items-center border-b border-[#1e2240] pb-4 print:hidden">
+          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 border-b border-[#1e2240] pb-4 print:hidden">
             <div>
               <h2 className="font-heading font-bold text-2xl flex items-center gap-2">
                 <FileText className="w-6 h-6 text-primary" />
@@ -104,7 +104,7 @@ export default function ReportPage() {
               </p>
             </div>
             
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               <button
                 onClick={handlePrint}
                 className="px-4 py-2 rounded-lg border border-[#1e2240] text-xs text-slate-200 hover:text-white hover:bg-[#141628] transition-all flex items-center gap-2 font-medium"

@@ -42,7 +42,7 @@ export default function RightPanel() {
   };
 
   return (
-    <aside className="w-80 border-l border-[#1e2240] bg-[#0a0c16] flex flex-col h-[calc(100vh-4rem)] select-none">
+    <aside className="hidden lg:flex w-80 border-l border-[#1e2240] bg-[#0a0c16] flex-col h-[calc(100vh-4rem)] select-none">
       {/* Detail Area */}
       <div className="flex-1 p-5 overflow-y-auto space-y-5">
         
