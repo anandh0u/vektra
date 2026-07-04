@@ -8,6 +8,7 @@ SYSTEM_PROMPT = """
 You are VEKTRA's Vulnerability Analyst. You analyze cloud permission policy
 vulnerabilities in AWS IAM and Kubernetes RBAC configurations. You are precise,
 technical, and concise. You always respond in valid JSON only.
+Respond with valid JSON only. No markdown. No explanation outside the JSON object.
 
 Respond only in this exact JSON format:
 {
@@ -20,11 +21,15 @@ Respond only in this exact JSON format:
 
 
 def _fallback(vulnerability: Dict[str, Any]) -> Dict[str, Any]:
+    severity_scores = {"CRITICAL": 9, "WARNING": 6, "INFO": 2}
+    title = vulnerability.get("title") or vulnerability.get("type") or "Policy vulnerability"
+    actions = ", ".join(vulnerability.get("actions") or [])
+    resources = ", ".join(vulnerability.get("resources") or [])
     return {
-        "danger_summary": None,
-        "attack_scenario": None,
-        "exploitability_score": None,
-        "attacker_capability_required": None,
+        "danger_summary": f"{title} affects actions [{actions or 'unspecified'}] on resources [{resources or 'unspecified'}].",
+        "attack_scenario": "An attacker with access to an affected principal could use this permission path to bypass least-privilege boundaries.",
+        "exploitability_score": severity_scores.get(vulnerability.get("severity"), 5),
+        "attacker_capability_required": "Access to a principal or workload covered by the affected rule.",
     }
 
 

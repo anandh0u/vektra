@@ -1,15 +1,16 @@
 import React, { useState } from "react";
-import { useVektraStore } from "../store/vektraStore";
+import { matchesSearch, useVektraStore } from "../store/vektraStore";
 import Sidebar from "../components/Sidebar";
 import TopBar from "../components/TopBar";
 import ConflictCard from "../components/ConflictCard";
 import { FileText, Printer, Clipboard, Check, Sparkles, Award } from "lucide-react";
 
 export default function ReportPage() {
-  const { stats, conflicts, format } = useVektraStore();
+  const { stats, conflicts, format, searchQuery } = useVektraStore();
   const [copied, setCopied] = useState(false);
 
   const { risk_score, executive_summary, top_priorities, compliance_notes, risk_label } = stats;
+  const filteredConflicts = conflicts.filter((conflict) => matchesSearch(conflict, searchQuery));
 
   const handlePrint = () => {
     window.print();
@@ -34,9 +35,9 @@ export default function ReportPage() {
       md += `\n`;
     }
 
-    md += `## Detected Vulnerabilities (${conflicts.length})\n\n`;
+    md += `## Detected Vulnerabilities (${filteredConflicts.length})\n\n`;
     
-    conflicts.forEach((c, idx) => {
+    filteredConflicts.forEach((c, idx) => {
       md += `### Vulnerability ${idx + 1}: [${c.severity}] ${c.title}\n`;
       md += `- **Type**: ${c.type}\n`;
       md += `- **Affected Nodes**: ${c.affected_rules.join(", ")}\n`;
@@ -165,10 +166,11 @@ export default function ReportPage() {
           {/* Conflict List */}
           <div className="space-y-6">
             <h3 className="font-heading font-bold text-lg text-slate-100 flex items-center gap-2 border-b border-[#1e2240] pb-2 print:border-slate-400 print:text-slate-800">
-              Detected Vulnerabilities ({conflicts.length})
+              Detected Vulnerabilities ({filteredConflicts.length})
+              {searchQuery ? <span className="ml-2 text-xs text-muted">filtered by "{searchQuery}"</span> : null}
             </h3>
             
-            {conflicts.length === 0 ? (
+            {filteredConflicts.length === 0 ? (
               <div className="text-center py-10 bg-cardSurface rounded-xl border border-cardBorder">
                 <Sparkles className="w-8 h-8 text-safe mx-auto mb-2" />
                 <h4 className="text-sm font-semibold text-slate-300">No vulnerabilities found</h4>
@@ -178,7 +180,7 @@ export default function ReportPage() {
               </div>
             ) : (
               <div className="space-y-4">
-                {conflicts.map((conflict, idx) => (
+                {filteredConflicts.map((conflict, idx) => (
                   <ConflictCard 
                     key={conflict.id || idx} 
                     conflict={conflict} 

@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useVektraStore } from "../store/vektraStore";
-import { Upload, FileCode, Play, Loader2, Sparkles, Network, Activity } from "lucide-react";
+import { Upload, FileCode, Play, Loader2, Sparkles, Network, Activity, Beaker } from "lucide-react";
 
 export default function UploadPage() {
   const navigate = useNavigate();
@@ -11,8 +11,7 @@ export default function UploadPage() {
     format, 
     setFormat, 
     runAnalysis, 
-    isAnalyzing,
-    loadSample
+    isAnalyzing
   } = useVektraStore();
 
   const [dragActive, setDragActive] = useState(false);
@@ -88,16 +87,10 @@ export default function UploadPage() {
         </div>
         <div className="flex gap-2">
           <button 
-            onClick={() => loadSample("iam")}
+            onClick={() => navigate("/test-lab")}
             className="px-3 py-1.5 rounded-lg border border-[#1e2240] text-xs text-muted hover:text-slate-200 hover:bg-[#141628] transition-all duration-200"
           >
-            Load Sample IAM
-          </button>
-          <button 
-            onClick={() => loadSample("k8s")}
-            className="px-3 py-1.5 rounded-lg border border-[#1e2240] text-xs text-muted hover:text-slate-200 hover:bg-[#141628] transition-all duration-200"
-          >
-            Load Sample RBAC
+            Test Lab
           </button>
         </div>
       </header>
@@ -114,7 +107,7 @@ export default function UploadPage() {
             </span>
           </h1>
           <p className="text-sm md:text-base text-muted font-sans max-w-xl mx-auto leading-relaxed">
-            Upload your AWS IAM or Kubernetes RBAC policy. VEKTRA maps every hidden vulnerability before it becomes a security incident.
+            Upload your own AWS IAM or Kubernetes RBAC policy. VEKTRA starts clean for every new account and maps hidden vulnerabilities before they become incidents.
           </p>
         </div>
 
@@ -234,6 +227,13 @@ export default function UploadPage() {
 
         {/* Stat badges under CTA */}
         <div className="flex flex-wrap justify-center gap-6 text-muted text-xs font-medium select-none pt-4">
+          <button
+            onClick={() => navigate("/test-lab")}
+            className="flex items-center gap-1.5 bg-primary/10 border border-primary/30 px-4 py-2 rounded-full text-primary hover:bg-primary/20 transition-colors"
+          >
+            <Beaker className="w-4.5 h-4.5" />
+            <span>Open vulnerability test lab</span>
+          </button>
           <div className="flex items-center gap-1.5 bg-[#141628]/40 border border-[#1e2240] px-4 py-2 rounded-full">
             <Sparkles className="w-4.5 h-4.5 text-primary" />
             <span>Detects 14 vulnerability classes</span>

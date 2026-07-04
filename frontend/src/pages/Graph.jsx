@@ -1,5 +1,5 @@
 import React from "react";
-import { useVektraStore } from "../store/vektraStore";
+import { matchesSearch, useVektraStore } from "../store/vektraStore";
 import Sidebar from "../components/Sidebar";
 import TopBar from "../components/TopBar";
 import GraphCanvas from "../components/GraphCanvas";
@@ -21,7 +21,8 @@ export default function GraphPage() {
     stats, 
     conflicts, 
     nodes, 
-    selectConflict 
+    selectConflict,
+    searchQuery
   } = useVektraStore();
 
   const {
@@ -31,10 +32,13 @@ export default function GraphPage() {
     compliance_notes
   } = stats;
 
+  const filteredConflicts = conflicts.filter((conflict) => matchesSearch(conflict, searchQuery));
+  const filteredNodes = nodes.filter((node) => matchesSearch(node, searchQuery));
+
   // Count instances by severity
-  const critCount = conflicts.filter(c => c.severity === "CRITICAL").length;
-  const warnCount = conflicts.filter(c => c.severity === "WARNING").length;
-  const infoCount = conflicts.filter(c => c.severity === "INFO").length;
+  const critCount = filteredConflicts.filter(c => c.severity === "CRITICAL").length;
+  const warnCount = filteredConflicts.filter(c => c.severity === "WARNING").length;
+  const infoCount = filteredConflicts.filter(c => c.severity === "INFO").length;
 
   // Color badge for risk score
   let riskColorClass = "border-safe text-safe bg-safe/10";
@@ -52,7 +56,7 @@ export default function GraphPage() {
 
   // Handle clicking a category card to select the first vulnerability of that type
   const handleCategoryClick = (severity) => {
-    const target = conflicts.find(c => c.severity === severity);
+    const target = filteredConflicts.find(c => c.severity === severity);
     if (target) {
       selectConflict(target.id);
     }
@@ -83,7 +87,7 @@ export default function GraphPage() {
                   Policy Graph Analysis
                 </h2>
                 <p className="text-[10px] text-muted font-medium mt-0.5 tracking-wider uppercase">
-                  Neo4j Aura relationship graph traversal
+                  Neo4j Aura relationship graph traversal{searchQuery ? ` - filtered by "${searchQuery}"` : ""}
                 </p>
               </div>
               
@@ -173,7 +177,7 @@ export default function GraphPage() {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <StatCard 
                 title="Rules Parsed" 
-                value={nodes.length} 
+                value={filteredNodes.length}
                 icon={Layers} 
               />
               <StatCard 

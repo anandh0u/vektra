@@ -15,6 +15,7 @@ Rules:
 - Never suggest removing all permissions; suggest the minimal permission that
   still preserves likely intent.
 - Respond in valid JSON only.
+Respond with valid JSON only. No markdown. No explanation outside the JSON object.
 
 Respond only in this exact JSON format:
 {
@@ -27,13 +28,35 @@ Respond only in this exact JSON format:
 """
 
 
-def _null_result() -> Dict[str, Any]:
+def _fallback(vulnerability: Dict[str, Any], fmt: str) -> Dict[str, Any]:
+    actions = [action for action in vulnerability.get("actions") or [] if action not in ("*", "*:*")]
+    resources = [resource for resource in vulnerability.get("resources") or [] if resource != "*"]
+    if fmt == "k8s":
+        block = (
+            "# Narrow the RBAC rule to explicit resources and verbs.\n"
+            "rules:\n"
+            "- apiGroups: [\"\"]\n"
+            f"  resources: {json.dumps(resources or ['pods'])}\n"
+            f"  verbs: {json.dumps(actions or ['get', 'list'])}"
+        )
+    else:
+        block = json.dumps(
+            {
+                "Sid": "VektraLeastPrivilegeFix",
+                "Effect": "Allow",
+                "Action": actions or ["service:ReadAction"],
+                "Resource": resources or ["arn:aws:service:region:account-id:resource/specific-id"],
+            },
+            indent=2,
+        )
+        block = "// Replace broad scope with explicit least-privilege actions and resources.\n" + block
+
     return {
-        "fix_description": None,
-        "fixed_policy_block": None,
-        "what_changed": None,
-        "confidence": None,
-        "principle_applied": None,
+        "fix_description": "Replace broad, conflicting, or inverted permission scope with explicit least-privilege access.",
+        "fixed_policy_block": block,
+        "what_changed": "Wildcard or risky permission scope was narrowed to explicit actions and resources.",
+        "confidence": "MEDIUM",
+        "principle_applied": "Least privilege",
     }
 
 
@@ -53,13 +76,13 @@ Full policy context:
 Policy format: {format}
 """
     data = await chat_json(SYSTEM_PROMPT, user_prompt, api_key=api_key)
-    fallback = _null_result()
+    fallback = _fallback(vulnerability, format)
     if not data:
         return fallback
 
-    confidence = data.get("confidence")
+    confidence = data.get("confidence") or fallback["confidence"]
     if confidence not in {"HIGH", "MEDIUM", "LOW"}:
-        confidence = None
+        confidence = "LOW"
 
     return {
         "fix_description": data.get("fix_description") or fallback["fix_description"],

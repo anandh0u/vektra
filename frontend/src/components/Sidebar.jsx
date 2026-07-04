@@ -6,6 +6,7 @@ import {
   Upload as UploadIcon, 
   Network, 
   FileText, 
+  Beaker,
   Settings as SettingsIcon, 
   Loader2, 
   Check, 
@@ -37,6 +38,7 @@ export default function Sidebar() {
   const navItems = [
     { label: "Upload Policy", shortLabel: "Upload", path: "/", icon: UploadIcon },
     { label: "Graph Canvas", shortLabel: "Graph", path: "/analyze", icon: Network },
+    { label: "Test Lab", shortLabel: "Lab", path: "/test-lab", icon: Beaker },
     { label: "Security Report", shortLabel: "Report", path: "/report", icon: FileText },
     { label: "Settings", shortLabel: "Settings", path: "/settings", icon: SettingsIcon },
   ];
@@ -171,7 +173,7 @@ export default function Sidebar() {
       </div>
     </aside>
 
-    <nav className="md:hidden fixed bottom-0 inset-x-0 z-50 h-16 bg-[#0a0c16] border-t border-[#1e2240] grid grid-cols-4 select-none">
+    <nav className="md:hidden fixed bottom-0 inset-x-0 z-50 h-16 bg-[#0a0c16] border-t border-[#1e2240] grid grid-cols-5 select-none">
       {navItems.map((item) => {
         const isActive = location.pathname === item.path;
         const Icon = item.icon;
