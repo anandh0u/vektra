@@ -1,0 +1,32 @@
+{
+  "expo": {
+    "name": "VEKTRA",
+    "slug": "vektra",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "scheme": "vektra",
+    "userInterfaceStyle": "dark",
+    "splash": {
+      "backgroundColor": "#0d0f1a"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-font"
+    ],
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#0d0f1a"
+      },
+      "package": "com.vektra.app"
+    },
+    "ios": {
+      "bundleIdentifier": "com.vektra.app",
+      "supportsTablet": false
+    },
+    "extra": {
+      "eas": {
+        "projectId": "your-eas-project-id"
+      }
+    }
+  }
+}
