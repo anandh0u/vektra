@@ -19,9 +19,12 @@ def get_api_key(api_key: Optional[str] = None) -> Optional[str]:
 def parse_json_object(text: str) -> Dict[str, Any]:
     cleaned = (text or "").strip()
     if cleaned.startswith("```"):
-        cleaned = cleaned.strip("`")
-        if cleaned.lower().startswith("json"):
-            cleaned = cleaned[4:].strip()
+        lines = cleaned.splitlines()
+        if lines and lines[0].strip().startswith("```"):
+            lines = lines[1:]
+        if lines and lines[-1].strip().startswith("```"):
+            lines = lines[:-1]
+        cleaned = "\n".join(lines).strip()
     try:
         return json.loads(cleaned)
     except json.JSONDecodeError:
@@ -42,7 +45,7 @@ async def chat_json(system_prompt: str, user_prompt: str, api_key: Optional[str]
             response = await client.post(
                 SARVAM_URL,
                 headers={
-                    "Authorization": f"Bearer {resolved_key}",
+                    "api-subscription-key": resolved_key,
                     "Content-Type": "application/json",
                 },
                 json={

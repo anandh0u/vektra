@@ -1,9 +1,9 @@
 import json
 import logging
 import os
-from typing import List
+from typing import Dict, List
 
-from neo4j import GraphDatabase
+from neo4j import AsyncGraphDatabase
 
 from backend.graph.models import Edge, Rule
 
@@ -31,115 +31,177 @@ class Neo4jClient:
         self.driver = None
         self.connected = False
 
-        if self.uri and self.username and self.password:
-            try:
-                self.driver = GraphDatabase.driver(self.uri, auth=(self.username, self.password))
-                self.driver.verify_connectivity()
-                self.connected = True
-                logger.info("Connected to Neo4j AuraDB.")
-            except Exception as exc:
-                logger.warning("Neo4j AuraDB connection failed; using offline graph mode: %s", exc)
-        else:
-            logger.info("Neo4j environment variables are incomplete; using offline graph mode.")
+    async def connect(self) -> bool:
+        if self.connected and self.driver:
+            return True
+        if not (self.uri and self.username and self.password):
+            self.connected = False
+            return False
 
-    def close(self):
+        try:
+            self.driver = AsyncGraphDatabase.driver(self.uri, auth=(self.username, self.password))
+            await self.driver.verify_connectivity()
+            self.connected = True
+            logger.info("Connected to Neo4j AuraDB.")
+            return True
+        except Exception as exc:
+            logger.warning("Neo4j AuraDB connection failed; using offline graph mode: %s", exc)
+            if self.driver:
+                await self.driver.close()
+            self.driver = None
+            self.connected = False
+            return False
+
+    async def close(self):
         if self.driver:
-            self.driver.close()
+            await self.driver.close()
+        self.driver = None
+        self.connected = False
 
-    def clear_session(self, session_id: str):
-        if not self.connected or not self.driver:
+    async def ping(self) -> bool:
+        if not await self.connect():
+            return False
+        try:
+            await self.driver.verify_connectivity()
+            self.connected = True
+            return True
+        except Exception as exc:
+            logger.warning("Neo4j ping failed: %s", exc)
+            self.connected = False
+            return False
+
+    async def clear_session(self, session_id: str):
+        if not await self.connect():
             return
         try:
-            with self.driver.session() as session:
-                session.run("MATCH (n:Rule {session_id: $session_id}) DETACH DELETE n", session_id=session_id)
+            async with self.driver.session() as session:
+                result = await session.run(
+                    "MATCH (n:Rule {session_id: $session_id}) DETACH DELETE n",
+                    session_id=session_id,
+                )
+                await result.consume()
         except Exception as exc:
             logger.error("Neo4j clear_session failed: %s", exc)
 
-    def write_rules(self, rules: List[Rule], session_id: str):
-        if not self.connected or not self.driver:
+    def _rule_payload(self, rule: Rule, session_id: str) -> Dict:
+        return {
+            "id": rule.id,
+            "session_id": session_id,
+            "effect": rule.effect,
+            "actions": rule.actions,
+            "resources": rule.resources,
+            "principals": rule.principals,
+            "conditions": json.dumps(rule.conditions or {}),
+            "raw": json.dumps(rule.raw or {}),
+            "severity": rule.severity,
+            "centrality_score": rule.centrality_score,
+            "source_file": rule.source_file,
+            "namespace": rule.namespace,
+            "role_type": rule.role_type,
+            "role_name": rule.role_name,
+            "owner_account": rule.owner_account,
+            "binding_kind": rule.binding_kind,
+        }
+
+    async def write_rules(self, rules: List[Rule], session_id: str):
+        if not rules or not await self.connect():
             return
+        payload = [self._rule_payload(rule, session_id) for rule in rules]
         try:
-            with self.driver.session() as session:
-                for rule in rules:
-                    session.run(
-                        """
-                        MERGE (r:Rule {id: $id, session_id: $session_id})
-                        SET r.effect = $effect,
-                            r.actions = $actions,
-                            r.resources = $resources,
-                            r.principals = $principals,
-                            r.conditions = $conditions,
-                            r.severity = $severity,
-                            r.centrality_score = $centrality_score,
-                            r.source_file = $source_file,
-                            r.namespace = $namespace,
-                            r.role_type = $role_type,
-                            r.role_name = $role_name
-                        """,
-                        id=rule.id,
-                        session_id=session_id,
-                        effect=rule.effect,
-                        actions=rule.actions,
-                        resources=rule.resources,
-                        principals=rule.principals,
-                        conditions=json.dumps(rule.conditions),
-                        severity=rule.severity,
-                        centrality_score=rule.centrality_score,
-                        source_file=rule.source_file,
-                        namespace=rule.namespace,
-                        role_type=rule.role_type,
-                        role_name=rule.role_name,
-                    )
+            async with self.driver.session() as session:
+                result = await session.run(
+                    """
+                    UNWIND $rules AS rule
+                    MERGE (r:Rule {id: rule.id, session_id: rule.session_id})
+                    SET r.effect = rule.effect,
+                        r.actions = rule.actions,
+                        r.resources = rule.resources,
+                        r.principals = rule.principals,
+                        r.conditions = rule.conditions,
+                        r.raw = rule.raw,
+                        r.severity = rule.severity,
+                        r.centrality_score = rule.centrality_score,
+                        r.source_file = rule.source_file,
+                        r.namespace = rule.namespace,
+                        r.role_type = rule.role_type,
+                        r.role_name = rule.role_name,
+                        r.owner_account = rule.owner_account,
+                        r.binding_kind = rule.binding_kind
+                    """,
+                    rules=payload,
+                )
+                await result.consume()
         except Exception as exc:
             logger.error("Neo4j write_rules failed: %s", exc)
 
-    def write_edge(self, edge: Edge, session_id: str):
-        if not self.connected or not self.driver:
+    async def write_vulnerability_edge(
+        self,
+        rule_a: str,
+        rule_b: str,
+        edge_type: str,
+        severity: str,
+        vuln_id: str,
+        session_id: str,
+    ):
+        if not await self.connect():
             return
-        edge_type = edge.type if edge.type in ALLOWED_EDGE_TYPES else "CONFLICTS_WITH"
+        safe_type = edge_type if edge_type in ALLOWED_EDGE_TYPES else "CONFLICTS_WITH"
         try:
             query = f"""
                 MATCH (a:Rule {{id: $source, session_id: $session_id}})
                 MATCH (b:Rule {{id: $target, session_id: $session_id}})
-                MERGE (a)-[r:{edge_type} {{session_id: $session_id, vulnerability_id: $vulnerability_id}}]->(b)
+                MERGE (a)-[r:{safe_type} {{session_id: $session_id, vulnerability_id: $vulnerability_id}}]->(b)
                 SET r.severity = $severity
             """
-            with self.driver.session() as session:
-                session.run(
+            async with self.driver.session() as session:
+                result = await session.run(
                     query,
-                    source=edge.source,
-                    target=edge.target,
+                    source=rule_a,
+                    target=rule_b,
                     session_id=session_id,
-                    vulnerability_id=edge.vulnerability_id,
-                    severity=edge.severity,
+                    vulnerability_id=vuln_id,
+                    severity=severity,
                 )
+                await result.consume()
         except Exception as exc:
-            logger.error("Neo4j write_edge failed: %s", exc)
+            logger.error("Neo4j write_vulnerability_edge failed: %s", exc)
 
-    def write_edges(self, edges: List[Edge], session_id: str):
-        if not self.connected or not self.driver:
+    async def write_edge(self, edge: Edge, session_id: str):
+        await self.write_vulnerability_edge(
+            edge.source,
+            edge.target,
+            edge.type,
+            edge.severity,
+            edge.vulnerability_id,
+            session_id,
+        )
+
+    async def write_edges(self, edges: List[Edge], session_id: str):
+        if not edges or not await self.connect():
             return
         for edge in edges:
-            self.write_edge(edge, session_id)
+            await self.write_edge(edge, session_id)
 
-    def find_critical_paths(self, session_id: str):
-        if not self.connected or not self.driver:
+    async def find_critical_paths(self, session_id: str):
+        if not await self.connect():
             return []
         try:
-            with self.driver.session() as session:
-                result = session.run(
+            async with self.driver.session() as session:
+                result = await session.run(
                     """
                     MATCH path = (a:Rule {session_id: $session_id})
                       -[:CONFLICTS_WITH|ESCALATES_TO|BYPASSES|ASSUMES*1..5]->
                       (b:Rule {session_id: $session_id})
                     WHERE length(path) > 1
-                    RETURN length(path) AS depth
+                    RETURN [node IN nodes(path) | node.id] AS rules,
+                           [rel IN relationships(path) | type(rel)] AS relationships,
+                           length(path) AS depth
                     ORDER BY depth DESC
                     LIMIT 5
                     """,
                     session_id=session_id,
                 )
-                return result.data()
+                return await result.data()
         except Exception as exc:
             logger.error("Neo4j critical path query failed: %s", exc)
             return []

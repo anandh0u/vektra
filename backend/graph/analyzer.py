@@ -74,7 +74,24 @@ def _item_overlap(left: str, right: str) -> bool:
         return True
     if "*" in right_n and fnmatch.fnmatchcase(left_n, right_n):
         return True
+    if _arn_prefix_overlap(left_n, right_n):
+        return True
     return left_n == right_n
+
+
+def _arn_prefix_overlap(left_n: str, right_n: str) -> bool:
+    if not (left_n.startswith("arn:") and right_n.startswith("arn:")):
+        return False
+    left_prefix = left_n.rstrip("*").rstrip("/:").strip()
+    right_prefix = right_n.rstrip("*").rstrip("/:").strip()
+    if left_prefix == right_prefix:
+        return True
+    return (
+        left_prefix.startswith(f"{right_prefix}/")
+        or left_prefix.startswith(f"{right_prefix}:")
+        or right_prefix.startswith(f"{left_prefix}/")
+        or right_prefix.startswith(f"{left_prefix}:")
+    )
 
 
 def _lists_overlap(left: Iterable[str], right: Iterable[str]) -> bool:
@@ -90,6 +107,14 @@ def _item_covers(parent: str, child: str) -> bool:
         return parent_n == "*"
     if "*" in parent_n:
         return fnmatch.fnmatchcase(child_n, parent_n)
+    if parent_n.startswith("arn:") and child_n.startswith("arn:"):
+        parent_prefix = parent_n.rstrip("*").rstrip("/:").strip()
+        child_prefix = child_n.rstrip("*").rstrip("/:").strip()
+        return (
+            child_prefix == parent_prefix
+            or child_prefix.startswith(f"{parent_prefix}/")
+            or child_prefix.startswith(f"{parent_prefix}:")
+        )
     return parent_n == child_n
 
 
@@ -170,7 +195,7 @@ def build_and_analyze(rules: List[Rule], format: str = "iam") -> AnalysisResult:
 
     vulnerabilities: List[Vulnerability] = []
     edges: List[Edge] = []
-    seen_vulns: Set[Tuple[str, str, Optional[str]]] = set()
+    seen_vulns: Set[Tuple[str, str, str, Optional[str]]] = set()
     seen_edges: Set[Tuple[str, str, str, str]] = set()
 
     def add_vulnerability(
@@ -183,7 +208,7 @@ def build_and_analyze(rules: List[Rule], format: str = "iam") -> AnalysisResult:
         rule_b: Optional[Rule] = None,
         edge_type: str,
     ) -> None:
-        key = (code, rule_a.id, rule_b.id if rule_b else None)
+        key = (code, suffix, rule_a.id, rule_b.id if rule_b else None)
         if key in seen_vulns:
             return
         seen_vulns.add(key)
@@ -300,6 +325,16 @@ def build_and_analyze(rules: List[Rule], format: str = "iam") -> AnalysisResult:
 
     # Single-rule classes.
     for rule in rules:
+        if fmt == "iam" and ("NotAction" in rule.raw or "NotResource" in rule.raw):
+            add_vulnerability(
+                code="V12",
+                suffix="NEGATED_SCOPE_REVIEW",
+                severity="WARNING",
+                title="NotAction or NotResource uses inverted permission scope and requires explicit review",
+                rule_a=rule,
+                edge_type="BYPASSES",
+            )
+
         if rule.effect == "Allow":
             has_escalation = _lists_overlap(rule.actions, ESCALATION_ACTIONS)
             has_passrole = _lists_overlap(rule.actions, ["iam:PassRole"])

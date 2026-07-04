@@ -70,7 +70,7 @@ def _parse_statements(
     role_type: Optional[str] = None,
     owner_account: Optional[str] = None,
     default_resources: Optional[List[str]] = None,
-    id_prefix: str = "Statement",
+    id_prefix: str = "stmt",
 ) -> List[Rule]:
     statements = policy_doc.get("Statement", [])
     if isinstance(statements, dict):
@@ -99,6 +99,12 @@ def _parse_statements(
             or _account_from_values(resources)
         )
 
+        conditions = dict(stmt.get("Condition", {}) or {})
+        if "NotAction" in stmt:
+            conditions["_vektra_not_action"] = True
+        if "NotResource" in stmt:
+            conditions["_vektra_not_resource"] = True
+
         statement_id = str(stmt.get("Sid") or f"{id_prefix}-{idx}")
         rules.append(
             Rule(
@@ -107,7 +113,7 @@ def _parse_statements(
                 actions=actions,
                 resources=resources,
                 principals=[str(principal) for principal in principals],
-                conditions=stmt.get("Condition", {}) or {},
+                conditions=conditions,
                 source_file=source_file,
                 role_type=role_type,
                 role_name=role_name,

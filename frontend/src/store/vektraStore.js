@@ -1,10 +1,6 @@
 import { create } from "zustand";
 
-const API_BASE =
-  import.meta.env.VITE_API_URL ||
-  (typeof window !== "undefined" && !["localhost", "127.0.0.1"].includes(window.location.hostname)
-    ? ""
-    : "http://localhost:8000");
+const API = import.meta.env.VITE_API_URL || "";
 
 // Standard sample policies
 const SAMPLE_IAM = `{
@@ -243,7 +239,7 @@ export const useVektraStore = create((set, get) => ({
     const { policyText, format, sessionId, apiKey } = get();
 
     try {
-      const response = await fetch(`${API_BASE}/api/analyze`, {
+      const response = await fetch(`${API}/api/analyze`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -354,7 +350,7 @@ export const useVektraStore = create((set, get) => ({
       }));
 
       // Send to SSE endpoint
-      const response = await fetch(`${API_BASE}/api/chat`, {
+      const response = await fetch(`${API}/api/chat`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

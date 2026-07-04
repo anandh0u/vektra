@@ -4,6 +4,8 @@ import Sidebar from "../components/Sidebar";
 import TopBar from "../components/TopBar";
 import { Settings, Key, Database, RefreshCw, Trash2, ShieldCheck, Sparkles } from "lucide-react";
 
+const API = import.meta.env.VITE_API_URL || "";
+
 export default function SettingsPage() {
   const { 
     apiKey, 
@@ -14,15 +16,18 @@ export default function SettingsPage() {
   } = useVektraStore();
 
   const [inputKey, setInputKey] = useState(apiKey);
+  const [neo4jUri, setNeo4jUri] = useState(localStorage.getItem("vektra_neo4j_uri") || "");
+  const [neo4jUsername, setNeo4jUsername] = useState(localStorage.getItem("vektra_neo4j_username") || "neo4j");
+  const [neo4jPassword, setNeo4jPassword] = useState(localStorage.getItem("vektra_neo4j_password") || "");
   const [dbStatus, setDbStatus] = useState("checking"); // "checking" | "connected" | "offline"
   const [testingConnection, setTestingConnection] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const [neo4jSaveSuccess, setNeo4jSaveSuccess] = useState(false);
 
   const checkDbConnection = async () => {
     setTestingConnection(true);
-    const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8000";
     try {
-      const res = await fetch(`${API_BASE}/api/health`);
+      const res = await fetch(`${API}/api/health`);
       if (res.ok) {
         const data = await res.json();
         setDbStatus(data.neo4j ? "connected" : "offline");
@@ -47,6 +52,15 @@ export default function SettingsPage() {
     setTimeout(() => setSaveSuccess(false), 2500);
   };
 
+  const handleSaveNeo4j = (e) => {
+    e.preventDefault();
+    localStorage.setItem("vektra_neo4j_uri", neo4jUri);
+    localStorage.setItem("vektra_neo4j_username", neo4jUsername);
+    localStorage.setItem("vektra_neo4j_password", neo4jPassword);
+    setNeo4jSaveSuccess(true);
+    setTimeout(() => setNeo4jSaveSuccess(false), 2500);
+  };
+
   const handleClearHistory = () => {
     if (confirm("Are you sure you want to delete all cached session history?")) {
       clearRecentAnalyses();
@@ -62,7 +76,7 @@ export default function SettingsPage() {
       <Sidebar />
 
       {/* Main Panel */}
-      <div className="flex-1 flex flex-col min-w-0">
+      <div className="flex-1 flex flex-col min-w-0 pb-16 md:pb-0">
         
         {/* TopBar */}
         <TopBar />
@@ -145,6 +159,61 @@ export default function SettingsPage() {
               <p className="text-xs text-muted leading-relaxed">
                 Connects to Neo4j to store VEKTRA relationship edges (`CONFLICTS_WITH`, `ESCALATES_TO`, `BYPASSES`, `EXPOSES`) and rule nodes.
               </p>
+
+              <form onSubmit={handleSaveNeo4j} className="grid gap-3">
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold text-muted uppercase tracking-wider block">
+                    Neo4j URI
+                  </label>
+                  <input
+                    type="password"
+                    value={neo4jUri}
+                    onChange={(e) => setNeo4jUri(e.target.value)}
+                    placeholder="neo4j+s://xxxxxxxx.databases.neo4j.io"
+                    className="w-full bg-[#0d0f1a] border border-[#1e2240] rounded-xl px-4 py-2 text-xs text-textMain placeholder-muted focus:outline-none focus:border-secondary transition-all duration-200 font-mono"
+                  />
+                </div>
+                <div className="grid sm:grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-bold text-muted uppercase tracking-wider block">
+                      Username
+                    </label>
+                    <input
+                      type="password"
+                      value={neo4jUsername}
+                      onChange={(e) => setNeo4jUsername(e.target.value)}
+                      placeholder="neo4j"
+                      className="w-full bg-[#0d0f1a] border border-[#1e2240] rounded-xl px-4 py-2 text-xs text-textMain placeholder-muted focus:outline-none focus:border-secondary transition-all duration-200 font-mono"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-bold text-muted uppercase tracking-wider block">
+                      Password
+                    </label>
+                    <input
+                      type="password"
+                      value={neo4jPassword}
+                      onChange={(e) => setNeo4jPassword(e.target.value)}
+                      placeholder="AuraDB password"
+                      className="w-full bg-[#0d0f1a] border border-[#1e2240] rounded-xl px-4 py-2 text-xs text-textMain placeholder-muted focus:outline-none focus:border-secondary transition-all duration-200 font-mono"
+                    />
+                  </div>
+                </div>
+                <div className="flex items-center justify-between pt-1">
+                  <button
+                    type="submit"
+                    className="px-4 py-2 bg-secondary hover:bg-secondary/80 text-white rounded-lg text-xs font-semibold transition-all duration-200"
+                  >
+                    Save Neo4j Fields
+                  </button>
+                  {neo4jSaveSuccess && (
+                    <span className="text-[10px] font-semibold text-safe flex items-center gap-1">
+                      <ShieldCheck className="w-4.5 h-4.5" />
+                      Saved locally
+                    </span>
+                  )}
+                </div>
+              </form>
 
               <div className="flex items-center gap-3 bg-[#0d0f1a] border border-[#1e2240] p-4 rounded-xl">
                 <div className={`w-3.5 h-3.5 rounded-full ${

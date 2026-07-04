@@ -65,7 +65,7 @@ export default function GraphPage() {
       <Sidebar />
 
       {/* ── CENTER COLUMN + RIGHT COLUMN ── */}
-      <div className="flex-1 flex flex-col min-w-0">
+      <div className="flex-1 flex flex-col min-w-0 pb-16 md:pb-0">
         
         {/* Top bar */}
         <TopBar />

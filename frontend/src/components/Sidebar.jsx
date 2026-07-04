@@ -13,6 +13,8 @@ import {
   Database
 } from "lucide-react";
 
+const API = import.meta.env.VITE_API_URL || "";
+
 export default function Sidebar() {
   const location = useLocation();
   const navigate = useNavigate();
@@ -26,19 +28,17 @@ export default function Sidebar() {
   const [dbConnected, setDbConnected] = useState(false);
 
   useEffect(() => {
-    // Check Neo4j health status
-    const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8000";
-    fetch(`${API_BASE}/api/health`)
+    fetch(`${API}/api/health`)
       .then(res => res.json())
       .then(data => setDbConnected(data.neo4j))
       .catch(() => setDbConnected(false));
   }, [sessionId]);
 
   const navItems = [
-    { label: "Upload Policy", path: "/", icon: UploadIcon },
-    { label: "Graph Canvas", path: "/analyze", icon: Network },
-    { label: "Security Report", path: "/report", icon: FileText },
-    { label: "Settings", path: "/settings", icon: SettingsIcon },
+    { label: "Upload Policy", shortLabel: "Upload", path: "/", icon: UploadIcon },
+    { label: "Graph Canvas", shortLabel: "Graph", path: "/analyze", icon: Network },
+    { label: "Security Report", shortLabel: "Report", path: "/report", icon: FileText },
+    { label: "Settings", shortLabel: "Settings", path: "/settings", icon: SettingsIcon },
   ];
 
   const handleRecentClick = (analysis) => {
@@ -47,7 +47,8 @@ export default function Sidebar() {
   };
 
   return (
-    <aside className="w-60 bg-[#0a0c16] border-r border-[#1e2240] flex flex-col h-screen select-none">
+    <>
+    <aside className="hidden md:flex w-60 bg-[#0a0c16] border-r border-[#1e2240] flex-col h-screen select-none">
       {/* Brand Header */}
       <div className="h-16 flex items-center px-6 border-b border-[#1e2240] gap-2">
         <div className="bg-gradient-to-tr from-primary to-secondary p-1.5 rounded-lg">
@@ -169,5 +170,27 @@ export default function Sidebar() {
         <div className={`w-2.5 h-2.5 rounded-full ${dbConnected ? "bg-safe shadow-[0_0_10px_#10b981]" : "bg-muted/50"}`} />
       </div>
     </aside>
+
+    <nav className="md:hidden fixed bottom-0 inset-x-0 z-50 h-16 bg-[#0a0c16] border-t border-[#1e2240] grid grid-cols-4 select-none">
+      {navItems.map((item) => {
+        const isActive = location.pathname === item.path;
+        const Icon = item.icon;
+        return (
+          <Link
+            key={item.path}
+            to={item.path}
+            aria-label={item.label}
+            title={item.label}
+            className={`flex flex-col items-center justify-center gap-1 text-[10px] font-semibold transition-all duration-200 ${
+              isActive ? "text-white bg-[#141628]" : "text-muted hover:text-slate-200"
+            }`}
+          >
+            <Icon className={`w-5 h-5 ${isActive ? "text-primary" : "text-muted"}`} />
+            <span className="max-w-[4.5rem] truncate leading-none">{item.shortLabel}</span>
+          </Link>
+        );
+      })}
+    </nav>
+    </>
   );
 }

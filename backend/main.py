@@ -12,7 +12,7 @@ from dotenv import load_dotenv
 from fastapi import FastAPI, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 # Vercel Services executes this file from inside the backend directory. Create a
 # lightweight package alias so existing backend.* imports work in both layouts.
@@ -36,9 +36,18 @@ logger = logging.getLogger("vektra.main")
 app = FastAPI(title="VEKTRA API", version="1.0.0")
 neo4j_client = Neo4jClient()
 
+FRONTEND_ORIGINS = [
+    "https://vektra-six.vercel.app",
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+]
+if os.getenv("FRONTEND_URL"):
+    FRONTEND_ORIGINS.append(os.getenv("FRONTEND_URL"))
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=FRONTEND_ORIGINS,
+    allow_origin_regex=r"https://.*\.vercel\.app",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -55,14 +64,24 @@ class ChatRequest(BaseModel):
     message: str
     policy_context: str = ""
     session_id: Optional[str] = None
-    history: List[Dict[str, str]] = []
+    history: List[Dict[str, str]] = Field(default_factory=list)
+
+
+@app.on_event("startup")
+async def startup_event():
+    await neo4j_client.connect()
+
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    await neo4j_client.close()
 
 
 @app.get("/api/health")
 async def health_check():
     return {
         "status": "ok",
-        "neo4j": neo4j_client.connected,
+        "neo4j": await neo4j_client.ping(),
         "sarvam": bool(os.getenv("SARVAM_API_KEY")),
     }
 
@@ -96,10 +115,10 @@ async def analyze_policy(
         logger.exception("Graph analysis failed.")
         raise HTTPException(status_code=500, detail=f"Graph analysis failed: {exc}") from exc
 
-    neo4j_client.clear_session(session_id)
-    neo4j_client.write_rules(analysis_result.rules, session_id)
-    neo4j_client.write_edges(analysis_result.edges, session_id)
-    critical_paths = neo4j_client.find_critical_paths(session_id)
+    await neo4j_client.clear_session(session_id)
+    await neo4j_client.write_rules(analysis_result.rules, session_id)
+    await neo4j_client.write_edges(analysis_result.edges, session_id)
+    critical_paths = await neo4j_client.find_critical_paths(session_id)
 
     try:
         enriched_vulnerabilities, risk_data = await run_agents(
@@ -192,7 +211,7 @@ async def chat_sse(
                     "POST",
                     SARVAM_URL,
                     headers={
-                        "Authorization": f"Bearer {sarvam_key}",
+                        "api-subscription-key": sarvam_key,
                         "Content-Type": "application/json",
                     },
                     json={
