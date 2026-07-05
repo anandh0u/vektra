@@ -86,7 +86,7 @@ class Neo4jClient:
             logger.error("Neo4j constraint setup failed: %s", exc)
 
     def clear_session(self, session_id: str):
-        if not self.connected or not self.driver:
+        if not self.driver:
             return
         try:
             with self.driver.session() as session:
@@ -95,7 +95,7 @@ class Neo4jClient:
             logger.error("Neo4j clear_session failed: %s", exc)
 
     def write_rules(self, rules: List[Rule], session_id: str):
-        if not self.connected or not self.driver:
+        if not self.driver:
             return
         try:
             with self.driver.session() as session:
@@ -133,7 +133,7 @@ class Neo4jClient:
             logger.error("Neo4j write_rules failed: %s", exc)
 
     def write_edge(self, edge: Edge, session_id: str):
-        if not self.connected or not self.driver:
+        if not self.driver:
             return
         edge_type = edge.type if edge.type in ALLOWED_EDGE_TYPES else "CONFLICTS_WITH"
         try:
@@ -156,13 +156,13 @@ class Neo4jClient:
             logger.error("Neo4j write_edge failed: %s", exc)
 
     def write_edges(self, edges: List[Edge], session_id: str):
-        if not self.connected or not self.driver:
+        if not self.driver:
             return
         for edge in edges:
             self.write_edge(edge, session_id)
 
     def find_critical_paths(self, session_id: str):
-        if not self.connected or not self.driver:
+        if not self.driver:
             return []
         try:
             with self.driver.session() as session:
@@ -184,7 +184,7 @@ class Neo4jClient:
             return []
 
     async def create_user(self, user: dict) -> dict:
-        if not self.connected or not self.driver:
+        if not self.driver:
             raise RuntimeError("Neo4j is not connected.")
         user_id = str(uuid.uuid4())
         jwt_secret = str(uuid.uuid4())
@@ -225,7 +225,7 @@ class Neo4jClient:
             return dict(record["u"])
 
     async def get_user_by_email(self, email: str):
-        if not self.connected or not self.driver:
+        if not self.driver:
             return None
         with self.driver.session() as session:
             result = session.run(
@@ -236,7 +236,7 @@ class Neo4jClient:
             return dict(record["u"]) if record else None
 
     async def get_user_by_id(self, user_id: str):
-        if not self.connected or not self.driver:
+        if not self.driver:
             return None
         with self.driver.session() as session:
             result = session.run(
@@ -247,7 +247,7 @@ class Neo4jClient:
             return dict(record["u"]) if record else None
 
     async def increment_scan_count(self, user_id: str):
-        if not self.connected or not self.driver:
+        if not self.driver:
             return
         today = date.today().isoformat()
         with self.driver.session() as session:
@@ -267,7 +267,7 @@ class Neo4jClient:
             )
 
     async def get_user_scan_history(self, user_id: str, limit: int = 50):
-        if not self.connected or not self.driver:
+        if not self.driver:
             return []
         with self.driver.session() as session:
             result = session.run(
@@ -291,7 +291,7 @@ class Neo4jClient:
         policy_text: str,
         user_id: str | None = None,
     ):
-        if not self.connected or not self.driver:
+        if not self.driver:
             return
         with self.driver.session() as session:
             session.run(
@@ -322,7 +322,7 @@ class Neo4jClient:
             )
 
     async def link_session_to_user(self, user_id: str, session_id: str):
-        if not self.connected or not self.driver:
+        if not self.driver:
             return
         with self.driver.session() as session:
             session.run(
@@ -339,7 +339,7 @@ class Neo4jClient:
     async def update_user_tier(self, user_id: str, tier: str):
         if tier not in {"free", "pro", "team"}:
             raise ValueError("Invalid tier.")
-        if not self.connected or not self.driver:
+        if not self.driver:
             return
         with self.driver.session() as session:
             session.run(
@@ -352,7 +352,7 @@ class Neo4jClient:
             )
 
     async def reset_user_credits(self, user_id: str, credits: int, today: str):
-        if not self.connected or not self.driver:
+        if not self.driver:
             return
         with self.driver.session() as session:
             session.run(
@@ -367,7 +367,7 @@ class Neo4jClient:
             )
 
     async def update_credits(self, user_id: str, credits: int):
-        if not self.connected or not self.driver:
+        if not self.driver:
             return
         with self.driver.session() as session:
             session.run(
@@ -380,7 +380,7 @@ class Neo4jClient:
             )
 
     async def update_user_profile(self, user_id: str, name: str):
-        if not self.connected or not self.driver:
+        if not self.driver:
             return
         with self.driver.session() as session:
             session.run(
@@ -393,7 +393,7 @@ class Neo4jClient:
             )
 
     async def update_user_password(self, user_id: str, password_hash: str):
-        if not self.connected or not self.driver:
+        if not self.driver:
             return
         with self.driver.session() as session:
             session.run(
@@ -406,7 +406,7 @@ class Neo4jClient:
             )
 
     async def delete_user(self, user_id: str):
-        if not self.connected or not self.driver:
+        if not self.driver:
             return
         with self.driver.session() as session:
             session.run(
@@ -418,7 +418,7 @@ class Neo4jClient:
             )
 
     async def update_notifications(self, user_id: str, prefs_json: str):
-        if not self.connected or not self.driver:
+        if not self.driver:
             return
         with self.driver.session() as session:
             session.run(
