@@ -37,6 +37,11 @@ logger = logging.getLogger("vektra.main")
 app = FastAPI(title="VEKTRA API", version="1.0.0")
 neo4j_client = Neo4jClient()
 
+@app.on_event("startup")
+async def startup_event():
+    # Asynchronously connect to Neo4j to prevent blocking the startup thread
+    asyncio.create_task(neo4j_client.verify_connection_async())
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],

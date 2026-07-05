@@ -1,3 +1,4 @@
+import asyncio
 import json
 import logging
 import os
@@ -35,22 +36,37 @@ class Neo4jClient:
 
         if self.uri and self.username and self.password:
             try:
-                self.driver = GraphDatabase.driver(self.uri, auth=(self.username, self.password))
-                self.driver.verify_connectivity()
-                self.connected = True
-                self.ensure_constraints()
-                logger.info("Connected to Neo4j AuraDB.")
+                self.driver = GraphDatabase.driver(
+                    self.uri, 
+                    auth=(self.username, self.password),
+                    connection_timeout=5.0,
+                    max_connection_lifetime=60.0
+                )
             except Exception as exc:
-                logger.warning("Neo4j AuraDB connection failed; using offline graph mode: %s", exc)
+                logger.warning("Neo4j driver creation failed; using offline graph mode: %s", exc)
         else:
             logger.info("Neo4j environment variables are incomplete; using offline graph mode.")
+
+    async def verify_connection_async(self):
+        if not self.driver:
+            return False
+        try:
+            await asyncio.to_thread(self.driver.verify_connectivity)
+            self.connected = True
+            await asyncio.to_thread(self.ensure_constraints)
+            logger.info("Connected to Neo4j AuraDB asynchronously.")
+            return True
+        except Exception as exc:
+            self.connected = False
+            logger.warning("Neo4j AuraDB connection verification failed: %s", exc)
+            return False
 
     def close(self):
         if self.driver:
             self.driver.close()
 
     def ensure_constraints(self):
-        if not self.connected or not self.driver:
+        if not self.driver:
             return
         try:
             with self.driver.session() as session:
