@@ -2,8 +2,11 @@ import asyncio
 import json
 import logging
 import os
+import sys
+import types
 import uuid
 from datetime import date
+from pathlib import Path
 from typing import Dict, List, Optional
 
 import httpx
@@ -12,6 +15,19 @@ from fastapi import FastAPI, Header, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse, JSONResponse
 from pydantic import BaseModel
+
+
+def _ensure_backend_package_importable():
+    try:
+        import backend  # noqa: F401
+        return
+    except ModuleNotFoundError:
+        package = types.ModuleType("backend")
+        package.__path__ = [str(Path(__file__).resolve().parent)]
+        sys.modules["backend"] = package
+
+
+_ensure_backend_package_importable()
 
 from backend.auth import create_token, get_current_user, hash_password, verify_password
 from backend.agents.orchestrator import run_agents
