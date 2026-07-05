@@ -50,9 +50,23 @@ load_dotenv()
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("vektra.main")
 
-app = FastAPI(title="VEKTRA API", version="1.0.0")
+app = FastAPI(title="VEKTRA API", version="1.0.0", servers=[{"url": "/"}])
 neo4j_client = Neo4jClient()
 neo4j_verify_task: Optional[asyncio.Task] = None
+
+
+class ApiPrefixMiddleware:
+    def __init__(self, app):
+        self.app = app
+
+    async def __call__(self, scope, receive, send):
+        if scope["type"] == "http":
+            path = scope.get("path", "")
+            if not path.startswith("/api") and not any(path.startswith(x) for x in ["/docs", "/openapi.json", "/redoc", "/favicon.ico"]):
+                scope["path"] = "/api" + path
+                if "raw_path" in scope:
+                    scope["raw_path"] = b"/api" + scope["raw_path"]
+        await self.app(scope, receive, send)
 
 
 def schedule_neo4j_verify() -> Optional[asyncio.Task]:
@@ -87,6 +101,7 @@ async def ensure_neo4j_ready(timeout: float = 6.0) -> bool:
     return False
 
 
+app.add_middleware(ApiPrefixMiddleware)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -94,16 +109,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-
-@app.middleware("http")
-async def ensure_api_prefix(request: Request, call_next):
-    path = request.scope.get("path", "")
-    if not path.startswith("/api") and not any(path.startswith(x) for x in ["/docs", "/openapi.json", "/redoc", "/favicon.ico"]):
-        request.scope["path"] = "/api" + path
-        if "raw_path" in request.scope:
-            request.scope["raw_path"] = b"/api" + request.scope["raw_path"]
-    return await call_next(request)
 
 
 class AnalyzeRequest(BaseModel):
