@@ -215,7 +215,7 @@ export default function Sidebar() {
         {/* Brand details */}
         <div className="flex justify-between items-center px-1 text-[10px] text-muted/60 font-mono pt-1">
           <span>VEKTRA v1.0.0</span>
-          <span>HACKHAZARDS '26</span>
+          <span>Security AI © 2026</span>
         </div>
       </div>
 

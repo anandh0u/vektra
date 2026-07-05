@@ -12,7 +12,10 @@ import {
   ChevronRight, 
   Check, 
   ShieldAlert,
-  Copy
+  Copy,
+  Sparkles,
+  Palette,
+  LogOut
 } from "lucide-react";
 import toast from "react-hot-toast";
 
@@ -23,10 +26,13 @@ export default function SettingsPage() {
     updateProfile, 
     changePassword, 
     updateNotifications, 
-    deleteAccount 
+    deleteAccount,
+    signOut,
+    theme,
+    setTheme
   } = useVektraStore();
 
-  const [activeTab, setActiveTab] = useState("profile"); // "profile" | "security" | "wallet" | "notifications" | "danger"
+  const [activeTab, setActiveTab] = useState("profile"); // "profile" | "security" | "wallet" | "notifications" | "appearance" | "danger"
 
   // ── PROFILE STATE ──
   const [profileName, setProfileName] = useState(currentUser?.name || "");
@@ -52,6 +58,11 @@ export default function SettingsPage() {
     weekly_digest: parsedPrefs.weekly_digest ?? false,
     credit_warnings: parsedPrefs.credit_warnings ?? true,
   });
+
+  // ── APPEARANCE STATE ──
+  const [currentTheme, setCurrentTheme] = useState(theme || "dark");
+  const [primaryColor, setPrimaryColor] = useState(localStorage.getItem("vektra_color_primary") || "#8b5cf6");
+  const [secondaryColor, setSecondaryColor] = useState(localStorage.getItem("vektra_color_secondary") || "#22d3ee");
 
   useEffect(() => {
     if (currentUser) {
@@ -97,7 +108,26 @@ export default function SettingsPage() {
     }
     setSavingProfile(true);
     try {
-      await updateProfile(profileName);
+      // If store doesn't have updateProfile implementation, update state manually
+      if (updateProfile) {
+        await updateProfile(profileName);
+      } else {
+        // Fallback update profile API call
+        const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8000";
+        const res = await fetch(`${API_BASE}/api/auth/profile`, {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${localStorage.getItem("vektra_token")}`,
+          },
+          body: JSON.stringify({ name: profileName }),
+        });
+        if (!res.ok) throw new Error("Failed to update profile");
+        const data = await res.json();
+        // Update store
+        useVektraStore.setState({ currentUser: { ...currentUser, name: profileName } });
+        localStorage.setItem("vektra_user", JSON.stringify({ ...currentUser, name: profileName }));
+      }
       toast.success("Profile saved");
     } catch (err) {
       toast.error(err.message || "Failed to update profile.");
@@ -143,9 +173,34 @@ export default function SettingsPage() {
       await updateNotifications(updated);
     } catch (err) {
       toast.error("Failed to save notification preferences.");
-      // Rollback
       setPrefs(prefs);
     }
+  };
+
+  // Theme selection
+  const handleThemeChange = (newTheme) => {
+    setCurrentTheme(newTheme);
+    setTheme(newTheme);
+    toast.success(`Theme updated to ${newTheme}`);
+  };
+
+  // Preset Colors
+  const COLOR_PRESETS = [
+    { name: "Default Violet", primary: "#8b5cf6", secondary: "#22d3ee" },
+    { name: "Cyber Punk", primary: "#ff007f", secondary: "#00ffff" },
+    { name: "Neon Emerald", primary: "#39ff14", secondary: "#ffdf00" },
+    { name: "Sunset Gold", primary: "#f59e0b", secondary: "#ef4444" },
+    { name: "Quantum Pink", primary: "#ec4899", secondary: "#8b5cf6" },
+  ];
+
+  const handleApplyColors = (prim, sec) => {
+    setPrimaryColor(prim);
+    setSecondaryColor(sec);
+    localStorage.setItem("vektra_color_primary", prim);
+    localStorage.setItem("vektra_color_secondary", sec);
+    document.documentElement.style.setProperty("--color-primary", prim);
+    document.documentElement.style.setProperty("--color-secondary", sec);
+    toast.success("Color scheme updated successfully!");
   };
 
   // Delete account
@@ -170,6 +225,12 @@ export default function SettingsPage() {
     }
   };
 
+  const handleSignOut = () => {
+    signOut();
+    toast.success("Logged out successfully");
+    navigate("/");
+  };
+
   const initials = currentUser?.name
     ? currentUser.name.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase()
     : "U";
@@ -189,37 +250,51 @@ export default function SettingsPage() {
         <div className="flex-1 flex min-w-0">
           
           {/* Left vertical settings tabs */}
-          <div className="w-60 border-r border-[#1e2240] bg-[#0a0c16]/30 p-6 flex flex-col space-y-1.5 shrink-0">
-            <span className="text-[10px] font-bold text-muted uppercase tracking-wider block mb-2 px-3">
-              Settings
-            </span>
-            {[
-              { id: "profile", label: "Profile", icon: User },
-              { id: "security", label: "Security", icon: Lock },
-              { id: "wallet", label: "Wallet Console", icon: Wallet },
-              { id: "notifications", label: "Notifications", icon: Bell },
-              { id: "danger", label: "Danger Zone", icon: Trash2, red: true }
-            ].map((tab) => {
-              const TabIcon = tab.icon;
-              const isSelected = activeTab === tab.id;
-              return (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
-                  className={`flex items-center justify-between px-3 py-2.5 rounded-lg text-xs font-semibold transition-all duration-200 ${
-                    isSelected 
-                      ? (tab.red ? "bg-danger/10 text-danger" : "bg-[#1e2240] text-white border-l-2 border-primary") 
-                      : (tab.red ? "text-danger/70 hover:bg-danger/5" : "text-muted hover:bg-[#141628] hover:text-slate-200")
-                  }`}
-                >
-                  <span className="flex items-center gap-2.5">
-                    <TabIcon className="w-4 h-4 shrink-0" />
-                    {tab.label}
-                  </span>
-                  <ChevronRight className={`w-3.5 h-3.5 opacity-60 ${isSelected ? "translate-x-0.5" : ""}`} />
-                </button>
-              );
-            })}
+          <div className="w-60 border-r border-[#1e2240] bg-[#0a0c16]/30 p-6 flex flex-col shrink-0 justify-between">
+            <div className="space-y-1.5">
+              <span className="text-[10px] font-bold text-muted uppercase tracking-wider block mb-2 px-3">
+                Settings
+              </span>
+              {[
+                { id: "profile", label: "Profile", icon: User },
+                { id: "security", label: "Security", icon: Lock },
+                { id: "wallet", label: "Wallet Console", icon: Wallet },
+                { id: "notifications", label: "Notifications", icon: Bell },
+                { id: "appearance", label: "Appearance", icon: Palette },
+                { id: "danger", label: "Danger Zone", icon: Trash2, red: true }
+              ].map((tab) => {
+                const TabIcon = tab.icon;
+                const isSelected = activeTab === tab.id;
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id)}
+                    className={`flex items-center justify-between w-full px-3 py-2.5 rounded-lg text-xs font-semibold transition-all duration-200 ${
+                      isSelected 
+                        ? (tab.red ? "bg-danger/10 text-danger" : "bg-[#1e2240] text-white border-l-2 border-primary") 
+                        : (tab.red ? "text-danger/70 hover:bg-danger/5" : "text-muted hover:bg-[#141628] hover:text-slate-200")
+                    }`}
+                  >
+                    <span className="flex items-center gap-2.5">
+                      <TabIcon className="w-4 h-4 shrink-0" />
+                      {tab.label}
+                    </span>
+                    <ChevronRight className={`w-3.5 h-3.5 opacity-60 ${isSelected ? "translate-x-0.5" : ""}`} />
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Bottom Sign Out */}
+            <div className="border-t border-[#1e2240] pt-4">
+              <button
+                onClick={handleSignOut}
+                className="flex items-center gap-2.5 w-full px-3 py-2.5 rounded-lg text-xs font-bold text-danger hover:bg-danger/10 transition-all duration-200"
+              >
+                <LogOut className="w-4 h-4" />
+                Sign Out Account
+              </button>
+            </div>
           </div>
 
           {/* Right tab panel content */}
@@ -264,7 +339,7 @@ export default function SettingsPage() {
                     <input
                       type="email"
                       readOnly
-                      value={email}
+                      value={currentUser?.email || ""}
                       className="w-full bg-[#0a0c16] border border-[#1e2240] rounded-xl px-4 py-2.5 text-xs text-muted cursor-not-allowed font-mono"
                     />
                   </div>
@@ -403,7 +478,6 @@ export default function SettingsPage() {
                 </div>
 
                 <div className="space-y-4">
-                  
                   {/* Toggle 1: Scan Complete */}
                   <div className="flex items-center justify-between p-4 bg-[#141628] border border-[#1e2240] rounded-xl">
                     <div>
@@ -459,7 +533,89 @@ export default function SettingsPage() {
                       <div className={`w-4.5 h-4.5 rounded-full bg-white transition-transform ${prefs.credit_warnings ? "translate-x-4.5" : "translate-x-0.5"}`} />
                     </button>
                   </div>
+                </div>
+              </div>
+            )}
 
+            {/* ── APPEARANCE TAB ── */}
+            {activeTab === "appearance" && (
+              <div className="space-y-6">
+                <div>
+                  <h2 className="font-heading text-xl font-bold text-white">Theme & Appearance</h2>
+                  <p className="text-xs text-muted mt-0.5">Customize your console interface style.</p>
+                </div>
+
+                {/* Theme Selector */}
+                <div className="space-y-3">
+                  <label className="text-[9px] font-bold text-muted uppercase tracking-wider block">UI Theme</label>
+                  <div className="grid grid-cols-3 gap-3">
+                    {[
+                      { id: "dark", name: "Default Dark", desc: "Sleek dark design" },
+                      { id: "cyberpunk", name: "Cyberpunk", desc: "Vibrant neon purple" },
+                      { id: "forest", name: "Forest", desc: "Retro matrix green" }
+                    ].map((t) => (
+                      <button
+                        key={t.id}
+                        onClick={() => handleThemeChange(t.id)}
+                        className={`p-3 rounded-xl border text-left transition-all ${
+                          currentTheme === t.id 
+                            ? "bg-[#1e2240] border-primary text-white" 
+                            : "bg-[#141628]/60 border-[#1e2240] text-muted hover:text-slate-200"
+                        }`}
+                      >
+                        <span className="text-xs font-bold block">{t.name}</span>
+                        <span className="text-[9px] opacity-75 mt-0.5 block">{t.desc}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Color Palette Change */}
+                <div className="space-y-3 border-t border-[#1e2240] pt-6">
+                  <label className="text-[9px] font-bold text-muted uppercase tracking-wider block">Color Preset Accent</label>
+                  <div className="space-y-2">
+                    {COLOR_PRESETS.map((preset, idx) => (
+                      <button
+                        key={idx}
+                        onClick={() => handleApplyColors(preset.primary, preset.secondary)}
+                        className="w-full flex items-center justify-between p-3 rounded-xl bg-[#141628]/40 border border-[#1e2240]/40 hover:bg-[#141628] hover:border-[#1e2240] transition-all"
+                      >
+                        <span className="text-xs font-semibold text-slate-200">{preset.name}</span>
+                        <div className="flex items-center gap-1.5">
+                          <div className="w-4 h-4 rounded-full" style={{ backgroundColor: preset.primary }} />
+                          <div className="w-4 h-4 rounded-full" style={{ backgroundColor: preset.secondary }} />
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Custom Color Pickers */}
+                  <div className="grid grid-cols-2 gap-4 border-t border-[#1e2240]/60 pt-4">
+                    <div className="space-y-1.5">
+                      <span className="text-[9px] font-bold text-muted uppercase tracking-wider block">Custom Primary Color</span>
+                      <div className="flex items-center gap-2">
+                        <input 
+                          type="color" 
+                          value={primaryColor} 
+                          onChange={(e) => handleApplyColors(e.target.value, secondaryColor)}
+                          className="w-8 h-8 rounded border-0 cursor-pointer bg-transparent" 
+                        />
+                        <span className="text-[11px] font-mono text-slate-300 uppercase">{primaryColor}</span>
+                      </div>
+                    </div>
+                    <div className="space-y-1.5">
+                      <span className="text-[9px] font-bold text-muted uppercase tracking-wider block">Custom Secondary Color</span>
+                      <div className="flex items-center gap-2">
+                        <input 
+                          type="color" 
+                          value={secondaryColor} 
+                          onChange={(e) => handleApplyColors(primaryColor, e.target.value)}
+                          className="w-8 h-8 rounded border-0 cursor-pointer bg-transparent" 
+                        />
+                        <span className="text-[11px] font-mono text-slate-300 uppercase">{secondaryColor}</span>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
             )}

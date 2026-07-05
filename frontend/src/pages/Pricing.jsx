@@ -1,7 +1,9 @@
 import React, { useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { ArrowRight, Check, Network, Shield, X } from "lucide-react";
+import { ArrowRight, Check, Network, Shield, X, Loader2 } from "lucide-react";
 import AuthNav from "../components/AuthNav";
+import { useVektraStore } from "../store/vektraStore";
+import toast from "react-hot-toast";
 
 function Feature({ children, locked = false }) {
   const Icon = locked ? X : Check;
@@ -13,46 +15,88 @@ function Feature({ children, locked = false }) {
   );
 }
 
-function PricingCard({ plan, annual }) {
+function PricingCard({ plan, annual, currentUser, upgradeWalletPlan }) {
   const navigate = useNavigate();
+  const [isUpgrading, setIsUpgrading] = useState(false);
   const price = annual ? plan.annualPrice : plan.monthlyPrice;
   const per = annual ? "/year" : "/month";
 
+  const handleAction = async () => {
+    if (plan.name === "Free") {
+      navigate("/");
+      return;
+    }
+
+    if (currentUser) {
+      setIsUpgrading(true);
+      const myToast = toast.loading(`Initiating Stellar Testnet upgrade to ${plan.name}...`);
+      try {
+        await upgradeWalletPlan(plan.name.toLowerCase());
+        toast.success(`Successfully upgraded to ${plan.name} Tier on Stellar Testnet!`, { id: myToast });
+        navigate("/wallet");
+      } catch (err) {
+        toast.error(err.message || "Failed to complete Stellar upgrade.", { id: myToast });
+      } finally {
+        setIsUpgrading(false);
+      }
+    } else {
+      navigate(plan.ctaPath);
+    }
+  };
+
+  const isCurrentPlan = currentUser?.tier?.toLowerCase() === plan.name.toLowerCase();
+
   return (
     <article className={`relative flex min-h-[560px] flex-col rounded-2xl p-8 ${plan.cardClass}`}>
-      <div className="space-y-5">
-        <span className={`inline-flex rounded-full px-3 py-1 text-[10px] font-extrabold uppercase tracking-wider ${plan.badgeClass}`}>
-          {plan.badge}
-        </span>
+      <div className="space-y-5 flex-1 flex flex-col justify-between">
+        <div className="space-y-5">
+          <span className={`inline-flex rounded-full px-3 py-1 text-[10px] font-extrabold uppercase tracking-wider ${plan.badgeClass}`}>
+            {plan.badge}
+          </span>
 
-        <div>
-          <h2 className="font-heading text-xl font-bold text-white">{plan.name}</h2>
-          <div className="mt-4 flex items-end gap-1">
-            <span className={`font-heading text-5xl font-bold ${plan.priceClass || "text-white"}`}>
-              {price}
-            </span>
-            <span className="pb-2 text-sm text-muted">{per}</span>
+          <div>
+            <h2 className="font-heading text-xl font-bold text-white">{plan.name}</h2>
+            <div className="mt-4 flex items-end gap-1">
+              <span className={`font-heading text-5xl font-bold ${plan.priceClass || "text-white"}`}>
+                {price}
+              </span>
+              <span className="pb-2 text-sm text-muted">{per}</span>
+            </div>
+            {annual && plan.monthlyPrice !== "$0" && (
+              <p className="mt-2 text-[11px] text-muted">Equivalent to 20% off monthly billing.</p>
+            )}
           </div>
-          {annual && plan.monthlyPrice !== "$0" && (
-            <p className="mt-2 text-[11px] text-muted">Equivalent to 20% off monthly billing.</p>
-          )}
+
+          <ul className="space-y-3 pt-2">
+            {plan.features.map((feature) => (
+              <Feature key={feature.label} locked={feature.locked}>
+                {feature.label}
+              </Feature>
+            ))}
+          </ul>
         </div>
 
         <button
-          onClick={() => navigate(plan.ctaPath)}
-          className={`flex w-full items-center justify-center gap-2 rounded-xl py-3 text-sm font-bold transition-all ${plan.ctaClass}`}
+          onClick={handleAction}
+          disabled={isUpgrading || isCurrentPlan}
+          className={`flex w-full items-center justify-center gap-2 rounded-xl py-3 text-sm font-bold transition-all mt-6 ${
+            isCurrentPlan 
+              ? "bg-[#1e2240] text-muted cursor-not-allowed border border-[#312e81]/30"
+              : plan.ctaClass
+          }`}
         >
-          {plan.cta}
-          <ArrowRight className="h-4 w-4" />
+          {isUpgrading ? (
+            <>
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Processing...
+            </>
+          ) : isCurrentPlan ? (
+            "Current Plan"
+          ) : (
+            plan.cta
+          )}
+          {!isCurrentPlan && !isUpgrading && <ArrowRight className="h-4 w-4" />}
         </button>
-
-        <ul className="space-y-3 pt-2">
-          {plan.features.map((feature) => (
-            <Feature key={feature.label} locked={feature.locked}>
-              {feature.label}
-            </Feature>
-          ))}
-        </ul>
       </div>
     </article>
   );
@@ -61,6 +105,7 @@ function PricingCard({ plan, annual }) {
 export default function PricingPage() {
   const location = useLocation();
   const [annual, setAnnual] = useState(false);
+  const { currentUser, upgradeWalletPlan } = useVektraStore();
   const successPlan = new URLSearchParams(location.search).get("success");
 
   const plans = useMemo(() => [
@@ -133,8 +178,8 @@ export default function PricingPage() {
       a: "Yes. No credit card required. 3 scans per day, always free.",
     },
     {
-      q: "What payment methods do you accept?",
-      a: "Coming soon - currently in beta. Contact us for early access.",
+      q: "How does Stellar Testnet integration work?",
+      a: "VEKTRA uses Stellar testnet accounts, trustlines, and assets. Each upgrade or token distribution occurs live on-chain, proving access rights with custom NFT tokens.",
     },
     {
       q: "Can I cancel anytime?",
@@ -149,7 +194,10 @@ export default function PricingPage() {
           <div className="bg-gradient-to-tr from-primary to-secondary p-1.5 rounded-lg">
             <Network className="w-5 h-5 text-white" />
           </div>
-          <span className="font-heading font-bold text-xl tracking-wider bg-gradient-to-r from-white via-slate-200 to-secondary bg-clip-text text-transparent">
+          <span 
+            onClick={() => navigate(currentUser ? "/dashboard" : "/")}
+            className="font-heading font-bold text-xl tracking-wider bg-gradient-to-r from-white via-slate-200 to-secondary bg-clip-text text-transparent cursor-pointer"
+          >
             VEKTRA
           </span>
         </div>
@@ -171,7 +219,7 @@ export default function PricingPage() {
 
           {successPlan && (
             <div className="mx-auto max-w-md rounded-lg border border-safe/30 bg-safe/10 px-4 py-3 text-sm font-semibold text-safe">
-              You are signed in for VEKTRA {successPlan.toUpperCase()}. Payment activation is coming soon in beta.
+              You are signed up on the {successPlan.toUpperCase()} plan. Your Stellar Testnet assets have been successfully issued!
             </div>
           )}
 
@@ -193,7 +241,13 @@ export default function PricingPage() {
 
         <section className="mt-12 grid gap-6 lg:grid-cols-3 lg:items-start">
           {plans.map((plan) => (
-            <PricingCard key={plan.name} plan={plan} annual={annual} />
+            <PricingCard 
+              key={plan.name} 
+              plan={plan} 
+              annual={annual} 
+              currentUser={currentUser}
+              upgradeWalletPlan={upgradeWalletPlan}
+            />
           ))}
         </section>
 

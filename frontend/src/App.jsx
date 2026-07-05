@@ -25,6 +25,13 @@ export default function App() {
   useEffect(() => {
     const savedTheme = localStorage.getItem("vektra_theme") || "dark";
     document.documentElement.setAttribute("data-theme", savedTheme);
+    
+    // Apply custom primary/secondary colors if set
+    const savedPrimary = localStorage.getItem("vektra_color_primary");
+    const savedSecondary = localStorage.getItem("vektra_color_secondary");
+    if (savedPrimary) document.documentElement.style.setProperty("--color-primary", savedPrimary);
+    if (savedSecondary) document.documentElement.style.setProperty("--color-secondary", savedSecondary);
+
     refreshCurrentUser();
   }, [refreshCurrentUser]);
 

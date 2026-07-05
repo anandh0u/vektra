@@ -211,6 +211,20 @@ export default function UploadPage() {
 
   const handleStartAnalysis = async () => {
     setErrorMsg("");
+    
+    // Auto-detect format to avoid parsing errors
+    const trimmed = policyText.trim();
+    let detectedFormat = format;
+    if (trimmed.startsWith("{") || trimmed.startsWith("[")) {
+      detectedFormat = "iam";
+    } else if (trimmed.includes("apiVersion:") || trimmed.includes("kind:") || trimmed.includes("rules:")) {
+      detectedFormat = "k8s";
+    }
+    
+    if (detectedFormat !== format) {
+      setFormat(detectedFormat);
+    }
+
     try {
       await runAnalysis();
       navigate("/analyze");
@@ -449,7 +463,7 @@ export default function UploadPage() {
 
       {/* Footer */}
       <footer className="h-12 border-t border-[#1e2240]/40 flex items-center justify-center text-[10px] text-muted">
-        HACKHAZARDS '26 • Trust, Identity & Security • Powered by Neo4j & Sarvam
+        VEKTRA • Trust, Identity & Security • Powered by Neo4j & Sarvam
       </footer>
 
     </div>
