@@ -24,13 +24,13 @@ except Exception:
     treasury_keypair = Keypair.random()
 
 NFT_ASSETS = {
-    "free":  Asset("VEKTRA_FREE", treasury_keypair.public_key),
-    "pro":   Asset("VEKTRA_PRO",  treasury_keypair.public_key),
-    "team":  Asset("VEKTRA_TEAM", treasury_keypair.public_key)
+    "free":  Asset("VEKTRAFREE", treasury_keypair.public_key),
+    "pro":   Asset("VEKTRAPRO",  treasury_keypair.public_key),
+    "team":  Asset("VEKTRATEAM", treasury_keypair.public_key)
 }
 
 CREDIT_ASSET = Asset(
-    "VEKTRA_CRED", treasury_keypair.public_key
+    "VEKTRACRED", treasury_keypair.public_key
 )
 
 async def create_user_wallet() -> dict:
@@ -166,11 +166,11 @@ async def get_wallet_balance(public_key: str) -> dict:
             asset_code = b.get("asset_code", "")
             balance = float(b.get("balance", 0))
             
-            if asset_code == "VEKTRA_CRED":
+            if asset_code == "VEKTRACRED":
                 credits = int(balance)
-            elif asset_code == "VEKTRA_PRO" and balance >= 1:
+            elif asset_code == "VEKTRAPRO" and balance >= 1:
                 nft_tier = "pro"
-            elif asset_code == "VEKTRA_TEAM" and balance >= 1:
+            elif asset_code == "VEKTRATEAM" and balance >= 1:
                 nft_tier = "team"
             elif b.get("asset_type") == "native":
                 xlm = balance

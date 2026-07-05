@@ -141,7 +141,7 @@ export default function WalletPage() {
               <div className="flex justify-between items-start">
                 <div>
                   <span className="text-[10px] font-bold text-muted uppercase tracking-wider block">Credits Balance</span>
-                  <span className="text-[9px] text-muted block mt-0.5">VEKTRA_CRED</span>
+                  <span className="text-[9px] text-muted block mt-0.5">VEKTRACRED</span>
                 </div>
                 <span className="text-[10px] text-muted">Resets daily at midnight IST</span>
               </div>
@@ -202,7 +202,7 @@ export default function WalletPage() {
                 <div className="flex flex-col items-center py-4">
                   <TierIcon className="w-12 h-12 text-slate-100 drop-shadow-[0_0_10px_rgba(255,255,255,0.3)]" />
                   <span className="text-lg font-heading font-extrabold text-white mt-2">VEKTRA {currentMeta.label}</span>
-                  <span className="text-[8px] font-mono text-muted mt-0.5">Token: VEKTRA_{currentMeta.label}</span>
+                  <span className="text-[8px] font-mono text-muted mt-0.5">Token: VEKTRA{currentMeta.label}</span>
                 </div>
 
                 <div className="border-t border-white/10 pt-2 space-y-1">

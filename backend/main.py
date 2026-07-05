@@ -713,12 +713,12 @@ async def get_wallet_transactions(http_request: Request):
                 asset_code = record.get("asset_code")
                 from_addr = record.get("from")
                 
-                if asset_code == "VEKTRA_CRED":
+                if asset_code == "VEKTRACRED":
                     if from_addr == public_key:
                         tx_type = "credits_spent"
                     else:
                         tx_type = "credits_issued"
-                elif asset_code in {"VEKTRA_FREE", "VEKTRA_PRO", "VEKTRA_TEAM"}:
+                elif asset_code in {"VEKTRAFREE", "VEKTRAPRO", "VEKTRATEAM"}:
                     tx_type = "nft_minted"
                 else:
                     continue
