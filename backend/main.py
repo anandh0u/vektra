@@ -58,6 +58,21 @@ async def startup_event():
     # Asynchronously connect to Neo4j to prevent blocking the startup thread
     asyncio.create_task(neo4j_client.verify_connection_async())
 
+
+async def ensure_neo4j_ready(timeout: float = 3.0) -> bool:
+    if neo4j_client.connected:
+        return True
+    if not neo4j_client.driver:
+        return False
+    try:
+        return await asyncio.wait_for(neo4j_client.verify_connection_async(), timeout=timeout)
+    except asyncio.TimeoutError:
+        logger.warning("Neo4j connection verification timed out after %.1fs.", timeout)
+    except Exception as exc:
+        logger.warning("Neo4j connection verification failed: %s", exc)
+    return False
+
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -153,6 +168,7 @@ async def resolve_request_user(request: Request, required: bool = False) -> dict
     if not claims:
         raise HTTPException(status_code=401, detail="Session expired, please sign in.")
 
+    await ensure_neo4j_ready()
     user = await neo4j_client.get_user_by_id(claims["user_id"])
     if user:
         return user
@@ -168,13 +184,14 @@ async def resolve_request_user(request: Request, required: bool = False) -> dict
 
 @app.get("/api/health")
 async def health_check():
+    neo4j_ok = neo4j_client.connected or await ensure_neo4j_ready(timeout=2.0)
     base44_ok = bool(
         (os.getenv("BASE44_API_KEY") or "1ec5cf39c2ff457c9686d35b1c5650d0") and
         (os.getenv("BASE44_APP_ID") or "6a494c246e43fac149974886")
     )
     return {
         "status": "ok",
-        "neo4j": neo4j_client.connected,
+        "neo4j": neo4j_ok,
         "sarvam": bool(os.getenv("SARVAM_API_KEY") or "sk_ofdpfh1o_zdhNv5LJscgGaqW2hvP16uPX"),
         "base44": base44_ok,
     }
@@ -200,6 +217,7 @@ async def register(body: RegisterRequest):
     if len(password) < 6:
         raise HTTPException(status_code=400, detail="Password must be at least 6 characters.")
 
+    await ensure_neo4j_ready()
     existing = await neo4j_client.get_user_by_email(email)
     if existing:
         raise HTTPException(status_code=400, detail="Email is already registered.")
@@ -240,6 +258,7 @@ async def register(body: RegisterRequest):
 @app.post("/api/auth/login")
 async def login(body: LoginRequest):
     email = body.email.strip().lower()
+    await ensure_neo4j_ready()
     user = await neo4j_client.get_user_by_email(email)
     if not user or not verify_password(body.password, user.get("password_hash", "")):
         raise HTTPException(status_code=401, detail="Invalid credentials.")
@@ -343,6 +362,7 @@ async def analyze_policy(
         logger.exception("Graph analysis failed.")
         raise HTTPException(status_code=500, detail=f"Graph analysis failed: {exc}") from exc
 
+    await ensure_neo4j_ready(timeout=2.0)
     neo4j_client.clear_session(session_id)
     neo4j_client.write_rules(analysis_result.rules, session_id)
     neo4j_client.write_edges(analysis_result.edges, session_id)
