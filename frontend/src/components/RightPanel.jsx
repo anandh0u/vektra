@@ -3,6 +3,7 @@ import { useVektraStore } from "../store/vektraStore";
 import CodeBlock from "./CodeBlock";
 import ExploitabilityBar from "./ExploitabilityBar";
 import ChatWidget from "./ChatWidget";
+import UpgradePrompt from "./UpgradePrompt";
 import { Network } from "lucide-react";
 
 export default function RightPanel() {
@@ -13,6 +14,7 @@ export default function RightPanel() {
     conflicts,
     format,
     stats,
+    upgradePrompt,
     selectConflict
   } = useVektraStore();
 
@@ -42,7 +44,7 @@ export default function RightPanel() {
   };
 
   return (
-    <aside className="hidden lg:flex w-80 border-l border-[#1e2240] bg-[#0a0c16] flex-col h-[calc(100vh-4rem)] select-none">
+    <aside className="w-80 border-l border-[#1e2240] bg-[#0a0c16] flex flex-col h-[calc(100vh-4rem)] select-none">
       {/* Detail Area */}
       <div className="flex-1 p-5 overflow-y-auto space-y-5">
         
@@ -161,13 +163,15 @@ export default function RightPanel() {
               {selectedConflict.title}
             </h3>
 
+            {upgradePrompt && <UpgradePrompt />}
+
             {/* Exploitability Segment */}
-            {selectedConflict.exploitability_score !== undefined && (
+            {!upgradePrompt && selectedConflict.exploitability_score !== undefined && (
               <ExploitabilityBar score={selectedConflict.exploitability_score} />
             )}
 
             {/* Agent 1 Danger Section */}
-            {selectedConflict.danger_summary && (
+            {!upgradePrompt && selectedConflict.danger_summary && (
               <div className="space-y-1.5">
                 <span className="text-[10px] font-bold text-muted uppercase tracking-wider block">
                   Danger Analysis
@@ -187,7 +191,7 @@ export default function RightPanel() {
             )}
 
             {/* Agent 2 Fix Section */}
-            {selectedConflict.fixed_policy_block && (
+            {!upgradePrompt && selectedConflict.fixed_policy_block && (
               <div className="space-y-2 pt-2 border-t border-cardBorder">
                 <div className="flex items-center justify-between">
                   <span className="text-[10px] font-bold text-muted uppercase tracking-wider">
@@ -208,6 +212,12 @@ export default function RightPanel() {
                 />
               </div>
             )}
+
+            {upgradePrompt && (
+              <div className="rounded-lg border border-[#1e2240] bg-[#0d0f1a] p-3 text-[11px] leading-relaxed text-muted">
+                Basic graph detection found this issue. Pro adds attack scenarios, remediation blocks, confidence scoring, and compliance context.
+              </div>
+            )}
           </div>
         )}
 
@@ -222,8 +232,14 @@ export default function RightPanel() {
               Click a node in the graph, or choose a vulnerability in the list to reveal agent reviews.
             </p>
 
+            {upgradePrompt && (
+              <div className="mt-6 w-full">
+                <UpgradePrompt />
+              </div>
+            )}
+
             {/* Agent 3 Risk Scorer priorities summary when nothing selected */}
-            {stats.top_priorities && stats.top_priorities.length > 0 && (
+            {!upgradePrompt && stats.top_priorities && stats.top_priorities.length > 0 && (
               <div className="w-full mt-6 text-left border-t border-cardBorder/60 pt-4 space-y-2">
                 <span className="text-[10px] font-bold text-muted uppercase tracking-wider block">
                   Top Priorities (Risk Scorer)

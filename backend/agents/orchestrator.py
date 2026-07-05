@@ -2,7 +2,7 @@ import asyncio
 import logging
 from typing import Any, Dict, List, Optional, Tuple
 
-from backend.agents import conflict_analyst, fix_engineer, risk_scorer
+from backend.agents import conflict_analyst, fix_advisor, risk_scorer
 from backend.graph.models import Rule, Vulnerability
 
 
@@ -34,7 +34,7 @@ async def run_agents(
     fixable = [idx for idx, vuln in enumerate(vuln_dicts) if vuln.get("severity") in {"CRITICAL", "WARNING"}]
     logger.info("Running Fix Engineer on %s vulnerabilities.", len(fixable))
     fix_results = await asyncio.gather(
-        *(fix_engineer.advise(vuln_dicts[idx], policy_text, format=format, api_key=api_key) for idx in fixable),
+        *(fix_advisor.advise(vuln_dicts[idx], policy_text, format=format, api_key=api_key) for idx in fixable),
         return_exceptions=True,
     )
     for idx, result in zip(fixable, fix_results):

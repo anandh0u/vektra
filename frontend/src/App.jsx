@@ -1,15 +1,18 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { useVektraStore } from "./store/vektraStore";
-import LoginPage from "./pages/Login";
 import UploadPage from "./pages/Upload";
 import GraphPage from "./pages/Graph";
 import ReportPage from "./pages/Report";
 import SettingsPage from "./pages/Settings";
-import TestLabPage from "./pages/TestLab";
+import LoginPage from "./pages/Login";
+import PricingPage from "./pages/Pricing";
+import HistoryPage from "./pages/History";
+import DashboardPage from "./pages/Dashboard";
+import WalletPage from "./pages/Wallet";
 
 function ProtectedRoute({ children }) {
-  const currentUser = useVektraStore((state) => state.currentUser);
+  const { currentUser } = useVektraStore();
   if (!currentUser) {
     return <Navigate to="/login" replace />;
   }
@@ -17,21 +20,46 @@ function ProtectedRoute({ children }) {
 }
 
 export default function App() {
+  const { refreshCurrentUser } = useVektraStore();
+
+  useEffect(() => {
+    const savedTheme = localStorage.getItem("vektra_theme") || "dark";
+    document.documentElement.setAttribute("data-theme", savedTheme);
+    refreshCurrentUser();
+  }, [refreshCurrentUser]);
+
   return (
     <BrowserRouter>
       <Routes>
+        {/* Authentication Page */}
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/pricing" element={<PricingPage />} />
 
-        <Route path="/" element={<ProtectedRoute><UploadPage /></ProtectedRoute>} />
+        {/* Upload Landing Page */}
+        <Route path="/" element={<UploadPage />} />
         
-        <Route path="/analyze" element={<ProtectedRoute><GraphPage /></ProtectedRoute>} />
+        {/* Graph Analysis Dashboard */}
+        <Route path="/analyze" element={<GraphPage />} />
         
-        <Route path="/report" element={<ProtectedRoute><ReportPage /></ProtectedRoute>} />
+        {/* Printable Security Report */}
+        <Route path="/report" element={<ReportPage />} />
         
+        {/* Legacy Credit Store */}
+        <Route path="/store" element={<Navigate to="/pricing" replace />} />
+
+        {/* Dashboard Console */}
+        <Route path="/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
+
+        {/* Wallet Console */}
+        <Route path="/wallet" element={<ProtectedRoute><WalletPage /></ProtectedRoute>} />
+
+        {/* Account Scan History */}
+        <Route path="/history" element={<ProtectedRoute><HistoryPage /></ProtectedRoute>} />
+        
+        {/* Settings Console */}
         <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
 
-        <Route path="/test-lab" element={<ProtectedRoute><TestLabPage /></ProtectedRoute>} />
-
+        {/* Fallback to Upload */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>

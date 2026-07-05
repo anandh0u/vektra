@@ -2,6 +2,33 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  --color-pageBg: #07080f;
+  --color-sidebarBg: #04050a;
+  --color-cardSurface: #0d0f1f;
+  --color-cardBorder: #312e81;
+  --color-primary: #8b5cf6;
+  --color-secondary: #22d3ee;
+}
+
+[data-theme="cyberpunk"] {
+  --color-pageBg: #0f0217;
+  --color-sidebarBg: #07000d;
+  --color-cardSurface: #170324;
+  --color-cardBorder: #ff007f;
+  --color-primary: #ff007f;
+  --color-secondary: #00ffff;
+}
+
+[data-theme="forest"] {
+  --color-pageBg: #020a05;
+  --color-sidebarBg: #010502;
+  --color-cardSurface: #051a0d;
+  --color-cardBorder: #39ff14;
+  --color-primary: #39ff14;
+  --color-secondary: #ffdf00;
+}
+
 @layer base {
   body {
     @apply bg-pageBg text-textMain font-sans;

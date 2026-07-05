@@ -7,12 +7,12 @@ export default {
   theme: {
     extend: {
       colors: {
-        pageBg: "#0d0f1a",
-        sidebarBg: "#0a0c16",
-        cardSurface: "#141628",
-        cardBorder: "#1e2240",
-        primary: "#7c3aed",
-        secondary: "#06b6d4",
+        pageBg: "var(--color-pageBg)",
+        sidebarBg: "var(--color-sidebarBg)",
+        cardSurface: "var(--color-cardSurface)",
+        cardBorder: "var(--color-cardBorder)",
+        primary: "var(--color-primary)",
+        secondary: "var(--color-secondary)",
         danger: "#ef4444",
         warning: "#f59e0b",
         safe: "#10b981",

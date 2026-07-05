@@ -18,7 +18,6 @@ Each finding becomes a graph edge such as `CONFLICTS_WITH`, `ESCALATES_TO`, `BYP
 
 - Frontend: React 18, Vite, TailwindCSS, React Flow, Zustand, React Router v6.
 - Backend: FastAPI, NetworkX, Neo4j Python Driver, PyYAML, httpx.
-- Mobile: Expo SDK 51, Expo Router, NativeWind, Zustand, AsyncStorage, axios.
 - AI: Sarvam AI `sarvam-m` through the OpenAI-compatible chat completions API.
 - Deployment: Render web service plus Render static site through `render.yaml`.
 
@@ -56,30 +55,12 @@ npm run dev
 
 Open `http://localhost:5173`.
 
-### Mobile
-
-```bash
-cd mobile
-npm install
-npx expo start
-```
-
-Set the backend URL in `mobile/.env` or inside the app Settings screen:
-
-```bash
-EXPO_PUBLIC_API_URL=https://vektra-six.vercel.app
-```
-
-The mobile app supports scan, results, vulnerability detail, local scan history, and service-status screens. Base44 history is optional for now; when `/api/history` or `/api/report/save` is unavailable, the app stores scan history locally with AsyncStorage and shows Base44 as not configured.
-
 ## Verification
 
 ```bash
 python backend/verify.py
 cd frontend
 npm run build
-cd ../mobile
-npx expo-doctor
 ```
 
 ## Render Deployment

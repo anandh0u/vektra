@@ -1,0 +1,53 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "AllowS3PutObject",
+      "Effect": "Allow",
+      "Action": ["s3:PutObject"],
+      "Resource": ["arn:aws:s3:::prod-bucket/*"]
+    },
+    {
+      "Sid": "DenyS3PutObject",
+      "Effect": "Deny",
+      "Action": ["s3:PutObject"],
+      "Resource": ["arn:aws:s3:::prod-bucket/*"]
+    },
+    {
+      "Sid": "DupS3PutObject0",
+      "Effect": "Allow",
+      "Action": ["s3:PutObject"],
+      "Resource": ["arn:aws:s3:::prod-bucket/*"]
+    },
+    {
+      "Sid": "DupS3PutObject1",
+      "Effect": "Allow",
+      "Action": ["s3:PutObject"],
+      "Resource": ["arn:aws:s3:::prod-bucket/*"]
+    },
+    {
+      "Sid": "DupS3PutObject2",
+      "Effect": "Allow",
+      "Action": ["s3:PutObject"],
+      "Resource": ["arn:aws:s3:::prod-bucket/*"]
+    },
+    {
+      "Sid": "DupS3PutObject3",
+      "Effect": "Allow",
+      "Action": ["s3:PutObject"],
+      "Resource": ["arn:aws:s3:::prod-bucket/*"]
+    },
+    {
+      "Sid": "DupS3PutObject4",
+      "Effect": "Allow",
+      "Action": ["s3:PutObject"],
+      "Resource": ["arn:aws:s3:::prod-bucket/*"]
+    },
+    {
+      "Sid": "DupS3PutObject5",
+      "Effect": "Allow",
+      "Action": ["s3:PutObject"],
+      "Resource": ["arn:aws:s3:::prod-bucket/*"]
+    }
+  ]
+}

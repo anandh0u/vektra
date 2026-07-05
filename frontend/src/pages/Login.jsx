@@ -1,176 +1,227 @@
 import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { useVektraStore } from "../store/vektraStore";
-import { ArrowRight, Lock, Mail, Shield, UserPlus, User } from "lucide-react";
+import { ArrowRight, Lock, Mail, Network, User } from "lucide-react";
 
 export default function LoginPage() {
   const navigate = useNavigate();
-  const { authMode, setAuthMode, signup, login } = useVektraStore();
-  const [form, setForm] = useState({ name: "", email: "", password: "" });
-  const [error, setError] = useState("");
+  const location = useLocation();
+  const { signUp, signIn } = useVektraStore();
+  const plan = new URLSearchParams(location.search).get("plan");
+  const planLabel = plan ? plan.charAt(0).toUpperCase() + plan.slice(1) : "";
 
-  const isSignup = authMode !== "login";
+  const [isSignUp, setIsSignUp] = useState(true);
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [errorMsg, setErrorMsg] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const update = (key, value) => {
-    setForm((current) => ({ ...current, [key]: value }));
-    setError("");
+  const redirectAfterAuth = () => {
+    if (plan) {
+      navigate(`/pricing?success=${plan}`);
+      return;
+    }
+    navigate("/");
   };
 
-  const submit = (event) => {
-    event.preventDefault();
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setErrorMsg("");
+
+    if (isSignUp && !name.trim()) {
+      setErrorMsg("Please enter your name.");
+      return;
+    }
+    if (!email.includes("@")) {
+      setErrorMsg("Enter a valid email address.");
+      return;
+    }
+    if (password.length < 6) {
+      setErrorMsg("Password must be at least 6 characters.");
+      return;
+    }
+
+    setIsSubmitting(true);
     try {
-      if (isSignup) {
-        signup(form);
+      if (isSignUp) {
+        await signUp(name, email, password);
       } else {
-        login(form);
+        await signIn(email, password);
       }
-      navigate("/", { replace: true });
-    } catch (err) {
-      setError(err.message || "Authentication failed.");
+      redirectAfterAuth();
+    } catch (error) {
+      setErrorMsg(error.message || "Authentication failed.");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-[#0d0f1a] text-slate-100 flex">
-      <section className="hidden lg:flex flex-1 relative overflow-hidden border-r border-[#1e2240]">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(124,58,237,0.22),transparent_30%),radial-gradient(circle_at_70%_60%,rgba(6,182,212,0.16),transparent_34%)]" />
-        <div className="relative z-10 flex flex-col justify-between p-12 max-w-2xl">
-          <div className="flex items-center gap-3">
-            <div className="bg-gradient-to-tr from-primary to-secondary p-2 rounded-xl">
-              <Shield className="w-6 h-6 text-white" />
-            </div>
-            <span className="font-heading font-bold text-2xl tracking-wider">VEKTRA</span>
+    <div className="min-h-screen bg-[#07080f] text-slate-100 flex flex-col md:flex-row font-sans select-none overflow-y-auto">
+      <div className="md:w-1/2 bg-[#04050a] border-r border-[#1e2240] flex flex-col justify-between p-8 md:p-16 relative overflow-hidden">
+        <div className="flex items-center gap-2.5 z-10">
+          <div className="bg-gradient-to-tr from-primary to-secondary p-2 rounded-xl shadow-[0_0_15px_rgba(139,92,246,0.3)]">
+            <Network className="w-6 h-6 text-white" />
           </div>
-          <div className="space-y-5">
-            <div className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
-              <Lock className="w-3.5 h-3.5" />
-              Private demo workspace
-            </div>
-            <h1 className="font-heading text-5xl font-bold leading-tight">
-              Start with a clean security workspace.
+          <span className="font-heading font-bold text-2xl tracking-wider bg-gradient-to-r from-white via-slate-200 to-secondary bg-clip-text text-transparent">
+            VEKTRA
+          </span>
+        </div>
+
+        <div className="my-auto py-12 space-y-8 z-10 max-w-lg">
+          <div className="space-y-4">
+            <h1 className="font-heading font-bold text-3xl md:text-4xl leading-tight text-white">
+              Secure your graph, <br />
+              <span className="bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
+                then unlock the agents.
+              </span>
             </h1>
-            <p className="text-sm leading-7 text-slate-300 max-w-xl">
-              Create an account, upload your own AWS IAM or Kubernetes RBAC policy, and run VEKTRA's graph analyzer without preloaded dummy results.
+            <p className="text-xs text-muted leading-relaxed font-sans">
+              Free scans stay open to everyone. Accounts add usage tracking, Neo4j-backed history, and paid-tier AI enrichment for deeper security review.
             </p>
           </div>
-          <div className="grid grid-cols-3 gap-3 text-xs text-muted">
-            <div className="rounded-xl border border-[#1e2240] bg-[#141628]/60 p-4">
-              <div className="font-heading text-lg text-white">14</div>
-              Vulnerability classes
+
+          <div className="grid grid-cols-3 gap-4 border-t border-[#1e2240]/60 pt-8">
+            <div className="bg-[#0d0f1f]/50 border border-[#312e81]/30 p-4 rounded-xl text-center space-y-1">
+              <div className="text-xl font-bold font-mono text-primary">14</div>
+              <div className="text-[9px] font-bold text-muted uppercase tracking-wider">Vulnerability classes</div>
             </div>
-            <div className="rounded-xl border border-[#1e2240] bg-[#141628]/60 p-4">
-              <div className="font-heading text-lg text-white">3</div>
-              Agent outputs
+            <div className="bg-[#0d0f1f]/50 border border-[#312e81]/30 p-4 rounded-xl text-center space-y-1">
+              <div className="text-xl font-bold font-mono text-secondary">3</div>
+              <div className="text-[9px] font-bold text-muted uppercase tracking-wider">AI agents on Pro</div>
             </div>
-            <div className="rounded-xl border border-[#1e2240] bg-[#141628]/60 p-4">
-              <div className="font-heading text-lg text-white">0</div>
-              Dummy scans
+            <div className="bg-[#0d0f1f]/50 border border-[#312e81]/30 p-4 rounded-xl text-center space-y-1">
+              <div className="text-xl font-bold font-mono text-safe">0</div>
+              <div className="text-[9px] font-bold text-muted uppercase tracking-wider">Credit card needed</div>
             </div>
           </div>
         </div>
-      </section>
 
-      <main className="flex-1 flex items-center justify-center px-6 py-10">
-        <div className="w-full max-w-md">
-          <div className="lg:hidden flex items-center justify-center gap-3 mb-8">
-            <div className="bg-gradient-to-tr from-primary to-secondary p-2 rounded-xl">
-              <Shield className="w-6 h-6 text-white" />
+        <div className="text-[10px] text-muted/60 font-mono z-10">
+          VEKTRA Security Platform © 2026. Protected workspace environment.
+        </div>
+      </div>
+
+      <div className="md:w-1/2 flex items-center justify-center p-8 md:p-16 relative">
+        <div className="max-w-md w-full bg-[#0d0f1f] border border-[#312e81]/60 rounded-2xl p-8 shadow-[0_0_30px_rgba(0,0,0,0.5)] z-10 space-y-6">
+          {plan && (
+            <div className="rounded-lg border border-primary/30 bg-primary/10 px-4 py-3 text-center text-xs font-bold text-primary">
+              You're signing up for VEKTRA {planLabel}
             </div>
-            <span className="font-heading font-bold text-2xl tracking-wider">VEKTRA</span>
+          )}
+
+          <div className="text-center space-y-1">
+            <h2 className="font-heading font-bold text-xl text-slate-100">
+              {isSignUp ? "Create your VEKTRA account" : "Sign in to your workspace"}
+            </h2>
+            <p className="text-[10px] text-muted">
+              Accounts are backed by Neo4j and secured with JWT sessions.
+            </p>
           </div>
 
-          <div className="bg-[#141628] border border-[#1e2240] rounded-2xl p-6 shadow-2xl">
-            <div className="flex rounded-xl bg-[#0a0c16] border border-[#1e2240] p-1 mb-6">
-              <button
-                onClick={() => setAuthMode("signup")}
-                className={`flex-1 rounded-lg py-2 text-xs font-bold transition-all ${
-                  isSignup ? "bg-primary text-white" : "text-muted hover:text-slate-200"
-                }`}
-              >
-                Create account
-              </button>
-              <button
-                onClick={() => setAuthMode("login")}
-                className={`flex-1 rounded-lg py-2 text-xs font-bold transition-all ${
-                  !isSignup ? "bg-primary text-white" : "text-muted hover:text-slate-200"
-                }`}
-              >
-                Sign in
-              </button>
+          <div className="flex bg-[#04050a] p-1 rounded-xl border border-[#1e2240]">
+            <button
+              onClick={() => {
+                setIsSignUp(true);
+                setErrorMsg("");
+              }}
+              className={`flex-1 py-2 rounded-lg text-xs font-semibold tracking-wider transition-all duration-200 ${
+                isSignUp ? "bg-primary text-white shadow-md" : "text-muted hover:text-slate-200"
+              }`}
+            >
+              Create account
+            </button>
+            <button
+              onClick={() => {
+                setIsSignUp(false);
+                setErrorMsg("");
+              }}
+              className={`flex-1 py-2 rounded-lg text-xs font-semibold tracking-wider transition-all duration-200 ${
+                !isSignUp ? "bg-primary text-white shadow-md" : "text-muted hover:text-slate-200"
+              }`}
+            >
+              Sign in
+            </button>
+          </div>
+
+          {errorMsg && (
+            <div className="bg-danger/10 border border-danger/20 rounded-xl p-3 text-xs text-danger text-center">
+              {errorMsg}
             </div>
+          )}
 
-            <div className="space-y-1 mb-6">
-              <h2 className="font-heading text-2xl font-bold text-white">
-                {isSignup ? "Create your VEKTRA account" : "Welcome back"}
-              </h2>
-              <p className="text-xs text-muted">
-                {isSignup
-                  ? "Your account is stored locally for this demo workspace."
-                  : "Sign in to continue your local VEKTRA workspace."}
-              </p>
-            </div>
-
-            <form onSubmit={submit} className="space-y-4">
-              {isSignup && (
-                <label className="block space-y-1.5">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-muted">Name</span>
-                  <div className="relative">
-                    <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted" />
-                    <input
-                      value={form.name}
-                      onChange={(event) => update("name", event.target.value)}
-                      className="w-full rounded-xl border border-[#1e2240] bg-[#0d0f1a] py-3 pl-10 pr-3 text-sm text-white placeholder:text-muted focus:border-primary focus:outline-none"
-                      placeholder="Security Operator"
-                    />
-                  </div>
-                </label>
-              )}
-
-              <label className="block space-y-1.5">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-muted">Email</span>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {isSignUp && (
+              <div className="space-y-1.5">
+                <label className="text-[9px] font-bold text-muted uppercase tracking-wider block">Full Name</label>
                 <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted" />
+                  <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted" />
                   <input
-                    type="email"
-                    value={form.email}
-                    onChange={(event) => update("email", event.target.value)}
-                    className="w-full rounded-xl border border-[#1e2240] bg-[#0d0f1a] py-3 pl-10 pr-3 text-sm text-white placeholder:text-muted focus:border-primary focus:outline-none"
-                    placeholder="you@example.com"
+                    type="text"
+                    required
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder="Security Operator"
+                    className="w-full bg-[#04050a] border border-[#1e2240] rounded-xl pl-10 pr-4 py-2.5 text-xs text-slate-100 placeholder-muted focus:outline-none focus:border-primary transition-all duration-200"
                   />
                 </div>
-              </label>
+              </div>
+            )}
 
-              <label className="block space-y-1.5">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-muted">Password</span>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted" />
-                  <input
-                    type="password"
-                    value={form.password}
-                    onChange={(event) => update("password", event.target.value)}
-                    className="w-full rounded-xl border border-[#1e2240] bg-[#0d0f1a] py-3 pl-10 pr-3 text-sm text-white placeholder:text-muted focus:border-primary focus:outline-none"
-                    placeholder="Minimum 6 characters"
-                  />
-                </div>
-              </label>
+            <div className="space-y-1.5">
+              <label className="text-[9px] font-bold text-muted uppercase tracking-wider block">Email Address</label>
+              <div className="relative">
+                <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted" />
+                <input
+                  type="email"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="name@company.com"
+                  className="w-full bg-[#04050a] border border-[#1e2240] rounded-xl pl-10 pr-4 py-2.5 text-xs text-slate-100 placeholder-muted focus:outline-none focus:border-primary transition-all duration-200"
+                />
+              </div>
+            </div>
 
-              {error && (
-                <div className="rounded-xl border border-danger/30 bg-danger/10 px-3 py-2 text-xs text-danger">
-                  {error}
-                </div>
-              )}
+            <div className="space-y-1.5">
+              <label className="text-[9px] font-bold text-muted uppercase tracking-wider block">Password</label>
+              <div className="relative">
+                <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted" />
+                <input
+                  type="password"
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Minimum 6 characters"
+                  className="w-full bg-[#04050a] border border-[#1e2240] rounded-xl pl-10 pr-4 py-2.5 text-xs text-slate-100 placeholder-muted focus:outline-none focus:border-primary transition-all duration-200"
+                />
+              </div>
+            </div>
 
-              <button
-                type="submit"
-                className="w-full h-12 rounded-xl bg-gradient-to-r from-primary to-secondary text-white font-heading font-semibold text-sm flex items-center justify-center gap-2"
-              >
-                {isSignup ? <UserPlus className="w-4 h-4" /> : <ArrowRight className="w-4 h-4" />}
-                {isSignup ? "Create account" : "Sign in"}
-              </button>
-            </form>
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className="w-full bg-primary hover:bg-primary/80 disabled:opacity-60 text-white py-2.5 rounded-xl text-xs font-bold transition-all duration-200 flex items-center justify-center gap-2 shadow-[0_0_15px_rgba(139,92,246,0.2)]"
+            >
+              <span>{isSubmitting ? "Securing session..." : (isSignUp ? "Create account" : "Sign in")}</span>
+              {!isSubmitting && <ArrowRight className="w-4 h-4" />}
+            </button>
+          </form>
+
+          <div className="space-y-2 border-t border-[#1e2240] pt-4">
+            <button
+              onClick={() => navigate("/")}
+              className="w-full rounded-xl border border-[#1e2240] py-2.5 text-xs font-bold text-muted hover:text-slate-200 hover:bg-[#141628] transition-all"
+            >
+              Continue with free tier (no account needed)
+            </button>
+            <p className="text-center text-[10px] text-muted">
+              3 free scans per day, no AI agents
+            </p>
           </div>
         </div>
-      </main>
+      </div>
     </div>
   );
 }

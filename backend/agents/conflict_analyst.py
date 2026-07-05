@@ -8,7 +8,6 @@ SYSTEM_PROMPT = """
 You are VEKTRA's Vulnerability Analyst. You analyze cloud permission policy
 vulnerabilities in AWS IAM and Kubernetes RBAC configurations. You are precise,
 technical, and concise. You always respond in valid JSON only.
-Respond with valid JSON only. No markdown. No explanation outside the JSON object.
 
 Respond only in this exact JSON format:
 {
@@ -26,10 +25,10 @@ def _fallback(vulnerability: Dict[str, Any]) -> Dict[str, Any]:
     actions = ", ".join(vulnerability.get("actions") or [])
     resources = ", ".join(vulnerability.get("resources") or [])
     return {
-        "danger_summary": f"{title} affects actions [{actions or 'unspecified'}] on resources [{resources or 'unspecified'}].",
-        "attack_scenario": "An attacker with access to an affected principal could use this permission path to bypass least-privilege boundaries.",
+        "danger_summary": f"{title} affects actions [{actions}] on resources [{resources}].",
+        "attack_scenario": "An attacker with access to the affected principal could exploit the overly broad or conflicting permission path.",
         "exploitability_score": severity_scores.get(vulnerability.get("severity"), 5),
-        "attacker_capability_required": "Access to a principal or workload covered by the affected rule.",
+        "attacker_capability_required": "Access to a principal covered by the affected rule.",
     }
 
 
@@ -40,15 +39,10 @@ async def analyze(vulnerability: Dict[str, Any], api_key: Optional[str] = None) 
         return _fallback(vulnerability)
 
     fallback = _fallback(vulnerability)
-    try:
-        exploitability_score = int(data.get("exploitability_score")) if data.get("exploitability_score") is not None else None
-    except (TypeError, ValueError):
-        exploitability_score = None
-
     return {
         "danger_summary": data.get("danger_summary") or fallback["danger_summary"],
         "attack_scenario": data.get("attack_scenario") or fallback["attack_scenario"],
-        "exploitability_score": exploitability_score,
+        "exploitability_score": int(data.get("exploitability_score") or fallback["exploitability_score"]),
         "attacker_capability_required": data.get("attacker_capability_required")
         or fallback["attacker_capability_required"],
     }

@@ -1,19 +1,62 @@
-import React, { useState } from "react";
-import { matchesSearch, useVektraStore } from "../store/vektraStore";
+import React, { useState, useEffect } from "react";
+import { getAuthHeaders, useVektraStore } from "../store/vektraStore";
 import Sidebar from "../components/Sidebar";
 import TopBar from "../components/TopBar";
 import ConflictCard from "../components/ConflictCard";
 import { FileText, Printer, Clipboard, Check, Sparkles, Award } from "lucide-react";
 
 export default function ReportPage() {
-  const { stats, conflicts, format, searchQuery } = useVektraStore();
+  const { stats, conflicts, format, sessionId, policyText, nodes, edges } = useVektraStore();
   const [copied, setCopied] = useState(false);
+  const [saved, setSaved] = useState(false);
+
+  useEffect(() => {
+    setSaved(false);
+  }, [sessionId]);
 
   const { risk_score, executive_summary, top_priorities, compliance_notes, risk_label } = stats;
-  const filteredConflicts = conflicts.filter((conflict) => matchesSearch(conflict, searchQuery));
 
   const handlePrint = () => {
     window.print();
+  };
+
+  const handleSave = async () => {
+    const title = prompt(
+      "Name this report:", 
+      `Scan ${sessionId.slice(0, 8)}`
+    );
+    if (!title) return;
+
+    const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8000";
+    const fullAnalysisResult = {
+      session_id: sessionId,
+      policyText,
+      format: format.toUpperCase(),
+      nodes,
+      edges,
+      conflicts,
+      stats,
+    };
+
+    try {
+      const res = await fetch(`${API_BASE}/api/report/save`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...getAuthHeaders() },
+        body: JSON.stringify({
+          session_id: sessionId,
+          report_data: fullAnalysisResult,
+          title
+        })
+      });
+      if (res.ok) {
+        setSaved(true);
+      } else {
+        alert("Failed to save report: Server error");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Failed to save report: " + err.message);
+    }
   };
 
   const handleCopyMarkdown = () => {
@@ -35,9 +78,9 @@ export default function ReportPage() {
       md += `\n`;
     }
 
-    md += `## Detected Vulnerabilities (${filteredConflicts.length})\n\n`;
+    md += `## Detected Vulnerabilities (${conflicts.length})\n\n`;
     
-    filteredConflicts.forEach((c, idx) => {
+    conflicts.forEach((c, idx) => {
       md += `### Vulnerability ${idx + 1}: [${c.severity}] ${c.title}\n`;
       md += `- **Type**: ${c.type}\n`;
       md += `- **Affected Nodes**: ${c.affected_rules.join(", ")}\n`;
@@ -83,7 +126,7 @@ export default function ReportPage() {
       </div>
 
       {/* Main View */}
-      <div className="flex-1 flex flex-col min-w-0 pb-16 md:pb-0">
+      <div className="flex-1 flex flex-col min-w-0">
         
         {/* TopBar - hidden in print */}
         <div className="print:hidden">
@@ -94,7 +137,7 @@ export default function ReportPage() {
         <div className="flex-1 overflow-y-auto p-8 max-w-4xl mx-auto w-full space-y-6 print:p-0 print:max-w-full">
           
           {/* Action Row - hidden in print */}
-          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 border-b border-[#1e2240] pb-4 print:hidden">
+          <div className="flex justify-between items-center border-b border-[#1e2240] pb-4 print:hidden">
             <div>
               <h2 className="font-heading font-bold text-2xl flex items-center gap-2">
                 <FileText className="w-6 h-6 text-primary" />
@@ -105,7 +148,23 @@ export default function ReportPage() {
               </p>
             </div>
             
-            <div className="flex flex-wrap gap-2">
+            <div className="flex gap-2">
+              {saved ? (
+                <button
+                  disabled
+                  className="px-4 py-2 rounded-lg bg-safe text-white text-xs transition-all flex items-center gap-2 font-medium cursor-not-allowed opacity-90"
+                >
+                  <Check className="w-4.5 h-4.5" />
+                  <span>✓ Saved</span>
+                </button>
+              ) : (
+                <button
+                  onClick={handleSave}
+                  className="px-4 py-2 rounded-lg border border-primary text-primary hover:bg-primary/10 text-xs transition-all flex items-center gap-2 font-medium"
+                >
+                  Save Report
+                </button>
+              )}
               <button
                 onClick={handlePrint}
                 className="px-4 py-2 rounded-lg border border-[#1e2240] text-xs text-slate-200 hover:text-white hover:bg-[#141628] transition-all flex items-center gap-2 font-medium"
@@ -166,11 +225,10 @@ export default function ReportPage() {
           {/* Conflict List */}
           <div className="space-y-6">
             <h3 className="font-heading font-bold text-lg text-slate-100 flex items-center gap-2 border-b border-[#1e2240] pb-2 print:border-slate-400 print:text-slate-800">
-              Detected Vulnerabilities ({filteredConflicts.length})
-              {searchQuery ? <span className="ml-2 text-xs text-muted">filtered by "{searchQuery}"</span> : null}
+              Detected Vulnerabilities ({conflicts.length})
             </h3>
             
-            {filteredConflicts.length === 0 ? (
+            {conflicts.length === 0 ? (
               <div className="text-center py-10 bg-cardSurface rounded-xl border border-cardBorder">
                 <Sparkles className="w-8 h-8 text-safe mx-auto mb-2" />
                 <h4 className="text-sm font-semibold text-slate-300">No vulnerabilities found</h4>
@@ -180,7 +238,7 @@ export default function ReportPage() {
               </div>
             ) : (
               <div className="space-y-4">
-                {filteredConflicts.map((conflict, idx) => (
+                {conflicts.map((conflict, idx) => (
                   <ConflictCard 
                     key={conflict.id || idx} 
                     conflict={conflict} 

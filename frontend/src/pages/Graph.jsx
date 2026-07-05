@@ -1,5 +1,5 @@
 import React from "react";
-import { matchesSearch, useVektraStore } from "../store/vektraStore";
+import { useVektraStore } from "../store/vektraStore";
 import Sidebar from "../components/Sidebar";
 import TopBar from "../components/TopBar";
 import GraphCanvas from "../components/GraphCanvas";
@@ -10,7 +10,6 @@ import {
   AlertTriangle, 
   Info, 
   Activity, 
-  Award,
   Layers,
   Sparkles,
   ArrowRight
@@ -21,8 +20,9 @@ export default function GraphPage() {
     stats, 
     conflicts, 
     nodes, 
-    selectConflict,
-    searchQuery
+    analysisTier,
+    upgradePrompt,
+    selectConflict 
   } = useVektraStore();
 
   const {
@@ -32,31 +32,23 @@ export default function GraphPage() {
     compliance_notes
   } = stats;
 
-  const filteredConflicts = conflicts.filter((conflict) => matchesSearch(conflict, searchQuery));
-  const filteredNodes = nodes.filter((node) => matchesSearch(node, searchQuery));
-
   // Count instances by severity
-  const critCount = filteredConflicts.filter(c => c.severity === "CRITICAL").length;
-  const warnCount = filteredConflicts.filter(c => c.severity === "WARNING").length;
-  const infoCount = filteredConflicts.filter(c => c.severity === "INFO").length;
+  const critCount = conflicts.filter(c => c.severity === "CRITICAL").length;
+  const warnCount = conflicts.filter(c => c.severity === "WARNING").length;
+  const infoCount = conflicts.filter(c => c.severity === "INFO").length;
 
-  // Color badge for risk score
-  let riskColorClass = "border-safe text-safe bg-safe/10";
   let riskLabel = risk_label || "LOW";
   if (risk_score >= 80) {
-    riskColorClass = "border-danger text-danger bg-danger/10 shadow-[0_0_15px_rgba(239,68,68,0.2)]";
     riskLabel = "CRITICAL";
   } else if (risk_score >= 50) {
-    riskColorClass = "border-warning text-warning bg-warning/10 shadow-[0_0_15px_rgba(245,158,11,0.2)]";
     riskLabel = "HIGH";
   } else if (risk_score >= 20) {
-    riskColorClass = "border-yellow-400 text-yellow-300 bg-yellow-400/10";
     riskLabel = "MEDIUM";
   }
 
   // Handle clicking a category card to select the first vulnerability of that type
   const handleCategoryClick = (severity) => {
-    const target = filteredConflicts.find(c => c.severity === severity);
+    const target = conflicts.find(c => c.severity === severity);
     if (target) {
       selectConflict(target.id);
     }
@@ -69,7 +61,7 @@ export default function GraphPage() {
       <Sidebar />
 
       {/* ── CENTER COLUMN + RIGHT COLUMN ── */}
-      <div className="flex-1 flex flex-col min-w-0 pb-16 md:pb-0">
+      <div className="flex-1 flex flex-col min-w-0">
         
         {/* Top bar */}
         <TopBar />
@@ -81,21 +73,67 @@ export default function GraphPage() {
           <div className="flex-1 flex flex-col p-6 space-y-4 overflow-y-auto min-w-0">
             
             {/* Header row */}
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div className="flex items-center justify-between">
               <div>
                 <h2 className="font-heading font-bold text-2xl text-slate-100">
                   Policy Graph Analysis
                 </h2>
                 <p className="text-[10px] text-muted font-medium mt-0.5 tracking-wider uppercase">
-                  Neo4j Aura relationship graph traversal{searchQuery ? ` - filtered by "${searchQuery}"` : ""}
+                  Neo4j Aura relationship graph traversal · {(analysisTier || "free").toUpperCase()} tier
                 </p>
               </div>
               
-              {/* Risk Badge */}
-              <div className={`px-4 py-1.5 rounded-lg border font-heading font-bold text-xs flex items-center gap-2 w-fit ${riskColorClass}`}>
-                <Award className="w-4.5 h-4.5" />
-                <span>RISK SCORE: {risk_score} · {riskLabel}</span>
-              </div>
+              {/* Risk Gauge */}
+              {(() => {
+                const radius = 16;
+                const circumference = 2 * Math.PI * radius;
+                const strokeDashoffset = circumference - (risk_score / 100) * circumference;
+
+                let strokeColor = "#10b981";
+                if (risk_score >= 80) strokeColor = "#ef4444";
+                else if (risk_score >= 50) strokeColor = "#f97316";
+                else if (risk_score >= 20) strokeColor = "#eab308";
+
+                return (
+                  <div className="flex items-center gap-3 bg-[#141628] border border-[#1e2240] rounded-xl px-4 py-2 shadow-md">
+                    <div className="relative w-10 h-10 flex items-center justify-center">
+                      <svg className="w-full h-full transform -rotate-90">
+                        <circle
+                          cx="20"
+                          cy="20"
+                          r={radius}
+                          className="stroke-[#1e2240]"
+                          strokeWidth="3"
+                          fill="transparent"
+                        />
+                        <circle
+                          cx="20"
+                          cy="20"
+                          r={radius}
+                          stroke={strokeColor}
+                          strokeWidth="3"
+                          fill="transparent"
+                          strokeDasharray={circumference}
+                          strokeDashoffset={strokeDashoffset}
+                          strokeLinecap="round"
+                          className="transition-all duration-500 ease-out"
+                        />
+                      </svg>
+                      <span className="absolute text-[9px] font-bold font-mono text-slate-200">
+                        {risk_score}%
+                      </span>
+                    </div>
+                    <div>
+                      <div className="text-[8px] uppercase font-bold text-muted tracking-wider">Overall Posture</div>
+                      <div className={`text-[10px] font-bold font-heading ${
+                        risk_score >= 80 ? "text-danger" : (risk_score >= 50 ? "text-warning" : (risk_score >= 20 ? "text-yellow-400" : "text-safe"))
+                      }`}>
+                        {riskLabel} RISK
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
 
             {/* Executive Summary Bar */}
@@ -104,7 +142,7 @@ export default function GraphPage() {
                 <Sparkles className="w-5 h-5 text-warning flex-shrink-0 mt-0.5" />
                 <div>
                   <span className="text-[10px] font-bold text-muted uppercase tracking-wider block mb-0.5">
-                    Executive Summary (Agent 3 Scorer)
+                    {upgradePrompt ? "Basic Graph Summary" : "Executive Summary (Agent 3 Scorer)"}
                   </span>
                   <p className="text-xs text-slate-300 leading-relaxed font-medium">
                     {executive_summary}
@@ -119,7 +157,7 @@ export default function GraphPage() {
             )}
 
             {/* Vulnerability category cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="grid grid-cols-3 gap-4">
               
               {/* Critical Card */}
               <button
@@ -177,7 +215,7 @@ export default function GraphPage() {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <StatCard 
                 title="Rules Parsed" 
-                value={filteredNodes.length}
+                value={nodes.length} 
                 icon={Layers} 
               />
               <StatCard 

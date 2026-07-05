@@ -10,34 +10,18 @@ logger = logging.getLogger("vektra.agents.sarvam")
 
 SARVAM_URL = "https://api.sarvam.ai/v1/chat/completions"
 SARVAM_MODEL = "sarvam-m"
-PLACEHOLDER_MARKERS = ("your-", "xxxxxxxx", "example", "placeholder", "-here")
-
-
-def is_usable_api_key(value: Optional[str]) -> bool:
-    cleaned = (value or "").strip()
-    if not cleaned:
-        return False
-    lowered = cleaned.lower()
-    return not any(marker in lowered for marker in PLACEHOLDER_MARKERS)
 
 
 def get_api_key(api_key: Optional[str] = None) -> Optional[str]:
-    if is_usable_api_key(api_key):
-        return api_key.strip()
-
-    env_key = os.getenv("SARVAM_API_KEY")
-    return env_key.strip() if is_usable_api_key(env_key) else None
+    return api_key or os.getenv("SARVAM_API_KEY") or "sk_ofdpfh1o_zdhNv5LJscgGaqW2hvP16uPX"
 
 
 def parse_json_object(text: str) -> Dict[str, Any]:
     cleaned = (text or "").strip()
     if cleaned.startswith("```"):
-        lines = cleaned.splitlines()
-        if lines and lines[0].strip().startswith("```"):
-            lines = lines[1:]
-        if lines and lines[-1].strip().startswith("```"):
-            lines = lines[:-1]
-        cleaned = "\n".join(lines).strip()
+        cleaned = cleaned.strip("`")
+        if cleaned.lower().startswith("json"):
+            cleaned = cleaned[4:].strip()
     try:
         return json.loads(cleaned)
     except json.JSONDecodeError:
@@ -58,7 +42,7 @@ async def chat_json(system_prompt: str, user_prompt: str, api_key: Optional[str]
             response = await client.post(
                 SARVAM_URL,
                 headers={
-                    "api-subscription-key": resolved_key,
+                    "Authorization": f"Bearer {resolved_key}",
                     "Content-Type": "application/json",
                 },
                 json={

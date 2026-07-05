@@ -8,7 +8,7 @@ import ReactFlow, {
   ReactFlowProvider
 } from "reactflow";
 import "reactflow/dist/style.css";
-import { matchesSearch, useVektraStore } from "../store/vektraStore";
+import { useVektraStore } from "../store/vektraStore";
 import { getLayoutedElements } from "../utils/graphLayout";
 import { ZoomIn, ZoomOut, Maximize2, RotateCcw } from "lucide-react";
 
@@ -66,8 +66,7 @@ function FlowCanvas() {
     edges: rawEdges, 
     stats, 
     selectNode,
-    selectedNodeId,
-    searchQuery
+    selectedNodeId
   } = useVektraStore();
   
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
@@ -77,12 +76,9 @@ function FlowCanvas() {
 
   // Layout and load elements when raw rules/edges change
   useEffect(() => {
-    const filteredRawNodes = rawNodes.filter((node) => matchesSearch(node, searchQuery));
-    const visibleNodeIds = new Set(filteredRawNodes.map((node) => node.id));
-    const filteredRawEdges = rawEdges.filter((edge) => visibleNodeIds.has(edge.source) && visibleNodeIds.has(edge.target));
     const { nodes: layoutedNodes, edges: layoutedEdges } = getLayoutedElements(
-      filteredRawNodes,
-      filteredRawEdges,
+      rawNodes, 
+      rawEdges, 
       stats.most_dangerous_rule
     );
     setNodes(layoutedNodes);
@@ -92,7 +88,7 @@ function FlowCanvas() {
     setTimeout(() => {
       fitView({ padding: 0.2 });
     }, 100);
-  }, [rawNodes, rawEdges, searchQuery, stats.most_dangerous_rule, setNodes, setEdges, fitView]);
+  }, [rawNodes, rawEdges, stats.most_dangerous_rule, setNodes, setEdges, fitView]);
 
   // Sync selectedNodeId state with React Flow node selection
   useEffect(() => {
@@ -107,12 +103,9 @@ function FlowCanvas() {
   };
 
   const handleResetLayout = () => {
-    const filteredRawNodes = rawNodes.filter((node) => matchesSearch(node, searchQuery));
-    const visibleNodeIds = new Set(filteredRawNodes.map((node) => node.id));
-    const filteredRawEdges = rawEdges.filter((edge) => visibleNodeIds.has(edge.source) && visibleNodeIds.has(edge.target));
     const { nodes: layoutedNodes, edges: layoutedEdges } = getLayoutedElements(
-      filteredRawNodes,
-      filteredRawEdges,
+      rawNodes, 
+      rawEdges, 
       stats.most_dangerous_rule
     );
     setNodes(layoutedNodes);

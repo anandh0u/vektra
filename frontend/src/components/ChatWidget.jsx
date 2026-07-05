@@ -48,11 +48,38 @@ export default function ChatWidget() {
         className="flex-1 p-4 overflow-y-auto space-y-3 min-h-[160px] max-h-[300px]"
       >
         {chatHistory.length === 0 ? (
-          <div className="h-full flex flex-col items-center justify-center text-center p-4">
-            <Bot className="w-8 h-8 text-muted/40 mb-2" />
-            <p className="text-[11px] text-muted leading-relaxed max-w-[180px]">
-              Ask questions about the active policy statement, vulnerability details, or suggested fixes.
-            </p>
+          <div className="h-full flex flex-col items-center justify-center text-center p-4 space-y-4">
+            <div className="space-y-1.5">
+              <Bot className="w-8 h-8 text-muted/40 mx-auto" />
+              <p className="text-[11px] text-muted leading-relaxed max-w-[180px]">
+                Ask questions about the active policy statement, vulnerability details, or suggested fixes.
+              </p>
+            </div>
+
+            <div className="w-full space-y-1.5 pt-1">
+              <span className="text-[9px] font-bold text-muted uppercase tracking-wider block text-left px-1">Suggested Queries</span>
+              <button
+                type="button"
+                onClick={() => sendChatMessage("Explain the privilege escalation risks in this policy.")}
+                className="w-full text-left px-2.5 py-1.5 bg-[#141628]/60 border border-[#1e2240] hover:border-primary/50 text-[10px] text-slate-300 rounded-lg transition-all duration-200 block truncate"
+              >
+                🔍 Explain escalation risks
+              </button>
+              <button
+                type="button"
+                onClick={() => sendChatMessage("How can I safely narrow down the wildcard '*' access?")}
+                className="w-full text-left px-2.5 py-1.5 bg-[#141628]/60 border border-[#1e2240] hover:border-primary/50 text-[10px] text-slate-300 rounded-lg transition-all duration-200 block truncate"
+              >
+                🛠️ How to fix wildcard access
+              </button>
+              <button
+                type="button"
+                onClick={() => sendChatMessage("What are the best remediation steps for the critical vulnerabilities identified?")}
+                className="w-full text-left px-2.5 py-1.5 bg-[#141628]/60 border border-[#1e2240] hover:border-primary/50 text-[10px] text-slate-300 rounded-lg transition-all duration-200 block truncate"
+              >
+                🛡️ Suggest remediation details
+              </button>
+            </div>
           </div>
         ) : (
           chatHistory.map((msg, idx) => {
