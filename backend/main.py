@@ -845,3 +845,26 @@ async def delete_account(body: DeleteAccountRequest, http_request: Request):
         raise HTTPException(status_code=400, detail="Must type 'DELETE' to confirm deletion.")
     await neo4j_client.delete_user(user["id"])
     return {"status": "ok"}
+
+
+# ---------------------------------------------------------------------------
+# Vercel strips the /api prefix before forwarding to FastAPI.
+# Register alias routes WITHOUT the /api prefix so both local dev and
+# production work correctly without relying on middleware path-rewriting.
+# ---------------------------------------------------------------------------
+app.add_api_route("/auth/register",         register,              methods=["POST"])
+app.add_api_route("/auth/login",            login,                 methods=["POST"])
+app.add_api_route("/auth/me",               me,                    methods=["GET"])
+app.add_api_route("/auth/logout",           logout,                methods=["POST"])
+app.add_api_route("/auth/profile",          update_profile,        methods=["PATCH"])
+app.add_api_route("/auth/change-password",  change_password,       methods=["POST"])
+app.add_api_route("/auth/notifications",    update_notifications,  methods=["PATCH"])
+app.add_api_route("/auth/account",          delete_account,        methods=["DELETE"])
+app.add_api_route("/analyze/rerun",         rerun_analysis,        methods=["POST"])
+app.add_api_route("/report/save",           save_report_endpoint,  methods=["POST"])
+app.add_api_route("/history",               get_history,           methods=["GET"])
+app.add_api_route("/report/{session_id}",   get_report,            methods=["GET"])
+app.add_api_route("/wallet",                get_wallet,            methods=["GET"])
+app.add_api_route("/wallet/upgrade",        upgrade_wallet,        methods=["POST"])
+app.add_api_route("/wallet/transactions",   get_wallet_transactions, methods=["GET"])
+
