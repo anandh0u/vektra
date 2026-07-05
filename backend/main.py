@@ -96,6 +96,16 @@ app.add_middleware(
 )
 
 
+@app.middleware("http")
+async def ensure_api_prefix(request: Request, call_next):
+    path = request.scope.get("path", "")
+    if not path.startswith("/api") and not any(path.startswith(x) for x in ["/docs", "/openapi.json", "/redoc", "/favicon.ico"]):
+        request.scope["path"] = "/api" + path
+        if "raw_path" in request.scope:
+            request.scope["raw_path"] = b"/api" + request.scope["raw_path"]
+    return await call_next(request)
+
+
 class AnalyzeRequest(BaseModel):
     policy_text: str
     format: str
