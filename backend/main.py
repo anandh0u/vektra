@@ -52,20 +52,34 @@ logger = logging.getLogger("vektra.main")
 
 app = FastAPI(title="VEKTRA API", version="1.0.0")
 neo4j_client = Neo4jClient()
+neo4j_verify_task: Optional[asyncio.Task] = None
+
+
+def schedule_neo4j_verify() -> Optional[asyncio.Task]:
+    global neo4j_verify_task
+    if neo4j_client.connected or not neo4j_client.driver:
+        return None
+    if neo4j_verify_task and not neo4j_verify_task.done():
+        return neo4j_verify_task
+    neo4j_verify_task = asyncio.create_task(neo4j_client.verify_connection_async())
+    return neo4j_verify_task
 
 @app.on_event("startup")
 async def startup_event():
-    # Asynchronously connect to Neo4j to prevent blocking the startup thread
-    asyncio.create_task(neo4j_client.verify_connection_async())
+    # Warm Neo4j in the background so serverless startup stays responsive.
+    schedule_neo4j_verify()
 
 
-async def ensure_neo4j_ready(timeout: float = 3.0) -> bool:
+async def ensure_neo4j_ready(timeout: float = 6.0) -> bool:
     if neo4j_client.connected:
         return True
     if not neo4j_client.driver:
         return False
+    task = schedule_neo4j_verify()
+    if not task:
+        return False
     try:
-        return await asyncio.wait_for(neo4j_client.verify_connection_async(), timeout=timeout)
+        return await asyncio.wait_for(asyncio.shield(task), timeout=timeout)
     except asyncio.TimeoutError:
         logger.warning("Neo4j connection verification timed out after %.1fs.", timeout)
     except Exception as exc:
@@ -184,7 +198,7 @@ async def resolve_request_user(request: Request, required: bool = False) -> dict
 
 @app.get("/api/health")
 async def health_check():
-    neo4j_ok = neo4j_client.connected or await ensure_neo4j_ready(timeout=2.0)
+    neo4j_ok = neo4j_client.connected or await ensure_neo4j_ready(timeout=6.0)
     base44_ok = bool(
         (os.getenv("BASE44_API_KEY") or "1ec5cf39c2ff457c9686d35b1c5650d0") and
         (os.getenv("BASE44_APP_ID") or "6a494c246e43fac149974886")
@@ -362,7 +376,7 @@ async def analyze_policy(
         logger.exception("Graph analysis failed.")
         raise HTTPException(status_code=500, detail=f"Graph analysis failed: {exc}") from exc
 
-    await ensure_neo4j_ready(timeout=2.0)
+    await ensure_neo4j_ready(timeout=6.0)
     neo4j_client.clear_session(session_id)
     neo4j_client.write_rules(analysis_result.rules, session_id)
     neo4j_client.write_edges(analysis_result.edges, session_id)
