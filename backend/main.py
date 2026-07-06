@@ -83,6 +83,8 @@ def schedule_neo4j_verify() -> Optional[asyncio.Task]:
 async def startup_event():
     # Warm Neo4j in the background so serverless startup stays responsive.
     schedule_neo4j_verify()
+    # Inject shared neo4j client into workflow_steps so all steps use one connection
+    workflow_steps.neo4j = neo4j_client
 
 
 async def ensure_neo4j_ready(timeout: float = 6.0) -> bool:
@@ -724,46 +726,48 @@ async def internal_finalize(body: dict):
 async def trigger_workflow(body: dict):
     session_id = body.get("session_id", str(uuid.uuid4()))
 
+    # Ensure neo4j is injected into workflow_steps (idempotent)
+    workflow_steps.neo4j = neo4j_client
+
     # Store initial payload in Neo4j
     await neo4j_client.save_workflow_state(
         session_id,
         "workflow-trigger",
         "started",
         {
-            "format": body["format"],
-            "policy_length": len(body["policy_text"]),
+            "format": body.get("format", ""),
+            "policy_length": len(body.get("policy_text", "")),
             "triggered_at": datetime.now().isoformat(),
         },
         0,
     )
 
-    # For local development, we'll run the workflow synchronously
-    # In production on Render, this would trigger the actual workflow
     try:
-        # Step 1: Parse
+        # Step 1: Parse policy
         await workflow_steps.step_parse(body)
 
-        # Step 2: Build Graph
+        # Step 2: Build graph (depends on step 1)
         await workflow_steps.step_build_graph({"session_id": session_id})
 
-        # Step 3A: Save to Neo4j
-        await workflow_steps.step_save_graph({"session_id": session_id})
-
-        # Step 3B: Save to Base44
-        await workflow_steps.step_save_history({"session_id": session_id})
-
-        # Step 4: Run Analysts
-        await workflow_steps.step_run_analysts({"session_id": session_id})
-
-        # Step 5: Run Fixes
-        await workflow_steps.step_run_fixes(
-            {"session_id": session_id, "policy_text": body["policy_text"]}
+        # Steps 3A + 3B: Run SIMULTANEOUSLY — Neo4j save and Base44 history
+        await asyncio.gather(
+            workflow_steps.step_save_graph({"session_id": session_id}),
+            workflow_steps.step_save_history({"session_id": session_id}),
+            return_exceptions=True,  # don't let Base44 failure kill Neo4j save
         )
 
-        # Step 6: Run Scorer
+        # Step 4: Run all vulnerability analysts in parallel (internal to step)
+        await workflow_steps.step_run_analysts({"session_id": session_id})
+
+        # Step 5: Run all fix engineers in parallel (CRITICAL + WARNING only)
+        await workflow_steps.step_run_fixes(
+            {"session_id": session_id, "policy_text": body.get("policy_text", "")}
+        )
+
+        # Step 6: Risk scorer (depends on step 5)
         await workflow_steps.step_run_scorer({"session_id": session_id})
 
-        # Step 7: Finalize
+        # Step 7: Finalize — aggregates all previous outputs
         await workflow_steps.step_finalize(
             {"session_id": session_id, "user_id": body.get("user_id")}
         )
@@ -1014,4 +1018,6 @@ app.add_api_route("/report/{session_id}",   get_report,            methods=["GET
 app.add_api_route("/wallet",                get_wallet,            methods=["GET"])
 app.add_api_route("/wallet/upgrade",        upgrade_wallet,        methods=["POST"])
 app.add_api_route("/wallet/transactions",   get_wallet_transactions, methods=["GET"])
+app.add_api_route("/workflow/analyze",      trigger_workflow,      methods=["POST"])
+app.add_api_route("/workflow/status/{session_id}", workflow_status, methods=["GET"])
 
