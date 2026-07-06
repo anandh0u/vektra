@@ -1,0 +1,129 @@
+{
+  "session_id": "session-sample-12345",
+  "workflow_state": {
+    "session_id": "session-sample-12345",
+    "is_complete": true,
+    "is_failed": false,
+    "steps_complete": [
+      "workflow-trigger",
+      "step-1-parse",
+      "step-2-graph",
+      "step-3-neo4j",
+      "step-3-base44",
+      "step-4-agents",
+      "step-5-fixes",
+      "step-6-score",
+      "step-7-finalize"
+    ],
+    "steps_failed": [],
+    "total_steps": 8,
+    "progress_pct": 100,
+    "step_timings": {
+      "workflow-trigger": 0,
+      "step-1-parse": 1245,
+      "step-2-graph": 2890,
+      "step-3-neo4j": 1567,
+      "step-3-base44": 892,
+      "step-4-agents": 7843,
+      "step-5-fixes": 6234,
+      "step-6-score": 2134,
+      "step-7-finalize": 456
+    },
+    "result": {
+      "session_id": "session-sample-12345",
+      "nodes": [
+        {
+          "id": "rule-001",
+          "effect": "Allow",
+          "actions": ["s3:PutObject"],
+          "resources": ["arn:aws:s3:::prod-bucket/*"],
+          "principals": ["user:alice"],
+          "severity": "CRITICAL",
+          "centrality_score": 0.85
+        },
+        {
+          "id": "rule-002",
+          "effect": "Deny",
+          "actions": ["s3:PutObject"],
+          "resources": ["arn:aws:s3:::prod-bucket/*"],
+          "principals": ["user:alice"],
+          "severity": "CRITICAL",
+          "centrality_score": 0.72
+        }
+      ],
+      "edges": [
+        {
+          "source": "rule-001",
+          "target": "rule-002",
+          "type": "CONFLICTS_WITH",
+          "severity": "CRITICAL",
+          "vulnerability_id": "V01-001"
+        }
+      ],
+      "vulnerabilities": [
+        {
+          "id": "V01-001",
+          "severity": "CRITICAL",
+          "type": "V01_ALLOW_DENY_DIRECT_CONFLICT",
+          "code": "V01",
+          "title": "Direct Allow/Deny conflict on overlapping permission scope",
+          "rule_a": "rule-001",
+          "rule_b": "rule-002",
+          "affected_rules": ["rule-001", "rule-002"],
+          "actions": ["s3:PutObject"],
+          "resources": ["arn:aws:s3:::prod-bucket/*"],
+          "effect_a": "Allow",
+          "effect_b": "Deny",
+          "edge_type": "CONFLICTS_WITH",
+          "agent1": {
+            "danger_summary": "Direct Allow/Deny conflict on s3:PutObject for prod-bucket creates ambiguity in permission evaluation.",
+            "attack_scenario": "An attacker could exploit the ambiguity to bypass intended security controls or gain unauthorized access.",
+            "exploitability_score": 8,
+            "attacker_capability_required": "Access to user:alice principal"
+          },
+          "agent2": {
+            "fix_description": "Remove the conflicting Deny statement or narrow the Allow statement to non-overlapping resources.",
+            "fixed_policy_block": "// Remove conflicting Deny statement\n{\n  \"Sid\": \"AllowS3PutObjectSpecific\",\n  \"Effect\": \"Allow\",\n  \"Action\": \"s3:PutObject\",\n  \"Resource\": \"arn:aws:s3:::prod-bucket/uploads/*\"\n}",
+            "what_changed": "Removed Deny statement and narrowed Allow resource scope",
+            "confidence": "HIGH",
+            "principle_applied": "Conflict resolution and least privilege"
+          }
+        }
+      ],
+      "critical_paths": [
+        {
+          "rules": ["rule-001", "rule-002"],
+          "relationships": ["CONFLICTS_WITH"],
+          "depth": 2
+        }
+      ],
+      "stats": {
+        "total_rules": 2,
+        "vulnerabilities_found": 1,
+        "critical_count": 1,
+        "warning_count": 0,
+        "risk_score": 75,
+        "risk_label": "HIGH",
+        "executive_summary": "VEKTRA detected 1 critical vulnerability in the IAM policy. A direct Allow/Deny conflict on s3:PutObject for prod-bucket creates permission ambiguity that could be exploited.",
+        "top_3_priorities": [
+          "Resolve V01_ALLOW_DENY_DIRECT_CONFLICT: Direct Allow/Deny conflict on overlapping permission scope",
+          "Review least-privilege boundaries and rerun VEKTRA after changes.",
+          "Review remaining vulnerable policy paths."
+        ],
+        "compliance_notes": "Review against SOC 2, ISO 27001, PCI-DSS, and CIS Benchmark least-privilege controls.",
+        "most_dangerous_rule": "rule-001"
+      },
+      "credits_deducted": 0,
+      "credits_remaining": null,
+      "workflow_complete": true
+    }
+  },
+  "exported_at": "2026-07-07T00:30:00.000Z",
+  "workflow_metadata": {
+    "total_duration_ms": 23261,
+    "parallel_steps": ["step-3-neo4j", "step-3-base44"],
+    "parallel_execution_time_saved_ms": 708,
+    "ai_agent_calls": 1,
+    "neo4j_writes": 2
+  }
+}

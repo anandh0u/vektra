@@ -5,7 +5,7 @@ import os
 import sys
 import types
 import uuid
-from datetime import date
+from datetime import date, datetime
 from pathlib import Path
 from typing import Dict, List, Optional
 
@@ -36,6 +36,7 @@ from backend.graph.analyzer import build_and_analyze
 from backend.graph.neo4j_client import Neo4jClient
 from backend.parser.iam_parser import parse_iam_policy
 from backend.parser.k8s_parser import parse_k8s_rbac
+from backend import workflow_steps
 from backend.base44_client import (
     save_scan_history,
     save_report,
@@ -669,6 +670,152 @@ async def chat_sse(
 
 
 app.add_api_route("/chat", chat_sse, methods=["POST"])
+
+
+# ============================================================================
+# WORKFLOW INTERNAL STEP ENDPOINTS
+# ============================================================================
+
+@app.post("/api/internal/parse")
+async def internal_parse(body: dict):
+    return await workflow_steps.step_parse(body)
+
+
+@app.post("/api/internal/build-graph")
+async def internal_build_graph(body: dict):
+    return await workflow_steps.step_build_graph(body)
+
+
+@app.post("/api/internal/save-graph")
+async def internal_save_graph(body: dict):
+    return await workflow_steps.step_save_graph(body)
+
+
+@app.post("/api/internal/save-history")
+async def internal_save_history(body: dict):
+    return await workflow_steps.step_save_history(body)
+
+
+@app.post("/api/internal/run-analysts")
+async def internal_run_analysts(body: dict):
+    return await workflow_steps.step_run_analysts(body)
+
+
+@app.post("/api/internal/run-fixes")
+async def internal_run_fixes(body: dict):
+    return await workflow_steps.step_run_fixes(body)
+
+
+@app.post("/api/internal/run-scorer")
+async def internal_run_scorer(body: dict):
+    return await workflow_steps.step_run_scorer(body)
+
+
+@app.post("/api/internal/finalize")
+async def internal_finalize(body: dict):
+    return await workflow_steps.step_finalize(body)
+
+
+# ============================================================================
+# WORKFLOW TRIGGER AND STATUS ENDPOINTS
+# ============================================================================
+
+@app.post("/api/workflow/analyze")
+async def trigger_workflow(body: dict):
+    session_id = body.get("session_id", str(uuid.uuid4()))
+
+    # Store initial payload in Neo4j
+    await neo4j_client.save_workflow_state(
+        session_id,
+        "workflow-trigger",
+        "started",
+        {
+            "format": body["format"],
+            "policy_length": len(body["policy_text"]),
+            "triggered_at": datetime.now().isoformat(),
+        },
+        0,
+    )
+
+    # For local development, we'll run the workflow synchronously
+    # In production on Render, this would trigger the actual workflow
+    try:
+        # Step 1: Parse
+        await workflow_steps.step_parse(body)
+
+        # Step 2: Build Graph
+        await workflow_steps.step_build_graph({"session_id": session_id})
+
+        # Step 3A: Save to Neo4j
+        await workflow_steps.step_save_graph({"session_id": session_id})
+
+        # Step 3B: Save to Base44
+        await workflow_steps.step_save_history({"session_id": session_id})
+
+        # Step 4: Run Analysts
+        await workflow_steps.step_run_analysts({"session_id": session_id})
+
+        # Step 5: Run Fixes
+        await workflow_steps.step_run_fixes(
+            {"session_id": session_id, "policy_text": body["policy_text"]}
+        )
+
+        # Step 6: Run Scorer
+        await workflow_steps.step_run_scorer({"session_id": session_id})
+
+        # Step 7: Finalize
+        await workflow_steps.step_finalize(
+            {"session_id": session_id, "user_id": body.get("user_id")}
+        )
+
+    except Exception as e:
+        logger.exception("Workflow execution failed")
+        raise HTTPException(status_code=500, detail=str(e))
+
+    return {
+        "session_id": session_id,
+        "workflow_triggered": True,
+        "status_url": f"/api/workflow/status/{session_id}",
+    }
+
+
+@app.get("/api/workflow/status/{session_id}")
+async def workflow_status(session_id: str):
+    state = await neo4j_client.get_workflow_state(session_id)
+
+    steps_complete = [k for k, v in state.items() if v["status"] == "complete"]
+    steps_failed = [k for k, v in state.items() if v["status"] == "failed"]
+
+    all_steps = [
+        "step-1-parse",
+        "step-2-graph",
+        "step-3-neo4j",
+        "step-3-base44",
+        "step-4-agents",
+        "step-5-fixes",
+        "step-6-score",
+        "step-7-finalize",
+    ]
+
+    is_complete = "step-7-finalize" in steps_complete
+
+    # If complete, return full result
+    result = None
+    if is_complete:
+        final_step = state.get("step-7-finalize", {})
+        result = final_step.get("output")
+
+    return {
+        "session_id": session_id,
+        "is_complete": is_complete,
+        "is_failed": len(steps_failed) > 0,
+        "steps_complete": steps_complete,
+        "steps_failed": steps_failed,
+        "total_steps": len(all_steps),
+        "progress_pct": int(len(steps_complete) / len(all_steps) * 100),
+        "step_timings": {k: v["duration_ms"] for k, v in state.items()},
+        "result": result,
+    }
 
 
 @app.post("/api/report/save")

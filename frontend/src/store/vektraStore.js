@@ -308,6 +308,16 @@ export const useVektraStore = create((set, get) => ({
   selectNode: (nodeId) => set({ selectedNodeId: nodeId, selectedConflictId: null }),
   selectConflict: (conflictId) => set({ selectedConflictId: conflictId, selectedNodeId: null }),
 
+  setAnalysisResult: (result) => {
+    set({
+      nodes: result.nodes || [],
+      edges: result.edges || [],
+      conflicts: result.vulnerabilities || [],
+      stats: result.stats || defaultStats,
+      sessionId: result.session_id,
+    });
+  },
+
   // Status
   isAnalyzing: false,
   agentStatus: {
@@ -336,12 +346,76 @@ export const useVektraStore = create((set, get) => ({
     set({ recentAnalyses: [] });
   },
 
-  // Run Analysis Pipeline
+  // Run Analysis Pipeline (Workflow Mode)
   runAnalysis: async () => {
     const { policyText, format, sessionId, currentUser, authToken } = get();
     const expectedTier = currentUser?.tier || "free";
     const expectsAgents = ["pro", "team"].includes(expectedTier);
-    
+
+    set({
+      isAnalyzing: true,
+      selectedNodeId: null,
+      selectedConflictId: null,
+      chatHistory: [],
+      upgradePrompt: false,
+      lockedFeatures: [],
+      agentStatus: {
+        analyst: expectsAgents ? "running" : "idle",
+        advisor: expectsAgents ? "running" : "idle",
+        scorer: expectsAgents ? "running" : "idle",
+      }
+    });
+
+    try {
+      const response = await fetch(`${API_BASE}/api/workflow/analyze`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
+        },
+        body: JSON.stringify({
+          policy_text: policyText,
+          format: format,
+          session_id: sessionId,
+          user_id: currentUser?.id,
+        }),
+      });
+
+      if (!response.ok) {
+        const message = await parseApiError(response, "Server error occurred during analysis.");
+        if (response.status === 401) {
+          clearAuthSession();
+          set({ currentUser: null, authToken: "", authNotice: "Session expired, please sign in." });
+        }
+        throw new Error(message);
+      }
+
+      const data = await response.json();
+      // For workflow mode, we return the session_id and let the frontend navigate to the analyzing page
+      set({
+        isAnalyzing: false,
+      });
+      return data;
+    } catch (error) {
+      console.error(error);
+      set({
+        isAnalyzing: false,
+        agentStatus: {
+          analyst: "failed",
+          advisor: "failed",
+          scorer: "failed",
+        },
+      });
+      throw error;
+    }
+  },
+
+  // Run Direct Analysis (Fallback for non-workflow mode)
+  runDirectAnalysis: async () => {
+    const { policyText, format, sessionId, currentUser, authToken } = get();
+    const expectedTier = currentUser?.tier || "free";
+    const expectsAgents = ["pro", "team"].includes(expectedTier);
+
     set({
       isAnalyzing: true,
       selectedNodeId: null,

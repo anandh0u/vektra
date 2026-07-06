@@ -211,7 +211,7 @@ export default function UploadPage() {
 
   const handleStartAnalysis = async () => {
     setErrorMsg("");
-    
+
     // Auto-detect format to avoid parsing errors
     const trimmed = policyText.trim();
     let detectedFormat = format;
@@ -220,14 +220,20 @@ export default function UploadPage() {
     } else if (trimmed.includes("apiVersion:") || trimmed.includes("kind:") || trimmed.includes("rules:")) {
       detectedFormat = "k8s";
     }
-    
+
     if (detectedFormat !== format) {
       setFormat(detectedFormat);
     }
 
     try {
-      await runAnalysis();
-      navigate("/analyze");
+      const result = await runAnalysis();
+      // Navigate to the analyzing page with the session ID
+      if (result && result.session_id) {
+        navigate(`/analyzing/${result.session_id}`);
+      } else {
+        // Fallback to direct navigation if workflow fails
+        navigate("/analyze");
+      }
     } catch (e) {
       setErrorMsg(e.message || "Failed to analyze policy. Please check syntax or backend logs.");
     }

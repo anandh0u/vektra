@@ -429,3 +429,84 @@ class Neo4jClient:
                 id=user_id,
                 prefs=prefs_json,
             )
+
+    async def save_workflow_state(
+        self, session_id: str, step_name: str, status: str, output: dict, duration_ms: int
+    ):
+        if not self.driver:
+            return
+        try:
+            with self.driver.session() as session:
+                session.run(
+                    """
+                    MERGE (w:WorkflowState {session_id: $session_id, step_name: $step_name})
+                    SET w.status = $status,
+                        w.output = $output,
+                        w.duration_ms = $duration_ms,
+                        w.updated_at = $updated_at
+                    """,
+                    session_id=session_id,
+                    step_name=step_name,
+                    status=status,
+                    output=json.dumps(output),
+                    duration_ms=duration_ms,
+                    updated_at=datetime.now().isoformat(),
+                )
+        except Exception as exc:
+            logger.error("Neo4j save_workflow_state failed: %s", exc)
+
+    async def get_workflow_state(self, session_id: str) -> dict:
+        if not self.driver:
+            return {}
+        try:
+            with self.driver.session() as session:
+                result = session.run(
+                    """
+                    MATCH (w:WorkflowState {session_id: $session_id})
+                    RETURN w.step_name AS step_name, w.status AS status, w.output AS output, w.duration_ms AS duration_ms
+                    """,
+                    session_id=session_id,
+                )
+                records = result.data()
+                state = {}
+                for record in records:
+                    try:
+                        state[record["step_name"]] = {
+                            "status": record["status"],
+                            "output": json.loads(record["output"]) if record["output"] else {},
+                            "duration_ms": record["duration_ms"],
+                        }
+                    except json.JSONDecodeError:
+                        state[record["step_name"]] = {
+                            "status": record["status"],
+                            "output": {},
+                            "duration_ms": record["duration_ms"],
+                        }
+                return state
+        except Exception as exc:
+            logger.error("Neo4j get_workflow_state failed: %s", exc)
+            return {}
+
+    async def get_step_output(self, session_id: str, step_name: str) -> dict:
+        if not self.driver:
+            return {}
+        try:
+            with self.driver.session() as session:
+                result = session.run(
+                    """
+                    MATCH (w:WorkflowState {session_id: $session_id, step_name: $step_name})
+                    RETURN w.output AS output
+                    """,
+                    session_id=session_id,
+                    step_name=step_name,
+                )
+                record = result.single()
+                if record and record["output"]:
+                    try:
+                        return json.loads(record["output"])
+                    except json.JSONDecodeError:
+                        return {}
+                return {}
+        except Exception as exc:
+            logger.error("Neo4j get_step_output failed: %s", exc)
+            return {}

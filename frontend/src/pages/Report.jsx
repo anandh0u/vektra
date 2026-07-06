@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { getAuthHeaders, useVektraStore } from "../store/vektraStore";
 import Sidebar from "../components/Sidebar";
 import TopBar from "../components/TopBar";
 import ConflictCard from "../components/ConflictCard";
-import { FileText, Printer, Clipboard, Check, Sparkles, Award } from "lucide-react";
+import { FileText, Printer, Clipboard, Check, Sparkles, Award, ExternalLink } from "lucide-react";
 
 export default function ReportPage() {
+  const navigate = useNavigate();
   const { stats, conflicts, format, sessionId, policyText, nodes, edges } = useVektraStore();
   const [copied, setCopied] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -172,6 +174,15 @@ export default function ReportPage() {
                 <Printer className="w-4 h-4 text-muted" />
                 Export PDF
               </button>
+              {sessionId && (
+                <button
+                  onClick={() => navigate(`/workflow/${sessionId}`)}
+                  className="px-4 py-2 rounded-lg border border-[#1e2240] text-xs text-slate-200 hover:text-white hover:bg-[#141628] transition-all flex items-center gap-2 font-medium"
+                >
+                  <ExternalLink className="w-4 h-4 text-muted" />
+                  View Workflow Execution
+                </button>
+              )}
               <button
                 onClick={handleCopyMarkdown}
                 className="px-4 py-2 rounded-lg bg-primary hover:bg-primary/80 text-white text-xs transition-all flex items-center gap-2 font-medium"

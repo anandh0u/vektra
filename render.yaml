@@ -2,9 +2,9 @@ services:
   - type: web
     name: vektra-backend
     env: python
-    rootDir: .
-    buildCommand: pip install -r backend/requirements.txt
-    startCommand: uvicorn backend.main:app --host 0.0.0.0 --port $PORT
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
     envVars:
       - key: NEO4J_URI
         sync: false
@@ -13,6 +13,20 @@ services:
       - key: NEO4J_PASSWORD
         sync: false
       - key: SARVAM_API_KEY
+        sync: false
+      - key: BASE44_API_KEY
+        sync: false
+      - key: BASE44_APP_ID
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: STELLAR_TREASURY_SECRET
+        sync: false
+      - key: STELLAR_NETWORK
+        value: testnet
+      - key: RENDER_WORKFLOW_URL
+        value: https://api.render.com/v1/workflows
+      - key: RENDER_API_KEY
         sync: false
 
   - type: static
@@ -23,3 +37,63 @@ services:
     envVars:
       - key: VITE_API_URL
         sync: false
+
+workflows:
+  - name: policy-analysis-pipeline
+    env: python
+    rootDir: backend
+    startCommand: python -m workflow_steps
+    envVars:
+      - key: NEO4J_URI
+        sync: false
+      - key: NEO4J_USERNAME
+        value: neo4j
+      - key: NEO4J_PASSWORD
+        sync: false
+      - key: SARVAM_API_KEY
+        sync: false
+      - key: BASE44_API_KEY
+        sync: false
+      - key: BASE44_APP_ID
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: STELLAR_TREASURY_SECRET
+        sync: false
+      - key: STELLAR_NETWORK
+        value: testnet
+    triggers:
+      - type: webhook
+        provider: render
+    steps:
+      - name: step-1-parse
+        command: python -c "import httpx; httpx.post('http://localhost:8000/api/internal/parse', json={'session_id': '${RENDER_SESSION_ID}', 'policy_text': '${RENDER_INPUT_POLICY_TEXT}', 'format': '${RENDER_INPUT_FORMAT}'})"
+      - name: step-2-graph
+        command: python -c "import httpx; httpx.post('http://localhost:8000/api/internal/build-graph', json={'session_id': '${RENDER_SESSION_ID}'})"
+        dependsOn:
+          - step-1-parse
+      - name: step-3-neo4j
+        command: python -c "import httpx; httpx.post('http://localhost:8000/api/internal/save-graph', json={'session_id': '${RENDER_SESSION_ID}'})"
+        dependsOn:
+          - step-2-graph
+      - name: step-3-base44
+        command: python -c "import httpx; httpx.post('http://localhost:8000/api/internal/save-history', json={'session_id': '${RENDER_SESSION_ID}'})"
+        dependsOn:
+          - step-2-graph
+      - name: step-4-agents
+        command: python -c "import httpx; httpx.post('http://localhost:8000/api/internal/run-analysts', json={'session_id': '${RENDER_SESSION_ID}'})"
+        dependsOn:
+          - step-3-neo4j
+          - step-3-base44
+      - name: step-5-fixes
+        command: python -c "import httpx; httpx.post('http://localhost:8000/api/internal/run-fixes', json={'session_id': '${RENDER_SESSION_ID}', 'policy_text': '${RENDER_INPUT_POLICY_TEXT}'})"
+        dependsOn:
+          - step-4-agents
+      - name: step-6-score
+        command: python -c "import httpx; httpx.post('http://localhost:8000/api/internal/run-scorer', json={'session_id': '${RENDER_SESSION_ID}'})"
+        dependsOn:
+          - step-5-fixes
+      - name: step-7-finalize
+        command: python -c "import httpx; httpx.post('http://localhost:8000/api/internal/finalize', json={'session_id': '${RENDER_SESSION_ID}', 'user_id': '${RENDER_INPUT_USER_ID}'})"
+        dependsOn:
+          - step-6-score

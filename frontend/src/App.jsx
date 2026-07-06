@@ -10,6 +10,8 @@ import PricingPage from "./pages/Pricing";
 import HistoryPage from "./pages/History";
 import DashboardPage from "./pages/Dashboard";
 import WalletPage from "./pages/Wallet";
+import AnalyzingPage from "./pages/Analyzing";
+import WorkflowEvidencePage from "./pages/WorkflowEvidence";
 
 function ProtectedRoute({ children }) {
   const { currentUser } = useVektraStore();
@@ -44,13 +46,19 @@ export default function App() {
 
         {/* Upload Landing Page */}
         <Route path="/" element={<UploadPage />} />
-        
+
+        {/* Workflow Progress Page */}
+        <Route path="/analyzing/:sessionId" element={<AnalyzingPage />} />
+
+        {/* Workflow Evidence Page */}
+        <Route path="/workflow/:sessionId" element={<WorkflowEvidencePage />} />
+
         {/* Graph Analysis Dashboard */}
         <Route path="/analyze" element={<GraphPage />} />
-        
+
         {/* Printable Security Report */}
         <Route path="/report" element={<ReportPage />} />
-        
+
         {/* Legacy Credit Store */}
         <Route path="/store" element={<Navigate to="/pricing" replace />} />
 
@@ -62,7 +70,7 @@ export default function App() {
 
         {/* Account Scan History */}
         <Route path="/history" element={<ProtectedRoute><HistoryPage /></ProtectedRoute>} />
-        
+
         {/* Settings Console */}
         <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
 
