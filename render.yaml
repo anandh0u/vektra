@@ -2,6 +2,7 @@ services:
   - type: web
     name: vektra-backend
     env: python
+    pythonVersion: "3.11.9"
     rootDir: backend
     buildCommand: pip install -r requirements.txt
     startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
