@@ -115,11 +115,12 @@ export default function DashboardPage() {
     Info: item.info_count || 0,
   }));
 
-  // Sparkline data (simple arrays for sparkline chart)
-  const sparklineData1 = [5, 10, 8, 15, 20, 18, 22];
-  const sparklineData2 = [2, 4, 3, 5, 8, 6, 9];
-  const sparklineData3 = [1, 2, 2, 4, 6, 5, 7];
-  const sparklineData4 = [10, 15, 13, 20, 25, 22, 28];
+  // Sparkline data (simple arrays for sparkline chart mapped from historyItems)
+  const last7Scans = [...historyItems].slice(0, 7).reverse();
+  const sparklineData1 = last7Scans.length >= 2 ? last7Scans.map((x, i) => i + 1) : [1, 2, 3, 4, 5];
+  const sparklineData2 = last7Scans.length >= 2 ? last7Scans.map(x => x.critical_count || 0) : [0, 0, 0, 0, 0];
+  const sparklineData3 = last7Scans.length >= 2 ? last7Scans.map(x => (x.critical_count || 0) + (x.warning_count || 0)) : [0, 0, 0, 0, 0];
+  const sparklineData4 = last7Scans.length >= 2 ? last7Scans.map(x => x.risk_score || 0) : [0, 0, 0, 0, 0];
 
   const handleNextTip = () => {
     setTipIndex((prev) => (prev + 1) % SECURITY_TIPS.length);
