@@ -666,7 +666,8 @@ async def chat_sse(
                             yield f"data: {json.dumps({'response': payload})}\n\n"
         except Exception as exc:
             logger.warning("Sarvam chat stream failed: %s", exc)
-            yield f"data: {json.dumps({'response': f'\\n[Error streaming from Sarvam: {exc}]'})}\n\n"
+            error_msg = "\n[Error streaming from Sarvam: " + str(exc) + "]"
+            yield f"data: {json.dumps({'response': error_msg})}\n\n"
 
     return StreamingResponse(stream(), media_type="text/event-stream")
 
