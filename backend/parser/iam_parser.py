@@ -168,9 +168,18 @@ def _parse_role_document(doc: Dict[str, Any], index: int) -> List[Rule]:
     return rules
 
 
+def _strip_comments(text: str) -> str:
+    # Strip /* ... */ multi-line comments
+    text = re.sub(r"/\*.*?\*/", "", text, flags=re.DOTALL)
+    # Strip // ... single-line comments (except when part of a URL like https://)
+    text = re.sub(r"(?<!:)\/\/.*", "", text)
+    return text
+
+
 def parse_iam_policy(policy_text: str) -> List[Rule]:
+    cleaned_text = _strip_comments(policy_text)
     try:
-        policy = json.loads(policy_text)
+        policy = json.loads(cleaned_text)
     except json.JSONDecodeError as exc:
         raise ValueError(f"Invalid JSON format: {exc}") from exc
 

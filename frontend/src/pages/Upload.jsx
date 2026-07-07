@@ -213,11 +213,30 @@ export default function UploadPage() {
     setErrorMsg("");
 
     // Auto-detect format to avoid parsing errors
-    const trimmed = policyText.trim();
+    let cleanText = policyText.trim();
+    // Strip leading comments
+    while (cleanText.startsWith("//") || cleanText.startsWith("/*") || cleanText.startsWith("#")) {
+      if (cleanText.startsWith("//") || cleanText.startsWith("#")) {
+        const eol = cleanText.indexOf("\n");
+        if (eol === -1) {
+          cleanText = "";
+          break;
+        }
+        cleanText = cleanText.substring(eol).trim();
+      } else if (cleanText.startsWith("/*")) {
+        const end = cleanText.indexOf("*/");
+        if (end === -1) {
+          cleanText = "";
+          break;
+        }
+        cleanText = cleanText.substring(end + 2).trim();
+      }
+    }
+
     let detectedFormat = format;
-    if (trimmed.startsWith("{") || trimmed.startsWith("[")) {
+    if (cleanText.startsWith("{") || cleanText.startsWith("[")) {
       detectedFormat = "iam";
-    } else if (trimmed.includes("apiVersion:") || trimmed.includes("kind:") || trimmed.includes("rules:")) {
+    } else if (cleanText.includes("apiVersion:") || cleanText.includes("kind:") || cleanText.includes("rules:")) {
       detectedFormat = "k8s";
     }
 

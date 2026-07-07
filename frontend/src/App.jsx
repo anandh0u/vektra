@@ -34,6 +34,14 @@ export default function App() {
     if (savedPrimary) document.documentElement.style.setProperty("--color-primary", savedPrimary);
     if (savedSecondary) document.documentElement.style.setProperty("--color-secondary", savedSecondary);
 
+    // Wake up backend in background on load
+    const API_BASE =
+      import.meta.env.VITE_API_URL ||
+      (typeof window !== "undefined" && !["localhost", "127.0.0.1"].includes(window.location.hostname)
+        ? ""
+        : "http://localhost:8000");
+    fetch(`${API_BASE}/api/health`).catch(() => {});
+
     refreshCurrentUser();
   }, [refreshCurrentUser]);
 
