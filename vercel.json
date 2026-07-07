@@ -3,10 +3,16 @@
     "frontend": {
       "entrypoint": "frontend",
       "routePrefix": "/"
-    },
-    "backend": {
-      "entrypoint": "backend/main.py",
-      "routePrefix": "/api"
     }
-  }
+  },
+  "rewrites": [
+    {
+      "source": "/api/:path*",
+      "destination": "https://vektra.onrender.com/api/:path*"
+    },
+    {
+      "source": "/workflow/:path*",
+      "destination": "https://vektra.onrender.com/workflow/:path*"
+    }
+  ]
 }
