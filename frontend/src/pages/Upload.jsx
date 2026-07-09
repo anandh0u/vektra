@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useVektraStore } from "../store/vektraStore";
-import { Upload, FileCode, Play, Loader2, Sparkles, Network, Activity } from "lucide-react";
+import { Upload, FileCode, Play, Loader2, Sparkles, Network, Activity, ShieldAlert, Cpu, ArrowRight } from "lucide-react";
 import AuthNav from "../components/AuthNav";
 
 const HARDCODED_SAMPLE_IAM = `{
@@ -139,6 +139,44 @@ roleRef:
   name: secret-reader
   apiGroup: rbac.authorization.k8s.io`;
 
+function SecurityGraphVisual() {
+  return (
+    <div className="w-full py-4 bg-[#12161F]/40 border border-[#232838] rounded-[6px] overflow-hidden relative">
+      <div className="absolute top-2 left-3 flex items-center gap-1.5 text-[9px] font-bold text-muted uppercase tracking-wider font-mono">
+        <Activity className="w-3 h-3 text-[#4C8DFF]" />
+        <span>Vulnerable Pathway Mapping Simulator</span>
+      </div>
+      <svg className="w-full h-40 text-[#8A93A6]" viewBox="0 0 600 160" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M120 80 H 260" stroke="#232838" strokeWidth="1.5" strokeDasharray="4" className="animate-[flow-dash_2s_linear_infinite]" />
+        <path d="M260 80 L 400 40" stroke="#FF5C4D" strokeWidth="1.5" strokeDasharray="4" className="animate-[flow-dash_1.5s_linear_infinite]" />
+        <path d="M260 80 L 400 120" stroke="#232838" strokeWidth="1.5" />
+        <path d="M400 40 H 530" stroke="#FF5C4D" strokeWidth="2" strokeDasharray="4" className="animate-[flow-dash_1s_linear_infinite]" />
+        
+        {/* Node 1: Identity */}
+        <circle cx="120" cy="80" r="16" fill="#12161F" stroke="#232838" strokeWidth="1.5" />
+        <text x="120" y="83" textAnchor="middle" fill="#E8EAED" fontSize="8" fontFamily="JetBrains Mono">User</text>
+        
+        {/* Node 2: Role */}
+        <circle cx="260" cy="80" r="20" fill="#1A1F2B" stroke="#4C8DFF" strokeWidth="1.5" />
+        <text x="260" y="83" textAnchor="middle" fill="#E8EAED" fontSize="8" fontFamily="JetBrains Mono">Role</text>
+        
+        {/* Node 3: Escalate Policy */}
+        <circle cx="400" cy="40" r="16" fill="#1A1F2B" stroke="#FF5C4D" strokeWidth="1.5" className="animate-pulse" />
+        <text x="400" y="43" textAnchor="middle" fill="#FF5C4D" fontSize="8" fontFamily="JetBrains Mono">Policy</text>
+        
+        {/* Node 4: S3 Bucket */}
+        <circle cx="400" cy="120" r="16" fill="#12161F" stroke="#232838" strokeWidth="1.5" />
+        <text x="400" y="143" textAnchor="middle" fill="#8A93A6" fontSize="7" fontFamily="Inter">S3 Bucket</text>
+        <text x="400" y="123" textAnchor="middle" fill="#E8EAED" fontSize="8" fontFamily="JetBrains Mono">Data</text>
+        
+        {/* Node 5: Admin */}
+        <rect x="512" y="22" width="36" height="36" rx="6" fill="#1A1F2B" stroke="#FF5C4D" strokeWidth="1.5" />
+        <text x="530" y="44" textAnchor="middle" fill="#FF5C4D" fontSize="8" fontFamily="JetBrains Mono">Admin</text>
+      </svg>
+    </div>
+  );
+}
+
 export default function UploadPage() {
   const navigate = useNavigate();
   const { 
@@ -150,7 +188,8 @@ export default function UploadPage() {
     isAnalyzing,
     currentUser,
     authNotice,
-    setAuthNotice
+    setAuthNotice,
+    setDemoMode
   } = useVektraStore();
 
   const [dragActive, setDragActive] = useState(false);
@@ -160,7 +199,6 @@ export default function UploadPage() {
   const isFree = tier === "free";
   const agentsUnlocked = ["pro", "team"].includes(tier);
 
-  // Clear policyText on mount
   useEffect(() => {
     setPolicyText("");
   }, [setPolicyText]);
@@ -195,6 +233,7 @@ export default function UploadPage() {
     const reader = new FileReader();
     const fileName = file.name.toLowerCase();
     
+    setDemoMode(false);
     reader.onload = (event) => {
       const content = event.target.result;
       setPolicyText(content);
@@ -212,9 +251,7 @@ export default function UploadPage() {
   const handleStartAnalysis = async () => {
     setErrorMsg("");
 
-    // Auto-detect format to avoid parsing errors
     let cleanText = policyText.trim();
-    // Strip leading comments
     while (cleanText.startsWith("//") || cleanText.startsWith("/*") || cleanText.startsWith("#")) {
       if (cleanText.startsWith("//") || cleanText.startsWith("#")) {
         const eol = cleanText.indexOf("\n");
@@ -246,11 +283,9 @@ export default function UploadPage() {
 
     try {
       const result = await runAnalysis();
-      // Navigate to the analyzing page with the session ID
       if (result && result.session_id) {
         navigate(`/analyzing/${result.session_id}`);
       } else {
-        // Fallback to direct navigation if workflow fails
         navigate("/analyze");
       }
     } catch (e) {
@@ -258,7 +293,26 @@ export default function UploadPage() {
     }
   };
 
+  const handleTryDemo = async () => {
+    setErrorMsg("");
+    setFormat("iam");
+    setPolicyText(HARDCODED_SAMPLE_IAM);
+    setDemoMode(true);
+
+    try {
+      const result = await runAnalysis();
+      if (result && result.session_id) {
+        navigate(`/analyzing/${result.session_id}`);
+      } else {
+        navigate("/analyze");
+      }
+    } catch (e) {
+      setErrorMsg(e.message || "Failed to initialize demo session. Please try again.");
+    }
+  };
+
   const handleLoadSample = (sampleType) => {
+    setDemoMode(false);
     if (sampleType === "iam") {
       setFormat("iam");
       setPolicyText(HARDCODED_SAMPLE_IAM);
@@ -269,109 +323,106 @@ export default function UploadPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0d0f1a] flex flex-col justify-between select-none relative">
+    <div className="min-h-screen bg-pageBg text-textMain flex flex-col justify-between selection:bg-primary/20 relative">
       
-      {/* Credits Widget (Top Right of Page if Logged In) */}
-      {currentUser && (
-        <div className="fixed top-20 right-8 z-40 bg-[#141628] border border-primary/40 rounded-xl px-4 py-2 shadow-[0_0_15px_rgba(124,58,237,0.2)] text-xs text-slate-200">
-          You have <span className="text-primary font-bold">{credits} credits</span> · Full scan costs <span className="text-secondary font-bold">5</span>
-        </div>
-      )}
-
       {/* ── TOP NAV ── */}
-      <header className="h-16 flex items-center justify-between px-8 border-b border-[#1e2240] bg-[#0a0c16]/50 backdrop-blur-md z-30">
-        <div className="flex items-center gap-2">
-          <div className="bg-gradient-to-tr from-primary to-secondary p-1.5 rounded-lg">
-            <Network className="w-5 h-5 text-white" />
+      <header className="h-16 flex items-center justify-between px-8 border-b border-cardBorder bg-[#0B0E14] z-30">
+        <div className="flex items-center gap-2.5">
+          <div className="bg-cardSurface border border-cardBorder p-1.5 rounded-[6px]">
+            <Network className="w-5 h-5 text-primary" />
           </div>
           <span 
             onClick={() => currentUser ? navigate("/dashboard") : navigate("/")}
-            className="font-heading font-bold text-xl tracking-wider bg-gradient-to-r from-white via-slate-200 to-secondary bg-clip-text text-transparent cursor-pointer"
+            className="font-sans font-bold text-sm tracking-wide text-textMain cursor-pointer"
           >
             VEKTRA
           </span>
         </div>
-        <div className="flex gap-2">
+        <div className="flex items-center gap-2.5">
           <button 
             onClick={() => handleLoadSample("iam")}
-            className="px-3 py-1.5 rounded-lg border border-[#1e2240] text-xs text-muted hover:text-slate-200 hover:bg-[#141628] transition-all duration-200"
+            className="px-2.5 py-1.5 rounded-[6px] border border-cardBorder text-xs text-muted hover:text-textMain hover:bg-cardSurface transition-fast"
           >
-            Load Sample IAM
+            Sample IAM
           </button>
           <button 
             onClick={() => handleLoadSample("k8s")}
-            className="px-3 py-1.5 rounded-lg border border-[#1e2240] text-xs text-muted hover:text-slate-200 hover:bg-[#141628] transition-all duration-200"
+            className="px-2.5 py-1.5 rounded-[6px] border border-cardBorder text-xs text-muted hover:text-textMain hover:bg-cardSurface transition-fast"
           >
-            Load Sample RBAC
+            Sample RBAC
           </button>
-          <div className="ml-2">
-            <AuthNav />
-          </div>
+          <div className="h-4 w-[1px] bg-cardBorder mx-1" />
+          <AuthNav />
         </div>
       </header>
 
       {/* ── MAIN CONTENT ── */}
-      <main className="flex-1 flex flex-col items-center justify-center max-w-6xl w-full mx-auto px-6 py-12 space-y-10 z-10">
+      <main className="flex-1 flex flex-col max-w-5xl w-full mx-auto px-8 py-16 space-y-12 z-10">
         
         {/* Hero Area */}
-        <div className="text-center space-y-4 max-w-2xl">
+        <div className="text-center space-y-4 max-w-2xl mx-auto">
           {authNotice && (
             <button
               onClick={() => setAuthNotice("")}
-              className="mx-auto block rounded-lg border border-warning/30 bg-warning/10 px-4 py-2 text-xs font-semibold text-warning"
+              className="mx-auto block rounded-[6px] border border-warning/20 bg-warning/5 px-3.5 py-1 text-[11px] font-semibold text-warning transition-fast hover:bg-warning/10 animate-pulse"
             >
               {authNotice}
             </button>
           )}
-          <h1 className="font-heading font-bold text-4xl md:text-5xl leading-tight text-white tracking-tight">
-            Find the rules that <br />
-            <span className="bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
-              will break you.
-            </span>
+          <h1 className="font-sans font-bold text-4xl tracking-tight leading-[1.1] text-textMain">
+            Cloud policy risk analysis.<br/>
+            <span className="text-primary font-semibold">Deterministic attack path scanning.</span>
           </h1>
-          <p className="text-sm md:text-base text-muted font-sans max-w-xl mx-auto leading-relaxed">
-            Upload your AWS IAM or Kubernetes RBAC policy. VEKTRA maps every hidden vulnerability before it becomes a security incident.
+          <p className="text-xs md:text-sm text-muted max-w-lg mx-auto leading-relaxed">
+            Upload AWS IAM JSON or Kubernetes RBAC YAML configs. Vektra models permissions as a node graph to catch privilege escalations before deployments.
           </p>
         </div>
 
-        {/* Format Selector Pills */}
-        <div className="flex bg-[#0a0c16] p-1 rounded-xl border border-[#1e2240]">
-          <button
-            onClick={() => setFormat("iam")}
-            className={`px-6 py-2 rounded-lg text-xs font-semibold tracking-wider transition-all duration-200 ${
-              format === "iam" 
-                ? "bg-primary text-white shadow-md shadow-primary/20" 
-                : "text-muted hover:text-slate-200"
-            }`}
-          >
-            AWS IAM JSON
-          </button>
-          <button
-            onClick={() => setFormat("k8s")}
-            className={`px-6 py-2 rounded-lg text-xs font-semibold tracking-wider transition-all duration-200 ${
-              format === "k8s" 
-                ? "bg-primary text-white shadow-md shadow-primary/20" 
-                : "text-muted hover:text-slate-200"
-            }`}
-          >
-            KUBERNETES RBAC YAML
-          </button>
+        {/* Action / Format Toggle */}
+        <div className="flex justify-center">
+          <div className="flex bg-[#12161F] p-1 rounded-[6px] border border-cardBorder">
+            <button
+              onClick={() => setFormat("iam")}
+              className={`px-4 py-1.5 rounded-[6px] text-xs font-medium tracking-wide transition-fast ${
+                format === "iam" 
+                  ? "bg-activeNav text-textMain border border-cardBorder shadow-sm" 
+                  : "text-muted hover:text-textMain"
+              }`}
+            >
+              AWS IAM JSON
+            </button>
+            <button
+              onClick={() => setFormat("k8s")}
+              className={`px-4 py-1.5 rounded-[6px] text-xs font-medium tracking-wide transition-fast ${
+                format === "k8s" 
+                  ? "bg-activeNav text-textMain border border-cardBorder shadow-sm" 
+                  : "text-muted hover:text-textMain"
+              }`}
+            >
+              K8S RBAC YAML
+            </button>
+          </div>
         </div>
 
-        {/* Warning Banner if Credits < 5 on Free tier */}
+        {/* Alert for Credits */}
         {currentUser && isFree && credits < 5 && (
-          <div className="w-full max-w-3xl border border-warning/45 bg-warning/10 rounded-2xl p-4 flex flex-col md:flex-row md:items-center justify-between gap-3 text-xs">
-            <span className="text-slate-200 font-semibold">
-              ⚠️ You have {credits} credits. Full scan costs 5 credits. Basic scan costs 1 credit.
+          <div className="max-w-4xl w-full border border-warning/20 bg-warning/5 rounded-[6px] p-3 flex flex-col md:flex-row md:items-center justify-between gap-3 text-xs">
+            <span className="text-warning font-medium">
+              ⚠️ Wallet Balance: {credits} credits left. AI agent analysis costs 5 credits.
             </span>
             <Link to="/pricing" className="text-primary hover:underline font-bold shrink-0">
-              Upgrade for 200 monthly credits →
+              Upgrade for unlimited credits →
             </Link>
           </div>
         )}
 
-        {/* Input Zone Container */}
-        <div className="w-full grid grid-cols-1 md:grid-cols-2 gap-6 items-stretch">
+        {/* Dynamic Graphic Visual (Signature Element) */}
+        <div className="max-w-3xl w-full mx-auto">
+          <SecurityGraphVisual />
+        </div>
+
+        {/* Redesigned Input Zone */}
+        <div className="w-full grid grid-cols-1 md:grid-cols-2 gap-6 items-stretch max-w-4xl mx-auto">
           
           {/* Drag & Drop Upload Zone */}
           <div
@@ -379,10 +430,10 @@ export default function UploadPage() {
             onDragOver={handleDrag}
             onDragLeave={handleDrag}
             onDrop={handleDrop}
-            className={`rounded-2xl border-2 border-dashed transition-all duration-300 p-8 flex flex-col items-center justify-center text-center cursor-pointer min-h-[300px] ${
+            className={`rounded-[6px] border border-dashed border-cardBorder transition-fast p-8 flex flex-col items-center justify-center text-center cursor-pointer min-h-[260px] ${
               dragActive 
-                ? "border-primary bg-primary/5 scale-[0.99]" 
-                : "border-[#1e2240] hover:border-primary/50 bg-[#141628]/40"
+                ? "border-primary bg-primary/5" 
+                : "hover:border-muted/50 bg-[#12161F]/40"
             }`}
           >
             <input
@@ -392,46 +443,45 @@ export default function UploadPage() {
               accept=".json,.yaml,.yml"
               onChange={handleFileChange}
             />
-            <label htmlFor="file-upload" className="cursor-pointer flex flex-col items-center gap-4">
-              <div className="p-4 rounded-full bg-primary/10 text-primary group-hover:scale-110 transition-transform">
-                <Upload className="w-8 h-8" />
+            <label htmlFor="file-upload" className="cursor-pointer flex flex-col items-center gap-3.5">
+              <div className="p-3 rounded-[6px] bg-cardSurface border border-cardBorder text-primary shadow-sm">
+                <Upload className="w-5 h-5" />
               </div>
-              <div>
-                <p className="text-sm font-semibold text-slate-200">
-                  Drop JSON or YAML files here
+              <div className="space-y-0.5">
+                <p className="text-xs font-semibold text-textMain">
+                  Drop policy configuration file here
                 </p>
-                <p className="text-xs text-muted mt-1.5">
-                  or click to browse from files
+                <p className="text-[11px] text-muted font-normal">
+                  or click to select file from directory
                 </p>
               </div>
-              <div className="text-[10px] text-muted bg-[#0d0f1a] border border-[#1e2240] px-3 py-1 rounded-full uppercase tracking-wider font-mono">
+              <div className="text-[9px] text-muted bg-cardSurface border border-cardBorder px-2.5 py-0.5 rounded-full uppercase tracking-wider font-mono">
                 {format === "iam" ? "JSON Format" : "YAML Format"}
               </div>
             </label>
           </div>
 
           {/* Text Editor Area */}
-          <div className="flex flex-col border border-[#1e2240] rounded-2xl overflow-hidden bg-[#08080e] min-h-[300px]">
-            <div className="flex items-center justify-between px-4 py-2 border-b border-[#1e2240] bg-[#0a0c16]">
+          <div className="flex flex-col border border-cardBorder rounded-[6px] overflow-hidden bg-cardSurface min-h-[260px]">
+            <div className="flex items-center justify-between px-4 py-2 border-b border-cardBorder bg-[#111113]">
               <div className="flex items-center gap-2 text-muted">
-                <FileCode className="w-4 h-4" />
+                <FileCode className="w-4 h-4 text-muted" />
                 <span className="text-[10px] font-bold tracking-wider uppercase font-mono">
                   {format === "iam" ? "policy.json" : "rbac.yaml"}
                 </span>
               </div>
               
-              {/* Live Syntax Status Badge */}
-              <div className={`px-2 py-0.5 rounded text-[8px] font-mono font-bold tracking-wider uppercase flex items-center gap-1 ${
-                policyText.trim() ? "bg-safe/10 text-safe border border-safe/20" : "bg-[#141628] text-muted border border-[#1e2240]"
+              <div className={`px-2 py-0.5 rounded-full text-[8px] font-mono font-bold tracking-wider uppercase flex items-center gap-1 ${
+                policyText.trim() ? "bg-[#22C55E]/10 text-[#22C55E] border border-[#22C55E]/20" : "bg-[#27272A] text-muted border border-cardBorder"
               }`}>
-                <div className={`w-1.5 h-1.5 rounded-full ${policyText.trim() ? "bg-safe animate-pulse" : "bg-muted"}`} />
-                <span>{policyText.trim() ? "Content loaded" : "Empty"}</span>
+                <div className={`w-1.5 h-1.5 rounded-full ${policyText.trim() ? "bg-[#22C55E]" : "bg-muted"}`} />
+                <span>{policyText.trim() ? "Active" : "Empty"}</span>
               </div>
             </div>
             <textarea
               value={policyText}
               onChange={(e) => setPolicyText(e.target.value)}
-              className="flex-1 w-full bg-transparent p-4 text-xs font-mono text-slate-300 placeholder-muted focus:outline-none resize-none min-h-[220px]"
+              className="flex-1 w-full bg-transparent p-4 text-[11px] font-mono text-slate-300 placeholder-muted focus:outline-none resize-none min-h-[200px]"
               placeholder={
                 format === "iam" 
                   ? "Paste your AWS IAM JSON policy statement here..." 
@@ -442,53 +492,54 @@ export default function UploadPage() {
 
         </div>
 
-        {/* CTA Analyze Button */}
-        <div className="w-full max-w-md flex flex-col gap-2">
-          {errorMsg && (
-            <div className="text-xs text-danger text-center bg-danger/10 border border-danger/20 py-2.5 px-4 rounded-xl">
-              {errorMsg}
-            </div>
-          )}
+        {/* CTA Buttons - Upload or Try Demo */}
+        <div className="w-full max-w-md mx-auto grid grid-cols-2 gap-3.5 pt-4">
           <button
             onClick={handleStartAnalysis}
             disabled={isAnalyzing || !policyText.trim()}
-            className="w-full h-[52px] bg-gradient-to-r from-primary to-secondary text-white font-heading font-semibold text-sm rounded-xl hover:shadow-[0_0_20px_rgba(124,58,237,0.4)] disabled:opacity-50 transition-all duration-300 flex items-center justify-center gap-2"
+            className="w-full h-10 bg-primary hover:bg-primary/90 text-white font-sans font-semibold text-xs rounded-[6px] shadow-sm transition-fast flex items-center justify-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed border border-primary/20"
           >
             {isAnalyzing ? (
               <>
-                <Loader2 className="w-5 h-5 animate-spin" />
-                <span>Agents analyzing policy...</span>
+                <Loader2 className="w-4 h-4 animate-spin text-white" />
+                <span>Running...</span>
               </>
             ) : (
               <>
-                <Play className="w-4 h-4 fill-white" />
-                <span>{agentsUnlocked ? "Analyze with AI agents" : "Analyze free graph"}</span>
+                <Play className="w-3.5 h-3.5 fill-white text-white" />
+                <span>{agentsUnlocked ? "Analyze IAM" : "Analyze Free"}</span>
               </>
             )}
           </button>
+
+          <button
+            onClick={handleTryDemo}
+            disabled={isAnalyzing}
+            className="w-full h-10 bg-cardSurface hover:bg-[#1A1F2B] border border-cardBorder text-textMain font-sans font-semibold text-xs rounded-[6px] shadow-sm transition-fast flex items-center justify-center gap-1.5 disabled:opacity-40"
+          >
+            <Sparkles className="w-3.5 h-3.5 text-primary" />
+            <span>Try Demo Mode</span>
+          </button>
         </div>
 
-        {/* Stat badges under CTA */}
-        <div className="flex flex-wrap justify-center gap-6 text-muted text-xs font-medium select-none pt-4">
-          <div className="flex items-center gap-1.5 bg-[#141628]/40 border border-[#1e2240] px-4 py-2 rounded-full">
-            <Sparkles className="w-4.5 h-4.5 text-primary" />
-            <span>Detects 14 vulnerability classes</span>
-          </div>
-          <div className="flex items-center gap-1.5 bg-[#141628]/40 border border-[#1e2240] px-4 py-2 rounded-full">
-            <Activity className="w-4.5 h-4.5 text-secondary" />
-            <span>Handles 500+ rule nodes</span>
-          </div>
-          <div className="flex items-center gap-1.5 bg-[#141628]/40 border border-[#1e2240] px-4 py-2 rounded-full">
-            <Sparkles className="w-4.5 h-4.5 text-primary" />
-            <span>AI agents unlocked on Pro</span>
+        {/* Trusted By Section (Muted, Enterprise style) */}
+        <div className="pt-10 border-t border-cardBorder text-center space-y-3.5 max-w-4xl mx-auto w-full">
+          <span className="text-[10px] font-bold text-muted uppercase tracking-widest block">
+            INTEGRATED SECURE ENVIRONMENT
+          </span>
+          <div className="flex flex-wrap justify-center items-center gap-12 opacity-30">
+            <span className="text-[11px] font-mono tracking-widest font-semibold text-muted">AWS ACCOUNT</span>
+            <span className="text-[11px] font-mono tracking-widest font-semibold text-muted">K8S CLUSTER</span>
+            <span className="text-[11px] font-mono tracking-widest font-semibold text-muted">NEO4J AURADB</span>
+            <span className="text-[11px] font-mono tracking-widest font-semibold text-muted">STELLAR LEDGER</span>
           </div>
         </div>
 
       </main>
 
       {/* Footer */}
-      <footer className="h-12 border-t border-[#1e2240]/40 flex items-center justify-center text-[10px] text-muted">
-        VEKTRA • Trust, Identity & Security • Powered by Neo4j & Sarvam
+      <footer className="h-14 border-t border-cardBorder flex items-center justify-center text-[10px] text-muted bg-[#0B0E14] font-mono">
+        VEKTRA SECURITY PORTAL • Powered by Neo4j AuraDB & Sarvam AI
       </footer>
 
     </div>

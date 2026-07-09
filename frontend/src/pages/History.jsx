@@ -11,7 +11,6 @@ function formatScanDate(dateString) {
   const date = new Date(dateString);
   if (Number.isNaN(date.getTime())) return "Recently";
   
-  // Format options: July 3, 2026 · 11:42 PM
   const formatted = date.toLocaleDateString("en-US", {
     month: "long",
     day: "numeric",
@@ -34,9 +33,8 @@ export default function HistoryPage() {
   const [loading, setLoading] = useState(true);
   const [rerunningSessionId, setRerunningSessionId] = useState(null);
 
-  // Filters
-  const [formatFilter, setFormatFilter] = useState("all"); // "all" | "iam" | "k8s"
-  const [severityFilter, setSeverityFilter] = useState("all"); // "all" | "critical" | "warning"
+  const [formatFilter, setFormatFilter] = useState("all"); 
+  const [severityFilter, setSeverityFilter] = useState("all"); 
   const [searchQuery, setSearchQuery] = useState("");
 
   const fetchHistory = () => {
@@ -88,9 +86,6 @@ export default function HistoryPage() {
     const rerunToast = toast.loading("Re-running AI agents (2 credits)...");
     
     try {
-      // We need to fetch the policy text of the scan first.
-      // Usually the saved report contains the full policy_json which has format, nodes, and policyText.
-      // Let's get it from report.
       const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8000";
       const res = await fetch(`${API_BASE}/api/report/${item.session_id}`, { headers: getAuthHeaders() });
       if (!res.ok) {
@@ -106,7 +101,6 @@ export default function HistoryPage() {
       toast.dismiss(rerunToast);
       toast.success("Analysis complete — agents executed successfully.");
       
-      // Update state and refresh history
       await refreshCurrentUser();
       fetchHistory();
       navigate("/analyze");
@@ -118,13 +112,10 @@ export default function HistoryPage() {
     }
   };
 
-  // Filter items
   const filteredItems = items.filter((item) => {
-    // 1. Format Filter
     if (formatFilter !== "all" && (item.format || "").toLowerCase() !== formatFilter) {
       return false;
     }
-    // 2. Severity Filter
     if (severityFilter !== "all") {
       const label = (item.risk_label || "").toLowerCase();
       if (severityFilter === "critical" && label !== "critical" && label !== "high") {
@@ -134,7 +125,6 @@ export default function HistoryPage() {
         return false;
       }
     }
-    // 3. Search Query
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
       const preview = (item.policy_preview || "").toLowerCase();
@@ -148,7 +138,7 @@ export default function HistoryPage() {
   });
 
   return (
-    <div className="flex h-screen bg-[#0d0f1a] text-slate-100 overflow-hidden font-sans select-none">
+    <div className="flex h-screen bg-pageBg text-textMain overflow-hidden font-sans select-none">
       <Sidebar />
       <div className="flex-1 flex flex-col min-w-0">
         <TopBar />
@@ -158,28 +148,28 @@ export default function HistoryPage() {
             {/* Header row */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
               <div>
-                <h1 className="font-heading text-2xl font-bold text-white flex items-center gap-2">
-                  <Clock className="h-6 w-6 text-primary" />
-                  Scan History
+                <h1 className="text-xl font-bold text-textMain flex items-center gap-2 tracking-tight uppercase">
+                  <Clock className="h-5 w-5 text-primary" />
+                  Scan Registry Logs
                 </h1>
-                <p className="mt-1 text-xs text-muted">
-                  View and manage Neo4j relationship scan logs linked to your operator account.
+                <p className="mt-0.5 text-xs text-muted">
+                  View and manage historical policy scans anchored to your Stellar operator key.
                 </p>
               </div>
             </div>
 
             {/* Filter controls row */}
-            <div className="bg-[#141628] border border-[#1e2240] rounded-2xl p-4 flex flex-col md:flex-row items-center justify-between gap-4">
+            <div className="bg-cardSurface border border-cardBorder rounded-[6px] p-4 flex flex-col md:flex-row items-center justify-between gap-4">
               <div className="flex flex-wrap items-center gap-4 w-full md:w-auto">
                 
                 {/* Format Filter */}
-                <div className="flex bg-[#0d0f1a] p-1 rounded-xl border border-[#1e2240] text-xs font-semibold">
+                <div className="flex bg-pageBg p-1 rounded-[6px] border border-cardBorder text-xs font-semibold">
                   {["all", "iam", "k8s"].map((f) => (
                     <button
                       key={f}
                       onClick={() => setFormatFilter(f)}
-                      className={`px-3 py-1.5 rounded-lg uppercase transition-all duration-200 ${
-                        formatFilter === f ? "bg-primary text-white" : "text-muted hover:text-slate-200"
+                      className={`px-3 py-1 rounded-[6px] uppercase transition-fast ${
+                        formatFilter === f ? "bg-activeNav text-textMain border border-cardBorder" : "text-muted hover:text-textMain"
                       }`}
                     >
                       {f}
@@ -188,13 +178,13 @@ export default function HistoryPage() {
                 </div>
 
                 {/* Severity Filter */}
-                <div className="flex bg-[#0d0f1a] p-1 rounded-xl border border-[#1e2240] text-xs font-semibold">
+                <div className="flex bg-pageBg p-1 rounded-[6px] border border-cardBorder text-xs font-semibold">
                   {["all", "critical", "warning"].map((s) => (
                     <button
                       key={s}
                       onClick={() => setSeverityFilter(s)}
-                      className={`px-3 py-1.5 rounded-lg uppercase transition-all duration-200 ${
-                        severityFilter === s ? "bg-primary text-white" : "text-muted hover:text-slate-200"
+                      className={`px-3 py-1 rounded-[6px] uppercase transition-fast ${
+                        severityFilter === s ? "bg-activeNav text-textMain border border-cardBorder" : "text-muted hover:text-textMain"
                       }`}
                     >
                       {s}
@@ -212,29 +202,29 @@ export default function HistoryPage() {
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Search policies..."
-                  className="w-full bg-[#0d0f1a] border border-[#1e2240] rounded-xl pl-10 pr-4 py-2 text-xs text-slate-100 placeholder-muted focus:outline-none focus:border-primary transition-all duration-200"
+                  className="w-full bg-pageBg border border-cardBorder rounded-[6px] pl-10 pr-4 py-2 text-xs text-textMain placeholder-muted focus:outline-none focus:border-primary transition-fast"
                 />
               </div>
             </div>
 
             {loading ? (
-              <div className="rounded-xl border border-[#1e2240] bg-[#141628] p-8 text-center text-xs text-muted">
+              <div className="rounded-[6px] border border-cardBorder bg-cardSurface p-8 text-center text-xs text-muted font-mono uppercase tracking-wider">
                 Loading scan logs...
               </div>
             ) : filteredItems.length === 0 ? (
-              <div className="rounded-2xl border border-[#1e2240] bg-[#141628] p-16 text-center space-y-4">
-                <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-primary/10 border border-primary/20 text-muted">
-                  <Network className="w-8 h-8 opacity-40 text-primary" />
+              <div className="rounded-[6px] border border-cardBorder bg-cardSurface p-16 text-center space-y-4">
+                <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-[6px] bg-primary/10 border border-primary/25 text-muted">
+                  <Network className="w-6 h-6 text-primary" />
                 </div>
-                <h2 className="font-heading text-lg font-bold text-slate-300">No scans yet</h2>
-                <p className="text-xs text-muted max-w-sm mx-auto">
-                  Upload your first policy to get started mapping entity relationships.
+                <h2 className="text-xs font-bold text-textMain uppercase tracking-wide">No scan records</h2>
+                <p className="text-xs text-muted max-w-xs mx-auto">
+                  Upload permission configuration rules to view telemetry logs.
                 </p>
                 <button
                   onClick={() => navigate("/")}
-                  className="bg-primary hover:bg-primary/80 text-white px-5 py-2.5 rounded-xl text-xs font-bold transition-all shadow-[0_0_15px_rgba(124,58,237,0.3)]"
+                  className="h-10 bg-primary hover:bg-primary/95 text-white px-5 rounded-[6px] text-xs font-semibold transition-fast border border-primary/20"
                 >
-                  Start scanning →
+                  Start Scanning
                 </button>
               </div>
             ) : (
@@ -243,7 +233,7 @@ export default function HistoryPage() {
                   const format = (item.format || "scan").toUpperCase();
                   const riskLabel = (item.risk_label || "LOW").toUpperCase();
                   
-                  let riskBadgeStyle = "bg-safe/10 text-safe border-safe/20";
+                  let riskBadgeStyle = "bg-primary/10 text-primary border-primary/20";
                   if (riskLabel === "CRITICAL" || riskLabel === "HIGH") {
                     riskBadgeStyle = "bg-danger/10 text-danger border-danger/20";
                   } else if (riskLabel === "WARNING" || riskLabel === "MEDIUM") {
@@ -253,65 +243,65 @@ export default function HistoryPage() {
                   const isRerunning = rerunningSessionId === item.session_id;
 
                   return (
-                    <article key={item.session_id} className="rounded-2xl border border-[#1e2240] bg-[#141628] p-5 space-y-4 transition-all hover:border-[#2b305e]">
+                    <article key={item.session_id} className="rounded-[6px] border border-cardBorder bg-cardSurface p-5 space-y-4 transition-fast hover:border-muted/30">
                       
-                      {/* Top Row: Badges and Date */}
+                      {/* Top Row */}
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
-                          <span className="rounded bg-[#0d0f1a] border border-[#1e2240] px-2.5 py-0.5 text-[9px] font-bold text-slate-300">
+                          <span className="rounded-[6px] bg-pageBg border border-cardBorder px-2.5 py-0.5 text-[8px] font-bold text-slate-300 font-mono">
                             {format}
                           </span>
-                          <span className={`rounded border px-2.5 py-0.5 text-[9px] font-bold ${riskBadgeStyle}`}>
+                          <span className={`rounded-[6px] border px-2.5 py-0.5 text-[8px] font-bold ${riskBadgeStyle}`}>
                             {riskLabel} RISK
                           </span>
                         </div>
-                        <span className="text-[10px] text-muted font-medium">
+                        <span className="text-[10px] text-muted font-mono">
                           {formatScanDate(item.scanned_at)}
                         </span>
                       </div>
 
-                      {/* Middle Row: Code Box */}
-                      <div className="bg-[#0a0c16] rounded-xl p-3 border border-[#1e2240]/40">
-                        <code className="text-slate-300 font-mono text-xs leading-relaxed line-clamp-2 block">
+                      {/* Middle Row */}
+                      <div className="bg-pageBg rounded-[6px] p-3.5 border border-cardBorder">
+                        <code className="text-slate-300 font-mono text-[11px] leading-relaxed line-clamp-2 block">
                           {item.policy_preview || "No preview stored."}
                         </code>
                       </div>
 
                       {/* Stats Row */}
-                      <div className="flex flex-wrap gap-2 text-[10px] font-bold">
-                        <span className="bg-danger/10 border border-danger/20 text-danger px-2.5 py-1 rounded-lg">
-                          🔴 {item.critical_count || 0} Critical
+                      <div className="flex flex-wrap gap-2 text-[9px] font-bold font-mono uppercase">
+                        <span className="bg-[#FF5C4D]/10 border border-[#FF5C4D]/25 text-[#FF5C4D] px-2.5 py-1 rounded-[6px]">
+                          {item.critical_count || 0} Critical
                         </span>
-                        <span className="bg-warning/10 border border-warning/20 text-warning px-2.5 py-1 rounded-lg">
-                          🟡 {item.warning_count || 0} Warning
+                        <span className="bg-[#F2A94B]/10 border border-[#F2A94B]/25 text-[#F2A94B] px-2.5 py-1 rounded-[6px]">
+                          {item.warning_count || 0} Warning
                         </span>
-                        <span className="bg-[#3b82f6]/10 border border-[#3b82f6]/20 text-[#3b82f6] px-2.5 py-1 rounded-lg">
-                          🔵 {item.info_count || 0} Info
+                        <span className="bg-[#4C8DFF]/10 border border-[#4C8DFF]/25 text-[#4C8DFF] px-2.5 py-1 rounded-[6px]">
+                          {item.info_count || 0} Info
                         </span>
-                        <span className="bg-primary/10 border border-primary/20 text-primary px-2.5 py-1 rounded-lg">
-                          📊 Risk: {item.risk_score || 0}
+                        <span className="bg-primary/10 border border-primary/25 text-primary px-2.5 py-1 rounded-[6px]">
+                          Risk Index: {item.risk_score || 0}
                         </span>
                       </div>
 
                       {/* Bottom Row */}
-                      <div className="flex items-center justify-between border-t border-[#1e2240]/40 pt-4 text-xs">
-                        <span className="font-mono text-[10px] text-muted bg-[#0d0f1a] px-2 py-1 rounded border border-[#1e2240]/40">
-                          {item.session_id ? item.session_id.slice(0, 18) : "session-id"}...
+                      <div className="flex items-center justify-between border-t border-cardBorder pt-4 text-xs">
+                        <span className="font-mono text-[10px] text-muted bg-pageBg px-2 py-0.5 rounded-[6px] border border-cardBorder">
+                          run_id: {item.session_id ? item.session_id.slice(0, 16) : "session"}...
                         </span>
                         <div className="flex items-center gap-2">
                           <button
                             onClick={() => handleRerun(item)}
                             disabled={isRerunning}
-                            className="bg-[#0d0f1a] hover:bg-[#1e2240] text-muted hover:text-slate-200 border border-[#1e2240] disabled:opacity-50 px-3 py-1.5 rounded-lg font-bold transition-all flex items-center gap-1.5"
+                            className="bg-pageBg hover:bg-activeNav text-muted hover:text-textMain border border-cardBorder disabled:opacity-40 px-3 py-1.5 rounded-[6px] font-semibold transition-fast flex items-center gap-1.5"
                           >
                             <Sparkles className="w-3.5 h-3.5 text-primary" />
-                            {isRerunning ? "Re-running..." : "Re-run Agents (2 CRED)"}
+                            {isRerunning ? "Rerunning..." : "Rerun (2 CRED)"}
                           </button>
                           <button
                             onClick={() => openReport(item.session_id)}
-                            className="bg-primary/10 hover:bg-primary/20 text-primary border border-primary/30 px-3 py-1.5 rounded-lg font-bold transition-all flex items-center gap-1"
+                            className="bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 px-3 py-1.5 rounded-[6px] font-semibold transition-fast flex items-center gap-1"
                           >
-                            View Report →
+                            View Report
                           </button>
                         </div>
                       </div>

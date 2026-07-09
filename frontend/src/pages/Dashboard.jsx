@@ -46,13 +46,11 @@ export default function DashboardPage() {
   const [tipIndex, setTipIndex] = useState(0);
   const [timeOfDay, setTimeOfDay] = useState("morning");
 
-  // Rotating security tips
   useEffect(() => {
     const randomIdx = Math.floor(Math.random() * SECURITY_TIPS.length);
     setTipIndex(randomIdx);
   }, []);
 
-  // Time based greeting
   useEffect(() => {
     const hours = new Date().getHours();
     if (hours < 12) setTimeOfDay("morning");
@@ -75,16 +73,13 @@ export default function DashboardPage() {
   const credits = currentUser?.credits_balance ?? 0;
   const isFree = tier === "free";
 
-  // Calculate stats from history
   const totalScans = historyItems.length;
   const totalCritical = historyItems.reduce((acc, curr) => acc + (curr.critical_count || 0), 0);
   const totalWarnings = historyItems.reduce((acc, curr) => acc + (curr.warning_count || 0), 0);
   const totalInfo = historyItems.reduce((acc, curr) => acc + (curr.info_count || 0), 0);
-  const totalFixes = totalCritical + totalWarnings; // Mock generated fixes count
+  const totalFixes = totalCritical + totalWarnings; 
   
-  // Calculate remaining hours to midnight IST
   const getHoursToMidnightIST = () => {
-    // Current time in IST (UTC+5.5)
     const now = new Date();
     const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
     const istTime = new Date(utc + (3600000 * 5.5));
@@ -107,7 +102,6 @@ export default function DashboardPage() {
 
   const totalDailyAllowance = isFree ? 5 : (tier === "pro" ? 200 : 1000);
 
-  // Recharts Chart Data (Vulnerability Breakdown of last 7 scans)
   const chartData = historyItems.slice(0, 7).reverse().map((item, index) => ({
     name: `Scan ${totalScans - 6 + index > 0 ? totalScans - 6 + index : index + 1}`,
     Critical: item.critical_count || 0,
@@ -115,7 +109,6 @@ export default function DashboardPage() {
     Info: item.info_count || 0,
   }));
 
-  // Sparkline data (simple arrays for sparkline chart mapped from historyItems)
   const last7Scans = [...historyItems].slice(0, 7).reverse();
   const sparklineData1 = last7Scans.length >= 2 ? last7Scans.map((x, i) => i + 1) : [1, 2, 3, 4, 5];
   const sparklineData2 = last7Scans.length >= 2 ? last7Scans.map(x => x.critical_count || 0) : [0, 0, 0, 0, 0];
@@ -142,15 +135,12 @@ export default function DashboardPage() {
   };
 
   return (
-    <div className="flex h-screen bg-[#0d0f1a] text-slate-100 overflow-hidden font-sans select-none">
-      {/* Sidebar */}
+    <div className="flex h-screen bg-pageBg text-textMain overflow-hidden font-sans select-none">
       <Sidebar />
 
-      {/* Center + Right panels */}
       <div className="flex-1 flex flex-col min-w-0">
         <TopBar />
 
-        {/* Dashboard grid body */}
         <div className="flex-1 flex min-w-0">
           
           {/* Main Area */}
@@ -158,11 +148,11 @@ export default function DashboardPage() {
             
             {/* Header / Greeting */}
             <div>
-              <h1 className="font-heading text-3xl font-bold leading-tight text-white tracking-tight">
-                Good {timeOfDay}, {name} 👋
+              <h1 className="text-xl font-bold tracking-tight text-textMain">
+                Operator Workspace · {name}
               </h1>
-              <p className="text-sm text-muted mt-1">
-                You have <span className="text-primary font-bold">{credits} credits</span> remaining today.
+              <p className="text-xs text-muted mt-0.5">
+                Active Tier: <span className="text-primary font-semibold uppercase font-mono">{tier}</span> · Available quota: <span className="text-primary font-semibold font-mono">{credits} tokens</span>
               </p>
             </div>
 
@@ -170,60 +160,60 @@ export default function DashboardPage() {
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
               
               {/* Card 1: Total Scans */}
-              <div className="bg-[#141628] border border-[#1e2240] rounded-2xl p-5 flex flex-col justify-between h-32 relative overflow-hidden">
+              <div className="bg-cardSurface border border-cardBorder rounded-[6px] p-4 flex flex-col justify-between h-28 hover:border-muted/30 transition-fast">
                 <div>
-                  <span className="text-xs text-muted block font-semibold">Total Scans</span>
-                  <span className="text-3xl font-heading font-bold text-white mt-2 block">{totalScans}</span>
+                  <span className="text-[10px] text-muted block uppercase tracking-wider font-semibold">Total Scans</span>
+                  <span className="text-2xl font-bold text-textMain mt-1.5 block font-sans tracking-tight">{totalScans}</span>
                 </div>
-                <div className="w-20 h-10 self-end opacity-60">
+                <div className="w-20 h-8 self-end opacity-50 shrink-0">
                   <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={sparklineData1.map((v, i) => ({ value: v }))}>
-                      <Line type="monotone" dataKey="value" stroke="#7c3aed" strokeWidth={2} dot={false} />
+                    <LineChart data={sparklineData1.map((v) => ({ value: v }))}>
+                      <Line type="monotone" dataKey="value" stroke="#4C8DFF" strokeWidth={1.5} dot={false} />
                     </LineChart>
                   </ResponsiveContainer>
                 </div>
               </div>
 
               {/* Card 2: Critical Found */}
-              <div className="bg-[#141628] border border-[#1e2240] rounded-2xl p-5 flex flex-col justify-between h-32 relative overflow-hidden">
+              <div className="bg-cardSurface border border-cardBorder rounded-[6px] p-4 flex flex-col justify-between h-28 hover:border-muted/30 transition-fast">
                 <div>
-                  <span className="text-xs text-muted block font-semibold">Critical Found</span>
-                  <span className="text-3xl font-heading font-bold text-danger mt-2 block">{totalCritical}</span>
+                  <span className="text-[10px] text-muted block uppercase tracking-wider font-semibold">Critical Found</span>
+                  <span className="text-2xl font-bold text-[#FF5C4D] mt-1.5 block font-sans tracking-tight">{totalCritical}</span>
                 </div>
-                <div className="w-20 h-10 self-end opacity-60">
+                <div className="w-20 h-8 self-end opacity-50 shrink-0">
                   <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={sparklineData2.map((v, i) => ({ value: v }))}>
-                      <Line type="monotone" dataKey="value" stroke="#ef4444" strokeWidth={2} dot={false} />
+                    <LineChart data={sparklineData2.map((v) => ({ value: v }))}>
+                      <Line type="monotone" dataKey="value" stroke="#FF5C4D" strokeWidth={1.5} dot={false} />
                     </LineChart>
                   </ResponsiveContainer>
                 </div>
               </div>
 
               {/* Card 3: Fixes Generated */}
-              <div className="bg-[#141628] border border-[#1e2240] rounded-2xl p-5 flex flex-col justify-between h-32 relative overflow-hidden">
+              <div className="bg-cardSurface border border-cardBorder rounded-[6px] p-4 flex flex-col justify-between h-28 hover:border-muted/30 transition-fast">
                 <div>
-                  <span className="text-xs text-muted block font-semibold">Fixes Generated</span>
-                  <span className="text-3xl font-heading font-bold text-safe mt-2 block">{totalFixes}</span>
+                  <span className="text-[10px] text-muted block uppercase tracking-wider font-semibold">Fixes Generated</span>
+                  <span className="text-2xl font-bold text-primary mt-1.5 block font-sans tracking-tight">{totalFixes}</span>
                 </div>
-                <div className="w-20 h-10 self-end opacity-60">
+                <div className="w-20 h-8 self-end opacity-50 shrink-0">
                   <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={sparklineData3.map((v, i) => ({ value: v }))}>
-                      <Line type="monotone" dataKey="value" stroke="#10b981" strokeWidth={2} dot={false} />
+                    <LineChart data={sparklineData3.map((v) => ({ value: v }))}>
+                      <Line type="monotone" dataKey="value" stroke="#4C8DFF" strokeWidth={1.5} dot={false} />
                     </LineChart>
                   </ResponsiveContainer>
                 </div>
               </div>
 
               {/* Card 4: Credits Used */}
-              <div className="bg-[#141628] border border-[#1e2240] rounded-2xl p-5 flex flex-col justify-between h-32 relative overflow-hidden">
+              <div className="bg-cardSurface border border-cardBorder rounded-[6px] p-4 flex flex-col justify-between h-28 hover:border-muted/30 transition-fast">
                 <div>
-                  <span className="text-xs text-muted block font-semibold">Credits Balance</span>
-                  <span className="text-3xl font-heading font-bold text-primary mt-2 block">{credits}</span>
+                  <span className="text-[10px] text-muted block uppercase tracking-wider font-semibold">Credits Balance</span>
+                  <span className="text-2xl font-bold text-primary mt-1.5 block font-sans tracking-tight">{credits}</span>
                 </div>
-                <div className="w-20 h-10 self-end opacity-60">
+                <div className="w-20 h-8 self-end opacity-50 shrink-0">
                   <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={sparklineData4.map((v, i) => ({ value: v }))}>
-                      <Line type="monotone" dataKey="value" stroke="#8b5cf6" strokeWidth={2} dot={false} />
+                    <LineChart data={sparklineData4.map((v) => ({ value: v }))}>
+                      <Line type="monotone" dataKey="value" stroke="#4C8DFF" strokeWidth={1.5} dot={false} />
                     </LineChart>
                   </ResponsiveContainer>
                 </div>
@@ -231,50 +221,50 @@ export default function DashboardPage() {
 
             </div>
 
-            {/* Quick Actions */}
+            {/* Quick Actions (Quiet Solid Cards) */}
             <div className="space-y-3">
-              <h2 className="font-heading text-lg font-bold text-slate-100">Quick Actions</h2>
+              <h2 className="text-xs font-bold text-muted uppercase tracking-wider">Quick Actions</h2>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 
                 <button
                   onClick={() => navigate("/")}
-                  className="bg-gradient-to-r from-primary to-secondary p-5 rounded-2xl text-left border border-primary/20 hover:shadow-[0_0_20px_rgba(124,58,237,0.3)] transition-all flex flex-col justify-between h-32"
+                  className="bg-cardSurface border border-cardBorder p-4 rounded-[6px] text-left hover-lift flex flex-col justify-between h-28"
                 >
-                  <Plus className="w-6 h-6 text-white" />
+                  <Plus className="w-5 h-5 text-primary" />
                   <div>
-                    <h3 className="font-bold text-sm text-white">New Scan</h3>
-                    <p className="text-[11px] text-white/80 mt-0.5">Upload a policy configuration</p>
+                    <h3 className="font-semibold text-xs text-textMain uppercase tracking-wide">Run New Scan</h3>
+                    <p className="text-[10px] text-muted mt-0.5 font-normal">Upload or paste IAM policy rules</p>
                   </div>
                 </button>
 
                 <button
                   onClick={() => navigate("/history")}
-                  className="bg-[#141628] border border-[#1e2240] p-5 rounded-2xl text-left hover:border-primary/40 transition-all flex flex-col justify-between h-32"
+                  className="bg-cardSurface border border-cardBorder p-4 rounded-[6px] text-left hover-lift flex flex-col justify-between h-28"
                 >
-                  <History className="w-6 h-6 text-primary" />
+                  <History className="w-5 h-5 text-primary" />
                   <div>
-                    <h3 className="font-bold text-sm text-slate-200">View Reports</h3>
-                    <p className="text-[11px] text-muted mt-0.5">Browse past policy scan reports</p>
+                    <h3 className="font-semibold text-xs text-textMain uppercase tracking-wide">View History</h3>
+                    <p className="text-[10px] text-muted mt-0.5 font-normal">Audit previous execution payloads</p>
                   </div>
                 </button>
 
                 {isFree ? (
                   <button
                     onClick={() => navigate("/pricing")}
-                    className="bg-gradient-to-r from-secondary to-[#0c4a6e] p-5 rounded-2xl text-left border border-secondary/20 hover:shadow-[0_0_20px_rgba(34,211,238,0.2)] transition-all flex flex-col justify-between h-32"
+                    className="bg-cardSurface border border-[#F2A94B]/35 p-4 rounded-[6px] text-left hover-lift flex flex-col justify-between h-28"
                   >
-                    <Sparkles className="w-6 h-6 text-cyan-200 animate-pulse" />
+                    <Sparkles className="w-5 h-5 text-[#F2A94B] animate-pulse" />
                     <div>
-                      <h3 className="font-bold text-sm text-white">Upgrade Plan</h3>
-                      <p className="text-[11px] text-white/80 mt-0.5">Get unlimited scans and AI agents</p>
+                      <h3 className="font-semibold text-xs text-[#F2A94B] uppercase tracking-wide">Upgrade Plan</h3>
+                      <p className="text-[10px] text-muted mt-0.5 font-normal">Unlock unlimited daily scans</p>
                     </div>
                   </button>
                 ) : (
-                  <div className="bg-[#141628] border border-[#1e2240] p-5 rounded-2xl text-left flex flex-col justify-between h-32">
-                    <Coins className="w-6 h-6 text-secondary" />
+                  <div className="bg-cardSurface border border-cardBorder p-4 rounded-[6px] text-left flex flex-col justify-between h-28">
+                    <Coins className="w-5 h-5 text-primary" />
                     <div>
-                      <h3 className="font-bold text-sm text-slate-200">Wallet Console</h3>
-                      <p className="text-[11px] text-muted mt-0.5">Manage credentials & credit tokens</p>
+                      <h3 className="font-semibold text-xs text-textMain uppercase tracking-wide">Wallet Balance</h3>
+                      <p className="text-[10px] text-muted mt-0.5 font-normal">Stellar anchored credits account</p>
                     </div>
                   </div>
                 )}
@@ -283,8 +273,8 @@ export default function DashboardPage() {
             </div>
 
             {/* Recharts vulnerability breakdown */}
-            <div className="bg-[#141628] border border-[#1e2240] rounded-2xl p-6 space-y-4">
-              <h3 className="font-heading font-semibold text-sm text-slate-200">Vulnerability Trends (Last 7 scans)</h3>
+            <div className="bg-cardSurface border border-cardBorder rounded-[6px] p-5 space-y-4">
+              <h3 className="text-xs font-bold text-muted uppercase tracking-wider">Vulnerability Severity Trends (Last 7 scans)</h3>
               <div className="h-60 w-full">
                 {chartData.length === 0 ? (
                   <div className="h-full flex items-center justify-center text-xs text-muted italic">
@@ -293,15 +283,15 @@ export default function DashboardPage() {
                 ) : (
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={chartData}>
-                      <XAxis dataKey="name" stroke="#64748b" fontSize={10} tickLine={false} axisLine={false} />
-                      <YAxis stroke="#64748b" fontSize={10} tickLine={false} axisLine={false} />
+                      <XAxis dataKey="name" stroke="#8A93A6" fontSize={9} tickLine={false} axisLine={false} fontFamily="JetBrains Mono" />
+                      <YAxis stroke="#8A93A6" fontSize={9} tickLine={false} axisLine={false} fontFamily="JetBrains Mono" />
                       <Tooltip 
-                        contentStyle={{ backgroundColor: "#0a0c16", border: "1px solid #1e2240" }}
-                        labelStyle={{ color: "#fff", fontWeight: "bold" }}
+                        contentStyle={{ backgroundColor: "#12161F", border: "1px solid #232838", borderRadius: "6px" }}
+                        labelStyle={{ color: "#E8EAED", fontWeight: "semibold", fontSize: "11px" }}
                       />
-                      <Bar dataKey="Critical" fill="#ef4444" radius={[4, 4, 0, 0]} />
-                      <Bar dataKey="Warning" fill="#f97316" radius={[4, 4, 0, 0]} />
-                      <Bar dataKey="Info" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+                      <Bar dataKey="Critical" fill="#FF5C4D" radius={[2, 2, 0, 0]} />
+                      <Bar dataKey="Warning" fill="#F2A94B" radius={[2, 2, 0, 0]} />
+                      <Bar dataKey="Info" fill="#4C8DFF" radius={[2, 2, 0, 0]} />
                     </BarChart>
                   </ResponsiveContainer>
                 )}
@@ -311,17 +301,17 @@ export default function DashboardPage() {
             {/* Recent Scans */}
             <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <h2 className="font-heading text-lg font-bold text-slate-100">Recent Scans</h2>
+                <h2 className="text-xs font-bold text-muted uppercase tracking-wider">Recent Scans</h2>
                 <Link to="/history" className="text-xs font-semibold text-primary hover:underline flex items-center gap-1">
-                  View all scans <ArrowRight className="w-3.5 h-3.5" />
+                  View history <ArrowRight className="w-3.5 h-3.5" />
                 </Link>
               </div>
 
               {loading ? (
                 <div className="text-xs text-muted py-6 text-center">Loading recent history...</div>
               ) : historyItems.length === 0 ? (
-                <div className="bg-[#141628]/40 border border-[#1e2240] rounded-2xl p-8 text-center text-xs text-muted">
-                  No scan history on your account. Upload a policy to get started!
+                <div className="bg-cardSurface border border-cardBorder rounded-[6px] p-8 text-center text-xs text-muted">
+                  No scan history on your account. Upload a policy to get started.
                 </div>
               ) : (
                 <div className="space-y-3">
@@ -329,33 +319,32 @@ export default function DashboardPage() {
                     const fmt = (item.format || "IAM").toUpperCase();
                     const score = item.risk_score ?? 0;
                     
-                    let scoreColor = "text-safe";
-                    if (score >= 80) scoreColor = "text-danger";
-                    else if (score >= 50) scoreColor = "text-orange-500";
-                    else if (score >= 20) scoreColor = "text-yellow-500";
+                    let scoreColor = "text-primary";
+                    if (score >= 80) scoreColor = "text-[#FF5C4D]";
+                    else if (score >= 50) scoreColor = "text-[#F2A94B]";
 
                     return (
                       <div 
                         key={item.session_id} 
                         onClick={() => handleHistoryClick(item.session_id)}
-                        className="bg-[#141628] border border-[#1e2240] rounded-2xl p-5 hover:border-primary/40 transition-all cursor-pointer flex flex-col md:flex-row md:items-center justify-between gap-4"
+                        className="bg-cardSurface border border-cardBorder rounded-[6px] p-4 hover:border-primary/40 transition-fast cursor-pointer flex flex-col md:flex-row md:items-center justify-between gap-4"
                       >
                         <div className="space-y-2 flex-1 min-w-0">
                           <div className="flex items-center gap-2">
-                            <span className="bg-[#0c0d1a] border border-[#1e2240] px-2 py-0.5 rounded text-[9px] font-bold text-slate-300">
+                            <span className="bg-pageBg border border-cardBorder px-2 py-0.5 rounded-[6px] text-[8px] font-bold text-slate-300 font-mono">
                               {fmt}
                             </span>
-                            <span className={`px-2 py-0.5 rounded text-[9px] font-bold border ${
+                            <span className={`px-2 py-0.5 rounded-[6px] text-[8px] font-bold border ${
                               item.risk_label === "CRITICAL" || item.risk_label === "HIGH" 
-                                ? "bg-danger/10 text-danger border-danger/20" 
+                                ? "bg-[#FF5C4D]/10 text-[#FF5C4D] border-[#FF5C4D]/20" 
                                 : item.risk_label === "WARNING" || item.risk_label === "MEDIUM"
-                                ? "bg-warning/10 text-warning border-warning/20"
-                                : "bg-safe/10 text-safe border-safe/20"
+                                ? "bg-[#F2A94B]/10 text-[#F2A94B] border-[#F2A94B]/20"
+                                : "bg-primary/10 text-primary border-primary/20"
                             }`}>
                               {item.risk_label || "LOW"} RISK
                             </span>
                           </div>
-                          <div className="bg-[#0a0c16] rounded-lg p-2 font-mono text-[11px] text-muted truncate">
+                          <div className="bg-pageBg border border-cardBorder rounded-[6px] p-2.5 font-mono text-[10px] text-muted truncate">
                             {item.policy_preview || "No policy content cached."}
                           </div>
                         </div>
@@ -363,9 +352,9 @@ export default function DashboardPage() {
                         <div className="flex items-center justify-between md:justify-end gap-6 shrink-0">
                           <div className="text-right">
                             <span className="text-[10px] text-muted block uppercase tracking-wider">Risk Score</span>
-                            <span className={`text-xl font-bold font-mono ${scoreColor}`}>{score}</span>
+                            <span className={`text-lg font-bold font-mono ${scoreColor}`}>{score}</span>
                           </div>
-                          <ArrowRight className="w-5 h-5 text-muted hover:text-white transition-colors hidden md:block" />
+                          <ArrowRight className="w-4 h-4 text-muted hover:text-white transition-colors hidden md:block" />
                         </div>
                       </div>
                     );
@@ -377,38 +366,38 @@ export default function DashboardPage() {
           </div>
 
           {/* Right Panel */}
-          <div className="w-80 border-l border-[#1e2240] bg-[#0a0c16]/50 flex flex-col h-full shrink-0 p-6 space-y-6 overflow-y-auto">
+          <div className="w-80 border-l border-cardBorder bg-[#12161F]/50 flex flex-col h-full shrink-0 p-6 space-y-6 overflow-y-auto">
             
             {/* Credits Widget */}
-            <div className="bg-[#141628] border border-[#1e2240] rounded-2xl p-5 space-y-4">
+            <div className="bg-cardSurface border border-cardBorder rounded-[6px] p-5 space-y-4">
               <div className="flex justify-between items-center">
-                <span className="text-[10px] font-bold text-muted uppercase tracking-wider">Credits Widget</span>
-                <span className="text-[9px] text-muted">Resets in {timeLeft.hours}h {timeLeft.mins}m</span>
+                <span className="text-[10px] font-bold text-muted uppercase tracking-wider">Quota Registry</span>
+                <span className="text-[9px] text-muted font-mono">{timeLeft.hours}h {timeLeft.mins}m</span>
               </div>
               
-              <div className="flex flex-col items-center py-4 relative">
-                <div className="w-28 h-28 flex items-center justify-center relative">
+              <div className="flex flex-col items-center py-2 relative">
+                <div className="w-24 h-24 flex items-center justify-center relative">
                   <svg className="w-full h-full transform -rotate-90">
-                    <circle cx="56" cy="56" r="48" stroke="#1f2937" strokeWidth="6" fill="transparent" />
+                    <circle cx="48" cy="48" r="40" stroke="#232838" strokeWidth="4" fill="transparent" />
                     <circle 
-                      cx="56" 
-                      cy="56" 
-                      r="48" 
-                      stroke="#8b5cf6" 
-                      strokeWidth="6" 
+                      cx="48" 
+                      cy="48" 
+                      r="40" 
+                      stroke="#4C8DFF" 
+                      strokeWidth="4" 
                       fill="transparent" 
-                      strokeDasharray={2 * Math.PI * 48}
-                      strokeDashoffset={(2 * Math.PI * 48) - (credits / totalDailyAllowance) * (2 * Math.PI * 48)}
+                      strokeDasharray={2 * Math.PI * 40}
+                      strokeDashoffset={(2 * Math.PI * 40) - (credits / totalDailyAllowance) * (2 * Math.PI * 40)}
                     />
                   </svg>
                   <div className="absolute text-center">
-                    <span className="text-2xl font-bold text-white block font-mono">{credits}</span>
-                    <span className="text-[9px] text-muted uppercase font-bold tracking-wider">Left Today</span>
+                    <span className="text-xl font-bold text-textMain block font-mono">{credits}</span>
+                    <span className="text-[8px] text-muted uppercase font-bold tracking-wider">Left</span>
                   </div>
                 </div>
               </div>
 
-              <div className="text-center pt-2">
+              <div className="text-center pt-1.5 border-t border-cardBorder">
                 <Link to="/pricing" className="text-xs font-bold text-primary hover:underline">
                   Get more credits →
                 </Link>
@@ -416,19 +405,19 @@ export default function DashboardPage() {
             </div>
 
             {/* Security Tip Card */}
-            <div className="bg-[#141628] border-l-4 border-primary rounded-r-2xl p-5 space-y-4">
+            <div className="bg-cardSurface border-l-2 border-primary rounded-r-[6px] border border-y-cardBorder border-r-cardBorder p-4 space-y-3">
               <div className="flex items-center gap-1.5 text-primary">
-                <Lightbulb className="w-4.5 h-4.5" />
-                <span className="text-[10px] font-bold uppercase tracking-wider">Security Tip</span>
+                <Lightbulb className="w-4 h-4 text-primary" />
+                <span className="text-[10px] font-bold uppercase tracking-wider">Security Guideline</span>
               </div>
-              <p className="text-xs text-slate-200 leading-relaxed font-medium">
+              <p className="text-xs text-textMain leading-relaxed font-normal">
                 {SECURITY_TIPS[tipIndex]}
               </p>
               <button 
                 onClick={handleNextTip} 
-                className="text-[10px] font-bold text-muted hover:text-slate-200 transition-colors"
+                className="text-[9px] font-bold text-muted hover:text-textMain transition-colors uppercase font-mono tracking-wider block"
               >
-                Next tip →
+                Next guideline →
               </button>
             </div>
 

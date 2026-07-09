@@ -108,29 +108,25 @@ export default function ReportPage() {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  // Color logic for risk
-  let riskColorText = "text-safe";
-  let riskBgGradient = "from-safe/20 to-transparent border-safe/30";
+  let riskColorText = "text-primary";
+  let riskBorder = "border-cardBorder";
   if (risk_score >= 70) {
     riskColorText = "text-danger";
-    riskBgGradient = "from-danger/20 to-transparent border-danger/30";
+    riskBorder = "border-danger/30";
   } else if (risk_score >= 30) {
     riskColorText = "text-warning";
-    riskBgGradient = "from-warning/20 to-transparent border-warning/30";
+    riskBorder = "border-warning/30";
   }
 
   return (
-    <div className="flex h-screen bg-[#0d0f1a] text-slate-100 overflow-hidden font-sans">
+    <div className="flex h-screen bg-pageBg text-textMain overflow-hidden font-sans">
       
-      {/* Sidebar - hidden in print */}
       <div className="print:hidden">
         <Sidebar />
       </div>
 
-      {/* Main View */}
       <div className="flex-1 flex flex-col min-w-0">
         
-        {/* TopBar - hidden in print */}
         <div className="print:hidden">
           <TopBar />
         </div>
@@ -139,37 +135,37 @@ export default function ReportPage() {
         <div className="flex-1 overflow-y-auto p-8 max-w-4xl mx-auto w-full space-y-6 print:p-0 print:max-w-full">
           
           {/* Action Row - hidden in print */}
-          <div className="flex justify-between items-center border-b border-[#1e2240] pb-4 print:hidden">
+          <div className="flex justify-between items-center border-b border-cardBorder pb-4 print:hidden">
             <div>
-              <h2 className="font-heading font-bold text-2xl flex items-center gap-2">
-                <FileText className="w-6 h-6 text-primary" />
-                Security Report
+              <h2 className="text-sm font-bold text-textMain uppercase tracking-wider flex items-center gap-2">
+                <FileText className="w-5 h-5 text-primary" />
+                Security Report Console
               </h2>
               <p className="text-xs text-muted mt-0.5">
                 Generate static summaries and markdown outputs for teams.
               </p>
             </div>
             
-            <div className="flex gap-2">
+            <div className="flex gap-2.5">
               {saved ? (
                 <button
                   disabled
-                  className="px-4 py-2 rounded-lg bg-safe text-white text-xs transition-all flex items-center gap-2 font-medium cursor-not-allowed opacity-90"
+                  className="px-3.5 py-2 rounded-[6px] bg-primary/10 border border-primary/20 text-primary text-xs transition-fast flex items-center gap-1.5 font-semibold cursor-not-allowed"
                 >
-                  <Check className="w-4.5 h-4.5" />
-                  <span>✓ Saved</span>
+                  <Check className="w-4 h-4" />
+                  <span>Saved</span>
                 </button>
               ) : (
                 <button
                   onClick={handleSave}
-                  className="px-4 py-2 rounded-lg border border-primary text-primary hover:bg-primary/10 text-xs transition-all flex items-center gap-2 font-medium"
+                  className="px-3.5 py-2 rounded-[6px] border border-primary text-primary hover:bg-primary/5 text-xs transition-fast flex items-center gap-1.5 font-semibold"
                 >
                   Save Report
                 </button>
               )}
               <button
                 onClick={handlePrint}
-                className="px-4 py-2 rounded-lg border border-[#1e2240] text-xs text-slate-200 hover:text-white hover:bg-[#141628] transition-all flex items-center gap-2 font-medium"
+                className="px-3.5 py-2 rounded-[6px] border border-cardBorder text-xs text-slate-200 hover:text-white hover:bg-cardSurface transition-fast flex items-center gap-1.5 font-semibold"
               >
                 <Printer className="w-4 h-4 text-muted" />
                 Export PDF
@@ -177,15 +173,15 @@ export default function ReportPage() {
               {sessionId && (
                 <button
                   onClick={() => navigate(`/workflow/${sessionId}`)}
-                  className="px-4 py-2 rounded-lg border border-[#1e2240] text-xs text-slate-200 hover:text-white hover:bg-[#141628] transition-all flex items-center gap-2 font-medium"
+                  className="px-3.5 py-2 rounded-[6px] border border-cardBorder text-xs text-slate-200 hover:text-white hover:bg-cardSurface transition-fast flex items-center gap-1.5 font-semibold"
                 >
                   <ExternalLink className="w-4 h-4 text-muted" />
-                  View Workflow Execution
+                  Telemetry
                 </button>
               )}
               <button
                 onClick={handleCopyMarkdown}
-                className="px-4 py-2 rounded-lg bg-primary hover:bg-primary/80 text-white text-xs transition-all flex items-center gap-2 font-medium"
+                className="px-3.5 py-2 rounded-[6px] bg-primary hover:bg-primary/95 text-white text-xs transition-fast flex items-center gap-1.5 font-semibold border border-primary/20"
               >
                 {copied ? (
                   <>
@@ -204,45 +200,45 @@ export default function ReportPage() {
 
           {/* Printable Header */}
           <div className="hidden print:flex justify-between items-center border-b-2 border-slate-600 pb-4 mb-6">
-            <span className="font-heading font-bold text-2xl text-slate-800 uppercase tracking-widest">
+            <span className="font-sans font-bold text-xl text-slate-800 uppercase tracking-widest">
               VEKTRA Cloud Security Report
             </span>
-            <span className="text-xs text-slate-600">
+            <span className="text-xs text-slate-600 font-mono">
               Generated: {new Date().toLocaleDateString()}
             </span>
           </div>
 
-          {/* Risk Score Hero Card */}
-          <div className={`border rounded-2xl p-8 bg-gradient-to-b ${riskBgGradient} flex flex-col items-center justify-center text-center space-y-4`}>
+          {/* Risk Score Hero Card (Redesigned matching Snyk guidelines) */}
+          <div className={`border rounded-[6px] p-6 bg-cardSurface ${riskBorder} flex flex-col items-center justify-center text-center space-y-3`}>
             <div className="relative flex items-center justify-center">
-              <div className={`text-7xl font-bold font-heading ${riskColorText}`}>
+              <div className={`text-6xl font-bold font-sans tracking-tight ${riskColorText}`}>
                 {risk_score}
               </div>
-              <div className="absolute -right-12 bottom-1.5 text-xs text-muted uppercase font-bold tracking-wider">
+              <div className="absolute -right-10 bottom-1 text-[10px] text-muted uppercase font-bold tracking-wider font-mono">
                 / 100
               </div>
             </div>
             <div className="space-y-1.5 max-w-xl">
-              <h3 className="text-slate-100 font-heading font-semibold text-base flex items-center justify-center gap-2">
-                <Award className={`w-5 h-5 ${riskColorText}`} />
+              <h3 className="text-textMain font-bold text-xs uppercase tracking-wide flex items-center justify-center gap-1.5">
+                <Award className={`w-4.5 h-4.5 ${riskColorText}`} />
                 Security Risk Assessment
               </h3>
-              <p className="text-xs text-slate-300 leading-relaxed italic">
+              <p className="text-xs text-textMain leading-relaxed font-normal">
                 "{executive_summary || "No active analysis data. Go back to upload policies."}"
               </p>
             </div>
           </div>
 
           {/* Conflict List */}
-          <div className="space-y-6">
-            <h3 className="font-heading font-bold text-lg text-slate-100 flex items-center gap-2 border-b border-[#1e2240] pb-2 print:border-slate-400 print:text-slate-800">
+          <div className="space-y-5">
+            <h3 className="text-xs font-bold text-muted uppercase tracking-wider block border-b border-cardBorder pb-2 print:border-slate-400 print:text-slate-800">
               Detected Vulnerabilities ({conflicts.length})
             </h3>
             
             {conflicts.length === 0 ? (
-              <div className="text-center py-10 bg-cardSurface rounded-xl border border-cardBorder">
-                <Sparkles className="w-8 h-8 text-safe mx-auto mb-2" />
-                <h4 className="text-sm font-semibold text-slate-300">No vulnerabilities found</h4>
+              <div className="text-center py-10 bg-cardSurface rounded-[6px] border border-cardBorder">
+                <Sparkles className="w-8 h-8 text-primary mx-auto mb-2" />
+                <h4 className="text-xs font-semibold text-textMain uppercase tracking-wide">No vulnerabilities found</h4>
                 <p className="text-xs text-muted max-w-xs mx-auto mt-1">
                   Upload a policy configuration containing vulnerabilities to inspect remediations.
                 </p>

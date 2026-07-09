@@ -32,7 +32,6 @@ export default function GraphPage() {
     compliance_notes
   } = stats;
 
-  // Count instances by severity
   const critCount = conflicts.filter(c => c.severity === "CRITICAL").length;
   const warnCount = conflicts.filter(c => c.severity === "WARNING").length;
   const infoCount = conflicts.filter(c => c.severity === "INFO").length;
@@ -46,7 +45,6 @@ export default function GraphPage() {
     riskLabel = "MEDIUM";
   }
 
-  // Handle clicking a category card to select the first vulnerability of that type
   const handleCategoryClick = (severity) => {
     const target = conflicts.find(c => c.severity === severity);
     if (target) {
@@ -55,7 +53,7 @@ export default function GraphPage() {
   };
 
   return (
-    <div className="flex h-screen bg-[#0d0f1a] text-slate-100 overflow-hidden font-sans select-none">
+    <div className="flex h-screen bg-pageBg text-textMain overflow-hidden font-sans select-none">
       
       {/* ── LEFT COLUMN (Sidebar) ── */}
       <Sidebar />
@@ -75,10 +73,10 @@ export default function GraphPage() {
             {/* Header row */}
             <div className="flex items-center justify-between">
               <div>
-                <h2 className="font-heading font-bold text-2xl text-slate-100">
+                <h2 className="text-lg font-bold text-textMain tracking-tight uppercase">
                   Policy Graph Analysis
                 </h2>
-                <p className="text-[10px] text-muted font-medium mt-0.5 tracking-wider uppercase">
+                <p className="text-[10px] text-muted font-mono mt-0.5 tracking-wider uppercase">
                   Neo4j Aura relationship graph traversal · {(analysisTier || "free").toUpperCase()} tier
                 </p>
               </div>
@@ -89,29 +87,34 @@ export default function GraphPage() {
                 const circumference = 2 * Math.PI * radius;
                 const strokeDashoffset = circumference - (risk_score / 100) * circumference;
 
-                let strokeColor = "#10b981";
-                if (risk_score >= 80) strokeColor = "#ef4444";
-                else if (risk_score >= 50) strokeColor = "#f97316";
-                else if (risk_score >= 20) strokeColor = "#eab308";
+                let strokeColor = "#4C8DFF"; // signal-blue
+                let textColor = "text-primary";
+                if (risk_score >= 80) {
+                  strokeColor = "#FF5C4D"; // alert-red
+                  textColor = "text-danger";
+                } else if (risk_score >= 50) {
+                  strokeColor = "#F2A94B"; // warn-amber
+                  textColor = "text-warning";
+                }
 
                 return (
-                  <div className="flex items-center gap-3 bg-[#141628] border border-[#1e2240] rounded-xl px-4 py-2 shadow-md">
-                    <div className="relative w-10 h-10 flex items-center justify-center">
+                  <div className="flex items-center gap-3 bg-cardSurface border border-cardBorder rounded-[6px] px-4 py-2">
+                    <div className="relative w-8 h-8 flex items-center justify-center">
                       <svg className="w-full h-full transform -rotate-90">
                         <circle
-                          cx="20"
-                          cy="20"
+                          cx="16"
+                          cy="16"
                           r={radius}
-                          className="stroke-[#1e2240]"
-                          strokeWidth="3"
+                          className="stroke-pageBg"
+                          strokeWidth="2.5"
                           fill="transparent"
                         />
                         <circle
-                          cx="20"
-                          cy="20"
+                          cx="16"
+                          cy="16"
                           r={radius}
                           stroke={strokeColor}
-                          strokeWidth="3"
+                          strokeWidth="2.5"
                           fill="transparent"
                           strokeDasharray={circumference}
                           strokeDashoffset={strokeDashoffset}
@@ -119,15 +122,13 @@ export default function GraphPage() {
                           className="transition-all duration-500 ease-out"
                         />
                       </svg>
-                      <span className="absolute text-[9px] font-bold font-mono text-slate-200">
+                      <span className="absolute text-[8px] font-bold font-mono text-textMain">
                         {risk_score}%
                       </span>
                     </div>
                     <div>
                       <div className="text-[8px] uppercase font-bold text-muted tracking-wider">Overall Posture</div>
-                      <div className={`text-[10px] font-bold font-heading ${
-                        risk_score >= 80 ? "text-danger" : (risk_score >= 50 ? "text-warning" : (risk_score >= 20 ? "text-yellow-400" : "text-safe"))
-                      }`}>
+                      <div className={`text-[10px] font-bold font-mono ${textColor}`}>
                         {riskLabel} RISK
                       </div>
                     </div>
@@ -138,17 +139,17 @@ export default function GraphPage() {
 
             {/* Executive Summary Bar */}
             {executive_summary && (
-              <div className="bg-[#141628] border border-[#1e2240] border-l-4 border-l-warning rounded-xl p-4 flex items-start gap-3 shadow-md">
-                <Sparkles className="w-5 h-5 text-warning flex-shrink-0 mt-0.5" />
+              <div className="bg-cardSurface border border-cardBorder border-l-2 border-l-primary rounded-[6px] p-4 flex items-start gap-3">
+                <Sparkles className="w-4.5 h-4.5 text-primary flex-shrink-0 mt-0.5" />
                 <div>
-                  <span className="text-[10px] font-bold text-muted uppercase tracking-wider block mb-0.5">
+                  <span className="text-[10px] font-bold text-muted uppercase tracking-wider block mb-0.5 font-mono">
                     {upgradePrompt ? "Basic Graph Summary" : "Executive Summary (Agent 3 Scorer)"}
                   </span>
-                  <p className="text-xs text-slate-300 leading-relaxed font-medium">
+                  <p className="text-xs text-textMain leading-relaxed font-normal">
                     {executive_summary}
                   </p>
                   {compliance_notes && (
-                    <p className="text-[10px] text-muted mt-1.5 leading-relaxed">
+                    <p className="text-[10px] text-muted mt-1.5 leading-relaxed font-mono">
                       {compliance_notes}
                     </p>
                   )}
@@ -162,46 +163,50 @@ export default function GraphPage() {
               {/* Critical Card */}
               <button
                 onClick={() => handleCategoryClick("CRITICAL")}
-                className="bg-gradient-to-r from-danger/20 to-danger/5 border border-danger/20 hover:border-danger/50 p-4 rounded-xl text-left transition-all duration-300 group flex justify-between items-center"
+                className={`bg-cardSurface border p-4 rounded-[6px] text-left transition-fast group flex justify-between items-center ${
+                  critCount > 0 ? "border-[#FF5C4D]/30 hover:border-[#FF5C4D]/60" : "border-cardBorder hover:border-muted/30"
+                }`}
               >
                 <div className="space-y-1">
-                  <div className="flex items-center gap-2 text-danger">
-                    <ShieldAlert className="w-4.5 h-4.5" />
-                    <span className="text-[10px] font-bold uppercase tracking-wider">Criticals</span>
+                  <div className="flex items-center gap-2 text-muted">
+                    <ShieldAlert className={`w-4 h-4 ${critCount > 0 ? "text-[#FF5C4D]" : "text-muted"}`} />
+                    <span className="text-[10px] font-bold uppercase tracking-wider font-mono">Criticals</span>
                   </div>
-                  <div className="text-2xl font-bold font-heading text-slate-100">{critCount}</div>
+                  <div className={`text-2xl font-bold font-sans tracking-tight ${critCount > 0 ? "text-[#FF5C4D]" : "text-textMain"}`}>{critCount}</div>
                 </div>
-                <ArrowRight className="w-5 h-5 text-danger opacity-0 group-hover:opacity-100 group-hover:translate-x-1 transition-all duration-300" />
+                <ArrowRight className="w-4 h-4 text-[#FF5C4D] opacity-0 group-hover:opacity-100 group-hover:translate-x-1 transition-fast" />
               </button>
 
               {/* Warning Card */}
               <button
                 onClick={() => handleCategoryClick("WARNING")}
-                className="bg-gradient-to-r from-warning/20 to-warning/5 border border-warning/20 hover:border-warning/50 p-4 rounded-xl text-left transition-all duration-300 group flex justify-between items-center"
+                className={`bg-cardSurface border p-4 rounded-[6px] text-left transition-fast group flex justify-between items-center ${
+                  warnCount > 0 ? "border-[#F2A94B]/30 hover:border-[#F2A94B]/60" : "border-cardBorder hover:border-muted/30"
+                }`}
               >
                 <div className="space-y-1">
-                  <div className="flex items-center gap-2 text-warning">
-                    <AlertTriangle className="w-4.5 h-4.5" />
-                    <span className="text-[10px] font-bold uppercase tracking-wider">Warnings</span>
+                  <div className="flex items-center gap-2 text-muted">
+                    <AlertTriangle className={`w-4 h-4 ${warnCount > 0 ? "text-[#F2A94B]" : "text-muted"}`} />
+                    <span className="text-[10px] font-bold uppercase tracking-wider font-mono">Warnings</span>
                   </div>
-                  <div className="text-2xl font-bold font-heading text-slate-100">{warnCount}</div>
+                  <div className={`text-2xl font-bold font-sans tracking-tight ${warnCount > 0 ? "text-[#F2A94B]" : "text-textMain"}`}>{warnCount}</div>
                 </div>
-                <ArrowRight className="w-5 h-5 text-warning opacity-0 group-hover:opacity-100 group-hover:translate-x-1 transition-all duration-300" />
+                <ArrowRight className="w-4 h-4 text-[#F2A94B] opacity-0 group-hover:opacity-100 group-hover:translate-x-1 transition-fast" />
               </button>
 
               {/* Info Card */}
               <button
                 onClick={() => handleCategoryClick("INFO")}
-                className="bg-gradient-to-r from-blue-500/20 to-blue-500/5 border border-blue-500/20 hover:border-blue-500/50 p-4 rounded-xl text-left transition-all duration-300 group flex justify-between items-center"
+                className="bg-cardSurface border border-cardBorder hover:border-muted/30 p-4 rounded-[6px] text-left transition-fast group flex justify-between items-center"
               >
                 <div className="space-y-1">
-                  <div className="flex items-center gap-2 text-blue-400">
-                    <Info className="w-4.5 h-4.5" />
-                    <span className="text-[10px] font-bold uppercase tracking-wider">Info Logs</span>
+                  <div className="flex items-center gap-2 text-muted">
+                    <Info className="w-4 h-4 text-primary" />
+                    <span className="text-[10px] font-bold uppercase tracking-wider font-mono">Info Logs</span>
                   </div>
-                  <div className="text-2xl font-bold font-heading text-slate-100">{infoCount}</div>
+                  <div className="text-2xl font-bold font-sans tracking-tight text-textMain">{infoCount}</div>
                 </div>
-                <ArrowRight className="w-5 h-5 text-blue-400 opacity-0 group-hover:opacity-100 group-hover:translate-x-1 transition-all duration-300" />
+                <ArrowRight className="w-4 h-4 text-primary opacity-0 group-hover:opacity-100 group-hover:translate-x-1 transition-fast" />
               </button>
 
             </div>
