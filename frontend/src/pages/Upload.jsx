@@ -144,7 +144,7 @@ function SecurityGraphVisual() {
     <div className="w-full py-4 bg-cardSurface/30 border border-cardBorder rounded-[6px] overflow-hidden relative">
       <div className="absolute top-2.5 left-3.5 flex items-center gap-1.5 text-[8px] font-bold text-muted uppercase tracking-wider font-mono">
         <Activity className="w-3 h-3 text-primary" />
-        <span>Vulnerable Pathway Mapping Simulator</span>
+        <span>Access Relationship Map</span>
       </div>
       <svg className="w-full h-32 text-muted" viewBox="0 0 600 160" fill="none" xmlns="http://www.w3.org/2000/svg">
         <path d="M120 80 H 260" stroke="var(--border-hairline)" strokeWidth="1" strokeDasharray="4" className="animate-[flow-dash_2.5s_linear_infinite]" />
@@ -383,11 +383,10 @@ export default function UploadPage() {
             </button>
           )}
           <h1 className="font-sans font-bold text-4xl tracking-tight leading-[1.1] text-textMain">
-            Cloud policy risk analysis.<br/>
-            <span className="text-primary font-semibold">Deterministic attack path scanning.</span>
+            Analyze Policy Risk
           </h1>
           <p className="text-xs md:text-sm text-muted max-w-lg mx-auto leading-relaxed font-normal">
-            Upload AWS IAM JSON or Kubernetes RBAC YAML configs. Vektra models permissions as a node graph to catch privilege escalations before deployments.
+            Identify privilege escalation paths and misconfigurations instantly.
           </p>
         </div>
 
@@ -520,7 +519,7 @@ export default function UploadPage() {
             ) : (
               <>
                 <Play className="w-3.5 h-3.5 fill-white text-white" />
-                <span>{agentsUnlocked ? "Analyze IAM" : "Analyze Free"}</span>
+                <span>Analyze Policy</span>
               </>
             )}
           </button>
@@ -531,20 +530,20 @@ export default function UploadPage() {
             className="w-full h-10 bg-cardSurface hover:bg-bgElevated border border-cardBorder text-textMain font-sans font-semibold text-xs rounded-[6px] shadow-sm transition-fast flex items-center justify-center gap-1.5 disabled:opacity-40"
           >
             <Sparkles className="w-3.5 h-3.5 text-primary" />
-            <span>Try Demo Mode</span>
+            <span>Load Demo</span>
           </button>
         </div>
 
         {/* Trusted By Section (Muted, Enterprise style) */}
         <div className="pt-10 border-t border-cardBorder text-center space-y-3.5 max-w-4xl mx-auto w-full">
-          <span className="text-[10px] font-bold text-muted uppercase tracking-widest block">
-            INTEGRATED SECURE ENVIRONMENT
+          <span className="text-[10px] font-bold text-muted uppercase tracking-widest block font-mono">
+            Integrations
           </span>
           <div className="flex flex-wrap justify-center items-center gap-12 opacity-30">
-            <span className="text-[11px] font-mono tracking-widest font-semibold text-muted">AWS ACCOUNT</span>
-            <span className="text-[11px] font-mono tracking-widest font-semibold text-muted">K8S CLUSTER</span>
-            <span className="text-[11px] font-mono tracking-widest font-semibold text-muted">NEO4J AURADB</span>
-            <span className="text-[11px] font-mono tracking-widest font-semibold text-muted">STELLAR LEDGER</span>
+            <span className="text-[11px] font-mono tracking-widest font-semibold text-muted">AWS</span>
+            <span className="text-[11px] font-mono tracking-widest font-semibold text-muted">Kubernetes</span>
+            <span className="text-[11px] font-mono tracking-widest font-semibold text-muted">Neo4j</span>
+            <span className="text-[11px] font-mono tracking-widest font-semibold text-muted">Stellar</span>
           </div>
         </div>
 
@@ -552,7 +551,7 @@ export default function UploadPage() {
 
       {/* Footer */}
       <footer className="h-14 border-t border-cardBorder flex items-center justify-center text-[10px] text-muted bg-pageBg font-mono">
-        VEKTRA SECURITY PORTAL • Powered by Neo4j AuraDB & Sarvam AI
+        Vektra
       </footer>
 
     </div>
