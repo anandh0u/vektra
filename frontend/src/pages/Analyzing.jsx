@@ -203,7 +203,7 @@ export default function AnalyzingPage() {
   }
 
   return (
-    <div className="min-h-screen bg-pageBg flex flex-col text-textMain selection:bg-primary/20">
+    <div className="min-h-screen bg-pageBg flex flex-col text-textMain selection:bg-primary/20" style={{backgroundImage: "radial-gradient(at 10% 0%, rgba(59,130,246,0.06) 0px, transparent 50%)"}}>
       
       {/* Header */}
       <header className="h-16 flex items-center justify-between px-8 border-b border-cardBorder bg-pageBg z-30">
@@ -260,14 +260,14 @@ export default function AnalyzingPage() {
           {STEP_CONFIG.slice(0, 2).map((step, index) => renderStepRow(step, index))}
 
           {/* Parallel Execution visual connectors */}
-          <div className="border border-cardBorder bg-cardSurface/20 p-4 rounded-[6px] space-y-3 relative">
+          <div className="glass-card p-4 rounded-lg space-y-3 relative">
             <div className="absolute -left-[1px] top-1/2 -translate-y-1/2 h-8 w-[2px] bg-primary" />
             <div className="flex justify-between items-center text-[9px] font-bold text-muted uppercase tracking-widest font-mono">
               <span className="flex items-center gap-1.5">
                 <Activity className="w-3 h-3 text-primary animate-pulse" />
                 Parallel Processing Hub
               </span>
-              <span className="text-primary">2x Concurrency Execution</span>
+              <span className="text-primary">2x Concurrent Operations</span>
             </div>
             <div className="grid grid-cols-2 gap-4">
               {STEP_CONFIG.slice(2, 4).map((step, index) => renderStepRow(step, index + 2))}
@@ -293,7 +293,7 @@ export default function AnalyzingPage() {
 
       {/* Footer */}
       <footer className="h-12 border-t border-cardBorder flex items-center justify-center text-[10px] text-muted bg-pageBg font-mono">
-        VEKTRA PIPELINE ENGINE • SECURITY OPERATIONS ENVIRONMENT
+        Vektra · Scan Pipeline
       </footer>
     </div>
   );

@@ -325,7 +325,7 @@ export default function UploadPage() {
   };
 
   return (
-    <div className="min-h-screen bg-pageBg text-textMain flex flex-col justify-between selection:bg-primary/20 relative">
+    <div className="min-h-screen bg-pageBg text-textMain flex flex-col justify-between selection:bg-primary/20 relative" style={{backgroundImage: "radial-gradient(at 20% 0%, rgba(59,130,246,0.06) 0px, transparent 50%), radial-gradient(at 80% 10%, rgba(139,92,246,0.04) 0px, transparent 50%)"}}>
       
       {/* ── TOP NAV ── */}
       <header className="h-16 flex items-center justify-between px-8 border-b border-cardBorder bg-pageBg z-30">
@@ -442,10 +442,10 @@ export default function UploadPage() {
             onDragOver={handleDrag}
             onDragLeave={handleDrag}
             onDrop={handleDrop}
-            className={`rounded-[6px] border border-dashed border-cardBorder transition-fast p-8 flex flex-col items-center justify-center text-center cursor-pointer min-h-[260px] ${
+            className={`glass-card rounded-lg border-dashed transition-fast p-8 flex flex-col items-center justify-center text-center cursor-pointer min-h-[260px] ${
               dragActive 
-                ? "border-primary bg-primary/5" 
-                : "hover:border-muted/50 bg-cardSurface/30"
+                ? "border-primary border-2 bg-primary/5" 
+                : "hover:border-muted/40"
             }`}
           >
             <input
@@ -455,26 +455,26 @@ export default function UploadPage() {
               accept=".json,.yaml,.yml"
               onChange={handleFileChange}
             />
-            <label htmlFor="file-upload" className="cursor-pointer flex flex-col items-center gap-3.5">
-              <div className="p-3 rounded-[6px] bg-cardSurface border border-cardBorder text-primary shadow-sm">
+            <label htmlFor="file-upload" className="cursor-pointer flex flex-col items-center gap-4">
+              <div className="p-3.5 rounded-lg bg-primary/10 border border-primary/20 text-primary">
                 <Upload className="w-5 h-5" />
               </div>
-              <div className="space-y-0.5">
+              <div className="space-y-1">
                 <p className="text-xs font-semibold text-textMain">
-                  Drop policy configuration file here
+                  Drop IAM or RBAC configuration file
                 </p>
                 <p className="text-[11px] text-muted font-normal">
-                  or click to select file from directory
+                  Supports AWS IAM JSON and Kubernetes YAML
                 </p>
               </div>
-              <div className="text-[9px] text-muted bg-cardSurface border border-cardBorder px-2.5 py-0.5 rounded-full uppercase tracking-wider font-mono">
-                {format === "iam" ? "JSON Format" : "YAML Format"}
+              <div className="text-[9px] text-muted bg-pageBg/80 border border-cardBorder px-2.5 py-0.5 rounded-full uppercase tracking-wider font-mono">
+                {format === "iam" ? ".json" : ".yaml / .yml"}
               </div>
             </label>
           </div>
 
           {/* Text Editor Area */}
-          <div className="flex flex-col border border-cardBorder rounded-[6px] overflow-hidden bg-cardSurface min-h-[260px]">
+          <div className="glass-card flex flex-col rounded-lg overflow-hidden min-h-[260px]">
             <div className="flex items-center justify-between px-4 py-2 border-b border-cardBorder bg-bgElevated">
               <div className="flex items-center gap-2 text-muted">
                 <FileCode className="w-4 h-4 text-muted" />
