@@ -2,7 +2,10 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="apple-touch-icon" href="/favicon.svg" />
+    <link rel="manifest" href="/manifest.json" />
+    <meta name="theme-color" content="#09090b" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>VEKTRA - Cloud Policy Vulnerability Graph Engine</title>
     <!-- Google Fonts -->
@@ -13,5 +16,14 @@
   <body class="bg-[#0d0f1a] text-[#f1f5f9] antialiased">
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
+    <script>
+      if ("serviceWorker" in navigator) {
+        window.addEventListener("load", () => {
+          navigator.serviceWorker.register("/sw.js").catch((err) => {
+            console.warn("ServiceWorker registration failed: ", err);
+          });
+        });
+      }
+    </script>
   </body>
 </html>

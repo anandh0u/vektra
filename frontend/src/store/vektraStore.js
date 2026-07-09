@@ -275,6 +275,8 @@ export const useVektraStore = create((set, get) => ({
     set({ format: fmt });
   },
   setDemoMode: (val) => set({ isDemoMode: val }),
+  mobileSidebarOpen: false,
+  setMobileSidebarOpen: (val) => set({ mobileSidebarOpen: val }),
   resetSession: () => set({ sessionId: generateUUID() }),
 
   // Loaded Samples

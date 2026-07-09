@@ -1,12 +1,19 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Search, ChevronRight, Sun, Moon } from "lucide-react";
+import { Search, ChevronRight, Sun, Moon, Menu } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import AuthNav from "./AuthNav";
 import { useVektraStore } from "../store/vektraStore";
 
 export default function TopBar() {
   const navigate = useNavigate();
-  const { recentAnalyses, loadRecentAnalysis, theme, setTheme } = useVektraStore();
+  const { 
+    recentAnalyses, 
+    loadRecentAnalysis, 
+    theme, 
+    setTheme,
+    mobileSidebarOpen,
+    setMobileSidebarOpen
+  } = useVektraStore();
   const [searchTerm, setSearchTerm] = useState("");
   const [showDropdown, setShowDropdown] = useState(false);
   const dropdownRef = useRef(null);
@@ -38,17 +45,27 @@ export default function TopBar() {
   return (
     <header className="h-16 border-b border-cardBorder bg-pageBg flex items-center justify-between px-8 select-none relative z-50">
       
-      {/* Search Input & Dropdown */}
-      <div className="relative w-96" ref={dropdownRef}>
-        <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted" />
-        <input
-          type="text"
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          onFocus={() => setShowDropdown(true)}
-          placeholder="Search policy scans & sessions..."
-          className="w-full bg-cardSurface border border-cardBorder rounded-lg py-2 pl-10 pr-4 text-xs text-textMain placeholder-muted focus:outline-none focus:border-primary transition-fast"
-        />
+      <div className="flex items-center gap-3">
+        {/* Mobile Sidebar Hamburger Trigger */}
+        <button
+          onClick={() => setMobileSidebarOpen(true)}
+          className="lg:hidden p-2 text-muted hover:text-textMain hover:bg-cardSurface border border-cardBorder rounded-[6px] transition-fast flex items-center justify-center"
+          title="Open Menu"
+        >
+          <Menu className="w-4 h-4" />
+        </button>
+
+        {/* Search Input & Dropdown */}
+        <div className="relative w-72 md:w-96" ref={dropdownRef}>
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted" />
+          <input
+            type="text"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            onFocus={() => setShowDropdown(true)}
+            placeholder="Search policy scans & sessions..."
+            className="w-full bg-cardSurface border border-cardBorder rounded-lg py-2 pl-10 pr-4 text-xs text-textMain placeholder-muted focus:outline-none focus:border-primary transition-fast"
+          />
         {searchTerm === "" && (
           <div className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[9px] bg-cardSurface text-muted px-1.5 py-0.5 rounded border border-cardBorder font-mono">
             ⌘K
@@ -109,6 +126,7 @@ export default function TopBar() {
           </div>
         )}
       </div>
+    </div>
 
       <div className="flex items-center gap-4">
         {/* Quick Theme Switch */}
