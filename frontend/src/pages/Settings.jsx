@@ -32,19 +32,16 @@ export default function SettingsPage() {
     setTheme
   } = useVektraStore();
 
-  const [activeTab, setActiveTab] = useState("profile"); // "profile" | "security" | "wallet" | "notifications" | "appearance" | "danger"
+  const [activeTab, setActiveTab] = useState("profile");
 
-  // ── PROFILE STATE ──
   const [profileName, setProfileName] = useState(currentUser?.name || "");
   const [savingProfile, setSavingProfile] = useState(false);
 
-  // ── SECURITY STATE ──
   const [currentPw, setCurrentPw] = useState("");
   const [newPw, setNewPw] = useState("");
   const [confirmPw, setConfirmPw] = useState("");
   const [updatingPw, setUpdatingPw] = useState(false);
 
-  // ── NOTIFICATIONS STATE ──
   const parsedPrefs = (() => {
     try {
       return JSON.parse(currentUser?.notification_preferences || "{}");
@@ -59,10 +56,9 @@ export default function SettingsPage() {
     credit_warnings: parsedPrefs.credit_warnings ?? true,
   });
 
-  // ── APPEARANCE STATE ──
   const [currentTheme, setCurrentTheme] = useState(theme || "dark");
-  const [primaryColor, setPrimaryColor] = useState(localStorage.getItem("vektra_color_primary") || "#8b5cf6");
-  const [secondaryColor, setSecondaryColor] = useState(localStorage.getItem("vektra_color_secondary") || "#22d3ee");
+  const [primaryColor, setPrimaryColor] = useState(localStorage.getItem("vektra_color_primary") || "#4C8DFF");
+  const [secondaryColor, setSecondaryColor] = useState(localStorage.getItem("vektra_color_secondary") || "#8A93A6");
 
   useEffect(() => {
     if (currentUser) {
@@ -79,11 +75,9 @@ export default function SettingsPage() {
     }
   }, [currentUser]);
 
-  // ── DANGER ZONE STATE ──
   const [confirmDeleteText, setConfirmDeleteText] = useState("");
   const [deletingAccount, setDeletingAccount] = useState(false);
 
-  // ── PASSWORD STRENGTH CALCULATION ──
   const getPasswordStrength = (pw) => {
     if (!pw) return { label: "", color: "bg-slate-700", width: "w-0" };
     if (pw.length < 8) return { label: "Too Short (Min 8 chars)", color: "bg-danger", width: "w-1/4" };
@@ -99,7 +93,6 @@ export default function SettingsPage() {
   };
   const strength = getPasswordStrength(newPw);
 
-  // Save profile info
   const handleSaveProfile = async (e) => {
     e.preventDefault();
     if (!profileName.trim()) {
@@ -108,11 +101,9 @@ export default function SettingsPage() {
     }
     setSavingProfile(true);
     try {
-      // If store doesn't have updateProfile implementation, update state manually
       if (updateProfile) {
         await updateProfile(profileName);
       } else {
-        // Fallback update profile API call
         const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8000";
         const res = await fetch(`${API_BASE}/api/auth/profile`, {
           method: "PATCH",
@@ -124,7 +115,6 @@ export default function SettingsPage() {
         });
         if (!res.ok) throw new Error("Failed to update profile");
         const data = await res.json();
-        // Update store
         useVektraStore.setState({ currentUser: { ...currentUser, name: profileName } });
         localStorage.setItem("vektra_user", JSON.stringify({ ...currentUser, name: profileName }));
       }
@@ -136,7 +126,6 @@ export default function SettingsPage() {
     }
   };
 
-  // Change password
   const handleUpdatePassword = async (e) => {
     e.preventDefault();
     if (!currentPw) {
@@ -165,7 +154,6 @@ export default function SettingsPage() {
     }
   };
 
-  // Notification toggles
   const handleTogglePref = async (key) => {
     const updated = { ...prefs, [key]: !prefs[key] };
     setPrefs(updated);
@@ -177,20 +165,17 @@ export default function SettingsPage() {
     }
   };
 
-  // Theme selection
   const handleThemeChange = (newTheme) => {
     setCurrentTheme(newTheme);
     setTheme(newTheme);
     toast.success(`Theme updated to ${newTheme}`);
   };
 
-  // Preset Colors
   const COLOR_PRESETS = [
-    { name: "Default Violet", primary: "#8b5cf6", secondary: "#22d3ee" },
-    { name: "Cyber Punk", primary: "#ff007f", secondary: "#00ffff" },
-    { name: "Neon Emerald", primary: "#39ff14", secondary: "#ffdf00" },
-    { name: "Sunset Gold", primary: "#f59e0b", secondary: "#ef4444" },
-    { name: "Quantum Pink", primary: "#ec4899", secondary: "#8b5cf6" },
+    { name: "Operator Blue", primary: "#4C8DFF", secondary: "#8A93A6" },
+    { name: "Cyber Pink", primary: "#D946EF", secondary: "#A78BFA" },
+    { name: "Matrix Emerald", primary: "#10B981", secondary: "#6EE7B7" },
+    { name: "Caution Amber", primary: "#F2A94B", secondary: "#8A93A6" },
   ];
 
   const handleApplyColors = (prim, sec) => {
@@ -200,10 +185,9 @@ export default function SettingsPage() {
     localStorage.setItem("vektra_color_secondary", sec);
     document.documentElement.style.setProperty("--color-primary", prim);
     document.documentElement.style.setProperty("--color-secondary", sec);
-    toast.success("Color scheme updated successfully!");
+    toast.success("Color preset accent updated!");
   };
 
-  // Delete account
   const handleDeleteAccount = async (e) => {
     e.preventDefault();
     if (confirmDeleteText !== "DELETE") {
@@ -238,30 +222,27 @@ export default function SettingsPage() {
   const pkey = currentUser?.stellar_public_key || "G...";
 
   return (
-    <div className="flex h-screen bg-[#0d0f1a] text-slate-100 overflow-hidden font-sans select-none">
-      {/* Sidebar */}
+    <div className="flex h-screen bg-pageBg text-textMain overflow-hidden font-sans select-none">
       <Sidebar />
 
-      {/* Main Content Area */}
       <div className="flex-1 flex flex-col min-w-0">
         <TopBar />
 
-        {/* Tabbed workspace */}
         <div className="flex-1 flex min-w-0">
           
           {/* Left vertical settings tabs */}
-          <div className="w-60 border-r border-[#1e2240] bg-[#0a0c16]/30 p-6 flex flex-col shrink-0 justify-between">
+          <div className="w-60 border-r border-cardBorder bg-[#12161F]/20 p-6 flex flex-col shrink-0 justify-between">
             <div className="space-y-1.5">
               <span className="text-[10px] font-bold text-muted uppercase tracking-wider block mb-2 px-3">
-                Settings
+                Settings Drawer
               </span>
               {[
-                { id: "profile", label: "Profile", icon: User },
-                { id: "security", label: "Security", icon: Lock },
+                { id: "profile", label: "Profile Settings", icon: User },
+                { id: "security", label: "Security Console", icon: Lock },
                 { id: "wallet", label: "Wallet Console", icon: Wallet },
-                { id: "notifications", label: "Notifications", icon: Bell },
-                { id: "appearance", label: "Appearance", icon: Palette },
-                { id: "danger", label: "Danger Zone", icon: Trash2, red: true }
+                { id: "notifications", label: "Notification Setup", icon: Bell },
+                { id: "appearance", label: "UI Appearance", icon: Palette },
+                { id: "danger", label: "Danger Workspace", icon: Trash2, red: true }
               ].map((tab) => {
                 const TabIcon = tab.icon;
                 const isSelected = activeTab === tab.id;
@@ -269,30 +250,29 @@ export default function SettingsPage() {
                   <button
                     key={tab.id}
                     onClick={() => setActiveTab(tab.id)}
-                    className={`flex items-center justify-between w-full px-3 py-2.5 rounded-lg text-xs font-semibold transition-all duration-200 ${
+                    className={`flex items-center justify-between w-full px-3 py-2 rounded-lg text-xs font-semibold transition-fast ${
                       isSelected 
-                        ? (tab.red ? "bg-danger/10 text-danger" : "bg-[#1e2240] text-white border-l-2 border-primary") 
-                        : (tab.red ? "text-danger/70 hover:bg-danger/5" : "text-muted hover:bg-[#141628] hover:text-slate-200")
+                        ? (tab.red ? "bg-danger/10 text-danger border border-danger/30" : "bg-activeNav text-textMain border border-cardBorder") 
+                        : (tab.red ? "text-danger hover:bg-danger/5" : "text-muted hover:bg-cardSurface hover:text-textMain")
                     }`}
                   >
                     <span className="flex items-center gap-2.5">
                       <TabIcon className="w-4 h-4 shrink-0" />
                       {tab.label}
                     </span>
-                    <ChevronRight className={`w-3.5 h-3.5 opacity-60 ${isSelected ? "translate-x-0.5" : ""}`} />
+                    <ChevronRight className="w-3.5 h-3.5 opacity-40" />
                   </button>
                 );
               })}
             </div>
 
-            {/* Bottom Sign Out */}
-            <div className="border-t border-[#1e2240] pt-4">
+            <div className="border-t border-cardBorder pt-4">
               <button
                 onClick={handleSignOut}
-                className="flex items-center gap-2.5 w-full px-3 py-2.5 rounded-lg text-xs font-bold text-danger hover:bg-danger/10 transition-all duration-200"
+                className="flex items-center gap-2.5 w-full px-3 py-2 rounded-lg text-xs font-bold text-danger hover:bg-danger/10 transition-fast"
               >
                 <LogOut className="w-4 h-4" />
-                Sign Out Account
+                Sign Out Operator
               </button>
             </div>
           </div>
@@ -304,20 +284,17 @@ export default function SettingsPage() {
             {activeTab === "profile" && (
               <div className="space-y-6">
                 <div>
-                  <h2 className="font-heading text-xl font-bold text-white">Profile Settings</h2>
-                  <p className="text-xs text-muted mt-0.5">Configure your operator details.</p>
+                  <h2 className="text-sm font-bold text-textMain uppercase tracking-wider">Profile Settings</h2>
+                  <p className="text-xs text-muted mt-0.5 font-normal">Configure your operator profile info.</p>
                 </div>
 
-                <div className="flex items-center gap-4 border-b border-[#1e2240] pb-6">
-                  <div className="w-20 h-20 rounded-full bg-primary/20 border-2 border-primary/40 flex items-center justify-center font-bold text-2xl text-primary shrink-0 shadow-[0_0_15px_rgba(124,58,237,0.2)]">
+                <div className="flex items-center gap-4 border-b border-cardBorder pb-6">
+                  <div className="w-16 h-16 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center font-bold text-xl text-primary shrink-0">
                     {initials}
                   </div>
                   <div>
-                    <h4 className="text-sm font-bold text-slate-200">Avatar Image</h4>
-                    <p className="text-[10px] text-muted mt-0.5">Using security system avatar initials</p>
-                    <button className="text-xs text-primary font-bold hover:underline mt-1.5 block" disabled>
-                      Change Avatar
-                    </button>
+                    <h4 className="text-xs font-semibold text-textMain uppercase tracking-wide">Operator Initials</h4>
+                    <p className="text-[10px] text-muted mt-0.5 font-normal">Derived from account registration</p>
                   </div>
                 </div>
 
@@ -330,7 +307,7 @@ export default function SettingsPage() {
                       value={profileName}
                       onChange={(e) => setProfileName(e.target.value)}
                       placeholder="Security Operator"
-                      className="w-full bg-[#141628]/60 border border-[#1e2240] rounded-xl px-4 py-2.5 text-xs text-slate-100 placeholder-muted focus:outline-none focus:border-primary transition-all duration-200"
+                      className="w-full bg-pageBg border border-cardBorder rounded-[6px] px-3.5 py-2 text-xs text-textMain placeholder-muted focus:outline-none focus:border-primary transition-fast"
                     />
                   </div>
 
@@ -340,16 +317,16 @@ export default function SettingsPage() {
                       type="email"
                       readOnly
                       value={currentUser?.email || ""}
-                      className="w-full bg-[#0a0c16] border border-[#1e2240] rounded-xl px-4 py-2.5 text-xs text-muted cursor-not-allowed font-mono"
+                      className="w-full bg-cardSurface border border-cardBorder rounded-[6px] px-3.5 py-2 text-xs text-muted cursor-not-allowed font-mono"
                     />
                   </div>
 
                   <button
                     type="submit"
                     disabled={savingProfile}
-                    className="bg-primary hover:bg-primary/80 disabled:opacity-60 text-white px-4 py-2.5 rounded-xl text-xs font-bold transition-all duration-200"
+                    className="h-10 bg-primary hover:bg-primary/95 disabled:opacity-50 text-white px-4 rounded-[6px] text-xs font-semibold transition-fast border border-primary/20"
                   >
-                    {savingProfile ? "Saving changes..." : "Save changes"}
+                    {savingProfile ? "Saving changes..." : "Save Profile"}
                   </button>
                 </form>
               </div>
@@ -359,8 +336,8 @@ export default function SettingsPage() {
             {activeTab === "security" && (
               <div className="space-y-6">
                 <div>
-                  <h2 className="font-heading text-xl font-bold text-white">Change Password</h2>
-                  <p className="text-xs text-muted mt-0.5">Secure your console workspace account.</p>
+                  <h2 className="text-sm font-bold text-textMain uppercase tracking-wider">Change Password</h2>
+                  <p className="text-xs text-muted mt-0.5 font-normal">Rotate your console access credentials.</p>
                 </div>
 
                 <form onSubmit={handleUpdatePassword} className="space-y-4">
@@ -372,7 +349,7 @@ export default function SettingsPage() {
                       value={currentPw}
                       onChange={(e) => setCurrentPw(e.target.value)}
                       placeholder="Enter current password..."
-                      className="w-full bg-[#141628]/60 border border-[#1e2240] rounded-xl px-4 py-2.5 text-xs text-slate-100 placeholder-muted focus:outline-none focus:border-primary transition-all duration-200"
+                      className="w-full bg-pageBg border border-cardBorder rounded-[6px] px-3.5 py-2 text-xs text-textMain placeholder-muted focus:outline-none focus:border-primary transition-fast"
                     />
                   </div>
 
@@ -384,16 +361,15 @@ export default function SettingsPage() {
                       value={newPw}
                       onChange={(e) => setNewPw(e.target.value)}
                       placeholder="Minimum 8 characters"
-                      className="w-full bg-[#141628]/60 border border-[#1e2240] rounded-xl px-4 py-2.5 text-xs text-slate-100 placeholder-muted focus:outline-none focus:border-primary transition-all duration-200"
+                      className="w-full bg-pageBg border border-cardBorder rounded-[6px] px-3.5 py-2 text-xs text-textMain placeholder-muted focus:outline-none focus:border-primary transition-fast"
                     />
                     
-                    {/* Strength Indicator */}
                     {newPw && (
                       <div className="space-y-1 pt-1">
-                        <div className="w-full bg-[#0d0f1a] h-1.5 rounded-full overflow-hidden">
-                          <div className={`h-full rounded-full transition-all duration-300 ${strength.color} ${strength.width}`} />
+                        <div className="w-full bg-pageBg h-1.5 rounded-full overflow-hidden border border-cardBorder">
+                          <div className={`h-full rounded-full transition-fast ${strength.color} ${strength.width}`} />
                         </div>
-                        <span className="text-[9px] font-bold text-muted block">Password strength: {strength.label}</span>
+                        <span className="text-[9px] font-semibold text-muted font-mono block">Strength: {strength.label}</span>
                       </div>
                     )}
                   </div>
@@ -406,16 +382,16 @@ export default function SettingsPage() {
                       value={confirmPw}
                       onChange={(e) => setConfirmPw(e.target.value)}
                       placeholder="Re-type new password"
-                      className="w-full bg-[#141628]/60 border border-[#1e2240] rounded-xl px-4 py-2.5 text-xs text-slate-100 placeholder-muted focus:outline-none focus:border-primary transition-all duration-200"
+                      className="w-full bg-pageBg border border-cardBorder rounded-[6px] px-3.5 py-2 text-xs text-textMain placeholder-muted focus:outline-none focus:border-primary transition-fast"
                     />
                   </div>
 
                   <button
                     type="submit"
                     disabled={updatingPw}
-                    className="bg-primary hover:bg-primary/80 disabled:opacity-60 text-white px-4 py-2.5 rounded-xl text-xs font-bold transition-all duration-200"
+                    className="h-10 bg-primary hover:bg-primary/95 disabled:opacity-50 text-white px-4 rounded-[6px] text-xs font-semibold transition-fast border border-primary/20"
                   >
-                    {updatingPw ? "Updating password..." : "Update password"}
+                    {updatingPw ? "Updating password..." : "Update Password"}
                   </button>
                 </form>
               </div>
@@ -425,11 +401,11 @@ export default function SettingsPage() {
             {activeTab === "wallet" && (
               <div className="space-y-6">
                 <div>
-                  <h2 className="font-heading text-xl font-bold text-white">Wallet Connection</h2>
-                  <p className="text-xs text-muted mt-0.5">Manage keys and credits allowance.</p>
+                  <h2 className="text-sm font-bold text-textMain uppercase tracking-wider">Wallet Connection</h2>
+                  <p className="text-xs text-muted mt-0.5 font-normal">Manage keys and credits allowance.</p>
                 </div>
 
-                <div className="bg-[#141628] border border-[#1e2240] rounded-2xl p-5 space-y-4">
+                <div className="bg-cardSurface border border-cardBorder rounded-[6px] p-5 space-y-4">
                   <div className="flex justify-between items-center">
                     <span className="text-[9px] font-bold text-muted uppercase tracking-wider">Stellar Public Address</span>
                     <button 
@@ -437,34 +413,34 @@ export default function SettingsPage() {
                         navigator.clipboard.writeText(pkey);
                         toast.success("Copied to clipboard");
                       }}
-                      className="text-muted hover:text-white transition-colors"
+                      className="text-muted hover:text-textMain transition-fast"
                       title="Copy Address"
                     >
                       <Copy className="w-3.5 h-3.5" />
                     </button>
                   </div>
-                  <span className="font-mono text-xs text-slate-200 block truncate bg-[#0d0f1a] p-2.5 rounded-lg border border-[#1e2240]/40">
+                  <span className="font-mono text-xs text-textMain block truncate bg-pageBg p-2.5 rounded-[6px] border border-cardBorder">
                     {pkey}
                   </span>
 
-                  <div className="grid grid-cols-2 gap-4 border-t border-[#1e2240]/60 pt-4 text-xs font-semibold text-slate-300">
+                  <div className="grid grid-cols-2 gap-4 border-t border-cardBorder pt-4 text-xs font-semibold text-textMain">
                     <div>
-                      <span className="text-muted block text-[10px] uppercase font-bold tracking-wider">Active Tier</span>
-                      <span className="text-primary mt-1 block uppercase">{currentUser?.tier || "free"}</span>
+                      <span className="text-muted block text-[10px] uppercase font-bold tracking-wider">Active Plan</span>
+                      <span className="text-primary mt-1 block uppercase font-mono">{currentUser?.tier || "free"}</span>
                     </div>
                     <div>
-                      <span className="text-muted block text-[10px] uppercase font-bold tracking-wider">Credits Remaining</span>
-                      <span className="text-safe mt-1 block">{currentUser?.credits_balance ?? 0} CRED</span>
+                      <span className="text-muted block text-[10px] uppercase font-bold tracking-wider">Credits Balance</span>
+                      <span className="text-primary mt-1 block font-mono">{currentUser?.credits_balance ?? 0} CRED</span>
                     </div>
                   </div>
                 </div>
 
                 <Link 
                   to="/wallet"
-                  className="inline-flex items-center justify-center gap-1.5 bg-[#141628] border border-[#1e2240] hover:border-primary/40 rounded-xl px-4 py-2.5 text-xs font-bold text-slate-200 transition-colors"
+                  className="inline-flex items-center justify-center gap-1.5 bg-cardSurface border border-cardBorder hover:border-muted/30 rounded-[6px] px-4 py-2.5 text-xs font-bold text-textMain transition-fast"
                 >
-                  View full wallet
-                  <ChevronRight className="w-4 h-4" />
+                  View Wallet Keys
+                  <ChevronRight className="w-4 h-4 text-primary" />
                 </Link>
               </div>
             )}
@@ -473,66 +449,30 @@ export default function SettingsPage() {
             {activeTab === "notifications" && (
               <div className="space-y-6">
                 <div>
-                  <h2 className="font-heading text-xl font-bold text-white">Notifications</h2>
-                  <p className="text-xs text-muted mt-0.5">Toggle real-time alerts and security warnings.</p>
+                  <h2 className="text-sm font-bold text-textMain uppercase tracking-wider">Notifications</h2>
+                  <p className="text-xs text-muted mt-0.5 font-normal">Toggle real-time alerts and system warnings.</p>
                 </div>
 
                 <div className="space-y-4">
-                  {/* Toggle 1: Scan Complete */}
-                  <div className="flex items-center justify-between p-4 bg-[#141628] border border-[#1e2240] rounded-xl">
-                    <div>
-                      <h4 className="text-xs font-bold text-slate-200">Scan Complete Notifications</h4>
-                      <p className="text-[10px] text-muted mt-0.5">Alert me when a graph scan finishes.</p>
+                  {[
+                    { key: "scan_complete", label: "Scan Complete Alerts", desc: "Notify when background parser tasks finish." },
+                    { key: "critical_alerts", label: "Critical Risk Alerts", desc: "Urgent notifications for path-escalation findings." },
+                    { key: "weekly_digest", label: "Weekly Telemetry digest", desc: "Summary reports of historical scans." },
+                    { key: "credit_warnings", label: "Quota Balance Warnings", desc: "Warnings when daily tokens dip below 5 CRED." },
+                  ].map((item) => (
+                    <div key={item.key} className="flex items-center justify-between p-4 bg-cardSurface border border-cardBorder rounded-[6px]">
+                      <div>
+                        <h4 className="text-xs font-bold text-textMain">{item.label}</h4>
+                        <p className="text-[10px] text-muted mt-0.5 font-normal">{item.desc}</p>
+                      </div>
+                      <button 
+                        onClick={() => handleTogglePref(item.key)}
+                        className={`w-10 h-5.5 rounded-full p-0.5 transition-fast relative flex items-center ${prefs[item.key] ? "bg-primary border border-primary/20" : "bg-pageBg border border-cardBorder"}`}
+                      >
+                        <div className={`w-4 h-4 rounded-full bg-white transition-transform ${prefs[item.key] ? "translate-x-4.5" : "translate-x-0.5"}`} />
+                      </button>
                     </div>
-                    <button 
-                      onClick={() => handleTogglePref("scan_complete")}
-                      className={`w-10 h-5.5 rounded-full p-0.5 transition-colors relative flex items-center ${prefs.scan_complete ? "bg-primary" : "bg-[#0d0f1a] border border-[#1e2240]"}`}
-                    >
-                      <div className={`w-4.5 h-4.5 rounded-full bg-white transition-transform ${prefs.scan_complete ? "translate-x-4.5" : "translate-x-0.5"}`} />
-                    </button>
-                  </div>
-
-                  {/* Toggle 2: Critical alerts */}
-                  <div className="flex items-center justify-between p-4 bg-[#141628] border border-[#1e2240] rounded-xl">
-                    <div>
-                      <h4 className="text-xs font-bold text-slate-200">Critical Vulnerability Alerts</h4>
-                      <p className="text-[10px] text-muted mt-0.5">Urgent emails for critical conflicts.</p>
-                    </div>
-                    <button 
-                      onClick={() => handleTogglePref("critical_alerts")}
-                      className={`w-10 h-5.5 rounded-full p-0.5 transition-colors relative flex items-center ${prefs.critical_alerts ? "bg-primary" : "bg-[#0d0f1a] border border-[#1e2240]"}`}
-                    >
-                      <div className={`w-4.5 h-4.5 rounded-full bg-white transition-transform ${prefs.critical_alerts ? "translate-x-4.5" : "translate-x-0.5"}`} />
-                    </button>
-                  </div>
-
-                  {/* Toggle 3: Weekly digest */}
-                  <div className="flex items-center justify-between p-4 bg-[#141628] border border-[#1e2240] rounded-xl">
-                    <div>
-                      <h4 className="text-xs font-bold text-slate-200">Weekly Security Digest</h4>
-                      <p className="text-[10px] text-muted mt-0.5">Summary of previous scans.</p>
-                    </div>
-                    <button 
-                      onClick={() => handleTogglePref("weekly_digest")}
-                      className={`w-10 h-5.5 rounded-full p-0.5 transition-colors relative flex items-center ${prefs.weekly_digest ? "bg-primary" : "bg-[#0d0f1a] border border-[#1e2240]"}`}
-                    >
-                      <div className={`w-4.5 h-4.5 rounded-full bg-white transition-transform ${prefs.weekly_digest ? "translate-x-4.5" : "translate-x-0.5"}`} />
-                    </button>
-                  </div>
-
-                  {/* Toggle 4: Credit warnings */}
-                  <div className="flex items-center justify-between p-4 bg-[#141628] border border-[#1e2240] rounded-xl">
-                    <div>
-                      <h4 className="text-xs font-bold text-slate-200">Credit Balance Warnings</h4>
-                      <p className="text-[10px] text-muted mt-0.5">Alert when tokens are below 5 credits.</p>
-                    </div>
-                    <button 
-                      onClick={() => handleTogglePref("credit_warnings")}
-                      className={`w-10 h-5.5 rounded-full p-0.5 transition-colors relative flex items-center ${prefs.credit_warnings ? "bg-primary" : "bg-[#0d0f1a] border border-[#1e2240]"}`}
-                    >
-                      <div className={`w-4.5 h-4.5 rounded-full bg-white transition-transform ${prefs.credit_warnings ? "translate-x-4.5" : "translate-x-0.5"}`} />
-                    </button>
-                  </div>
+                  ))}
                 </div>
               </div>
             )}
@@ -541,26 +481,27 @@ export default function SettingsPage() {
             {activeTab === "appearance" && (
               <div className="space-y-6">
                 <div>
-                  <h2 className="font-heading text-xl font-bold text-white">Theme & Appearance</h2>
-                  <p className="text-xs text-muted mt-0.5">Customize your console interface style.</p>
+                  <h2 className="text-sm font-bold text-textMain uppercase tracking-wider">Theme & Styling</h2>
+                  <p className="text-xs text-muted mt-0.5 font-normal">Customize the visual palette of your workspace.</p>
                 </div>
 
                 {/* Theme Selector */}
                 <div className="space-y-3">
-                  <label className="text-[9px] font-bold text-muted uppercase tracking-wider block">UI Theme</label>
-                  <div className="grid grid-cols-3 gap-3">
+                  <label className="text-[9px] font-bold text-muted uppercase tracking-wider block font-mono">UI Color Theme</label>
+                  <div className="grid grid-cols-2 gap-3">
                     {[
-                      { id: "dark", name: "Default Dark", desc: "Sleek dark design" },
-                      { id: "cyberpunk", name: "Cyberpunk", desc: "Vibrant neon purple" },
-                      { id: "forest", name: "Forest", desc: "Retro matrix green" }
+                      { id: "dark", name: "Default Dark", desc: "Sleek dark graphite design" },
+                      { id: "light", name: "Default Light", desc: "Clean bright alabaster design" },
+                      { id: "cyberpunk", name: "Cyberpunk Mode", desc: "Deep vibrant violet neon" },
+                      { id: "forest", name: "Forest Mode", desc: "Obsidian Matrix green" },
                     ].map((t) => (
                       <button
                         key={t.id}
                         onClick={() => handleThemeChange(t.id)}
-                        className={`p-3 rounded-xl border text-left transition-all ${
+                        className={`p-3.5 rounded-[6px] border text-left transition-fast ${
                           currentTheme === t.id 
-                            ? "bg-[#1e2240] border-primary text-white" 
-                            : "bg-[#141628]/60 border-[#1e2240] text-muted hover:text-slate-200"
+                            ? "bg-activeNav border-primary text-textMain" 
+                            : "bg-cardSurface/60 border-cardBorder text-muted hover:text-textMain"
                         }`}
                       >
                         <span className="text-xs font-bold block">{t.name}</span>
@@ -571,48 +512,48 @@ export default function SettingsPage() {
                 </div>
 
                 {/* Color Palette Change */}
-                <div className="space-y-3 border-t border-[#1e2240] pt-6">
-                  <label className="text-[9px] font-bold text-muted uppercase tracking-wider block">Color Preset Accent</label>
+                <div className="space-y-3 border-t border-cardBorder pt-6">
+                  <label className="text-[9px] font-bold text-muted uppercase tracking-wider block font-mono">Primary Preset Accent</label>
                   <div className="space-y-2">
                     {COLOR_PRESETS.map((preset, idx) => (
                       <button
                         key={idx}
                         onClick={() => handleApplyColors(preset.primary, preset.secondary)}
-                        className="w-full flex items-center justify-between p-3 rounded-xl bg-[#141628]/40 border border-[#1e2240]/40 hover:bg-[#141628] hover:border-[#1e2240] transition-all"
+                        className="w-full flex items-center justify-between p-3 rounded-[6px] bg-cardSurface/40 border border-cardBorder hover:bg-cardSurface hover:border-muted/30 transition-fast"
                       >
-                        <span className="text-xs font-semibold text-slate-200">{preset.name}</span>
+                        <span className="text-xs font-semibold text-textMain">{preset.name}</span>
                         <div className="flex items-center gap-1.5">
-                          <div className="w-4 h-4 rounded-full" style={{ backgroundColor: preset.primary }} />
-                          <div className="w-4 h-4 rounded-full" style={{ backgroundColor: preset.secondary }} />
+                          <div className="w-3.5 h-3.5 rounded-full" style={{ backgroundColor: preset.primary }} />
+                          <div className="w-3.5 h-3.5 rounded-full" style={{ backgroundColor: preset.secondary }} />
                         </div>
                       </button>
                     ))}
                   </div>
 
                   {/* Custom Color Pickers */}
-                  <div className="grid grid-cols-2 gap-4 border-t border-[#1e2240]/60 pt-4">
+                  <div className="grid grid-cols-2 gap-4 border-t border-cardBorder pt-4">
                     <div className="space-y-1.5">
-                      <span className="text-[9px] font-bold text-muted uppercase tracking-wider block">Custom Primary Color</span>
+                      <span className="text-[9px] font-bold text-muted uppercase tracking-wider block font-mono">Custom Primary Color</span>
                       <div className="flex items-center gap-2">
                         <input 
                           type="color" 
                           value={primaryColor} 
                           onChange={(e) => handleApplyColors(e.target.value, secondaryColor)}
-                          className="w-8 h-8 rounded border-0 cursor-pointer bg-transparent" 
+                          className="w-7 h-7 rounded border-0 cursor-pointer bg-transparent" 
                         />
-                        <span className="text-[11px] font-mono text-slate-300 uppercase">{primaryColor}</span>
+                        <span className="text-[10px] font-mono text-muted uppercase">{primaryColor}</span>
                       </div>
                     </div>
                     <div className="space-y-1.5">
-                      <span className="text-[9px] font-bold text-muted uppercase tracking-wider block">Custom Secondary Color</span>
+                      <span className="text-[9px] font-bold text-muted uppercase tracking-wider block font-mono">Custom Secondary Color</span>
                       <div className="flex items-center gap-2">
                         <input 
                           type="color" 
                           value={secondaryColor} 
                           onChange={(e) => handleApplyColors(primaryColor, e.target.value)}
-                          className="w-8 h-8 rounded border-0 cursor-pointer bg-transparent" 
+                          className="w-7 h-7 rounded border-0 cursor-pointer bg-transparent" 
                         />
-                        <span className="text-[11px] font-mono text-slate-300 uppercase">{secondaryColor}</span>
+                        <span className="text-[10px] font-mono text-muted uppercase">{secondaryColor}</span>
                       </div>
                     </div>
                   </div>
@@ -624,22 +565,22 @@ export default function SettingsPage() {
             {activeTab === "danger" && (
               <div className="space-y-6">
                 <div>
-                  <h2 className="font-heading text-xl font-bold text-danger">Danger Zone</h2>
-                  <p className="text-xs text-muted mt-0.5">Irreversible workspace profile deletion.</p>
+                  <h2 className="text-sm font-bold text-danger uppercase tracking-wider">Danger Zone</h2>
+                  <p className="text-xs text-muted mt-0.5 font-normal">Irreversible workspace profile deletion.</p>
                 </div>
 
-                <div className="bg-[#141628] border border-danger/30 rounded-2xl p-5 space-y-4">
+                <div className="bg-cardSurface border border-danger/20 rounded-[6px] p-5 space-y-4">
                   <div className="flex items-start gap-3">
                     <ShieldAlert className="w-5 h-5 text-danger shrink-0 mt-0.5" />
                     <div>
-                      <h4 className="text-xs font-bold text-slate-200">Delete Account</h4>
-                      <p className="text-[10px] text-muted mt-1 leading-relaxed">
-                        This will permanently delete your account, all scan history, and forfeit your VEKTRA credits. This cannot be undone.
+                      <h4 className="text-xs font-bold text-textMain uppercase tracking-wide">Delete Workspace Account</h4>
+                      <p className="text-[10px] text-muted mt-1 leading-relaxed font-normal">
+                        This will permanently delete your account, all scan history, and forfeit your remaining credits. This action cannot be reversed.
                       </p>
                     </div>
                   </div>
 
-                  <form onSubmit={handleDeleteAccount} className="space-y-3 border-t border-[#1e2240] pt-4">
+                  <form onSubmit={handleDeleteAccount} className="space-y-3 border-t border-cardBorder pt-4">
                     <div className="space-y-1.5">
                       <label className="text-[9px] font-bold text-muted uppercase tracking-wider block">
                         Type DELETE to confirm
@@ -650,16 +591,16 @@ export default function SettingsPage() {
                         value={confirmDeleteText}
                         onChange={(e) => setConfirmDeleteText(e.target.value)}
                         placeholder="Type DELETE..."
-                        className="w-full bg-[#0d0f1a] border border-[#1e2240] rounded-xl px-4 py-2 text-xs text-slate-100 placeholder-muted focus:outline-none focus:border-danger transition-all duration-200 font-mono"
+                        className="w-full bg-pageBg border border-cardBorder rounded-[6px] px-3.5 py-2 text-xs text-textMain placeholder-muted focus:outline-none focus:border-danger transition-fast font-mono"
                       />
                     </div>
 
                     <button
                       type="submit"
                       disabled={deletingAccount || confirmDeleteText !== "DELETE"}
-                      className="bg-danger hover:bg-danger/80 disabled:opacity-50 text-white px-4 py-2.5 rounded-xl text-xs font-bold transition-all duration-200"
+                      className="bg-danger hover:bg-danger/90 disabled:opacity-50 text-white px-4 py-2.5 rounded-[6px] text-xs font-bold transition-fast border border-danger/25"
                     >
-                      {deletingAccount ? "Deleting account..." : "Delete my account"}
+                      {deletingAccount ? "Deleting account..." : "Delete Operator Profile"}
                     </button>
                   </form>
                 </div>

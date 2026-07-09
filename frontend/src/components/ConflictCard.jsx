@@ -31,8 +31,8 @@ export default function ConflictCard({ conflict, format }) {
       label: "WARNING"
     },
     INFO: {
-      bg: "bg-blue-500/10",
-      text: "text-blue-400 border-blue-500/30",
+      bg: "bg-primary/10",
+      text: "text-primary border-primary/30",
       icon: Info,
       label: "INFO"
     }
@@ -48,17 +48,17 @@ export default function ConflictCard({ conflict, format }) {
   const BadgeIcon = badge.icon;
 
   const confidenceColors = {
-    HIGH: "bg-safe/10 text-safe border-safe/30",
+    HIGH: "bg-primary/10 text-primary border-primary/30",
     MEDIUM: "bg-warning/10 text-warning border-warning/30",
     LOW: "bg-danger/10 text-danger border-danger/30"
   };
 
   return (
-    <div className="bg-cardSurface border border-cardBorder rounded-xl p-5 space-y-4 hover:border-slate-500/30 transition-all duration-300">
+    <div className="bg-cardSurface border border-cardBorder rounded-[6px] p-5 space-y-4 hover:border-primary/30 transition-fast">
       {/* Header Row */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2">
-          <span className={`px-2.5 py-0.5 rounded-full border text-[10px] font-bold flex items-center gap-1 ${badge.bg} ${badge.text}`}>
+          <span className={`px-2.5 py-0.5 rounded-[6px] border text-[9px] font-bold flex items-center gap-1 ${badge.bg} ${badge.text}`}>
             <BadgeIcon className="w-3 h-3" />
             {badge.label}
           </span>
@@ -74,29 +74,27 @@ export default function ConflictCard({ conflict, format }) {
       </div>
 
       {/* Title */}
-      <h3 className="font-heading font-semibold text-slate-100 text-sm">
+      <h3 className="font-heading font-semibold text-textMain text-sm">
         {title}
       </h3>
 
       {/* Agent 1 outputs */}
       {danger_summary && (
         <div className="space-y-2">
-          {/* Danger summary card with left border color */}
-          <div className={`p-3 rounded-lg border-l-4 bg-[#0d0f1a] ${
-            severity === "CRITICAL" ? "border-danger" : (severity === "WARNING" ? "border-warning" : "border-blue-500")
+          <div className={`p-3 rounded-[6px] border-l-4 bg-pageBg border-cardBorder ${
+            severity === "CRITICAL" ? "border-l-danger" : (severity === "WARNING" ? "border-l-warning" : "border-l-primary")
           }`}>
             <span className="text-[10px] font-bold text-muted uppercase tracking-wider block mb-1">
               Danger Summary (Vulnerability Analyst)
             </span>
-            <p className="text-xs text-slate-300 leading-relaxed">
+            <p className="text-xs text-textMain leading-relaxed font-normal">
               {danger_summary}
             </p>
           </div>
 
-          {/* Attack scenario */}
           {attack_scenario && (
             <div className="text-xs text-muted/90 italic leading-relaxed">
-              <span className="font-semibold text-slate-400 not-italic">Scenario: </span>
+              <span className="font-semibold text-muted not-italic">Scenario: </span>
               {attack_scenario}
             </div>
           )}
@@ -111,12 +109,12 @@ export default function ConflictCard({ conflict, format }) {
               Proposed Fix (Fix Engineer)
             </span>
             {confidence && (
-              <span className={`px-2 py-0.5 rounded text-[9px] font-bold border ${confidenceColors[confidence] || "bg-[#1e2240] text-muted"}`}>
+              <span className={`px-2 py-0.5 rounded-[6px] text-[8px] font-bold border ${confidenceColors[confidence] || "bg-bgElevated text-muted"}`}>
                 CONFIDENCE: {confidence}
               </span>
             )}
           </div>
-          <p className="text-xs text-muted leading-relaxed">
+          <p className="text-xs text-muted leading-relaxed font-normal">
             {fix_description}
           </p>
           <CodeBlock code={fixed_policy_block} language={format === "iam" ? "json" : "yaml"} />
@@ -130,7 +128,7 @@ export default function ConflictCard({ conflict, format }) {
             Affected Nodes:
           </span>
           {affected_rules.map((ruleId) => (
-            <span key={ruleId} className="px-2 py-0.5 rounded bg-[#1e2240] text-primary text-[10px] font-mono font-semibold">
+            <span key={ruleId} className="px-2 py-0.5 rounded-[6px] bg-bgElevated text-primary text-[10px] font-mono font-semibold">
               {ruleId}
             </span>
           ))}
