@@ -198,7 +198,7 @@ export default function DashboardPage() {
                 <div className="w-20 h-8 self-end opacity-50 shrink-0">
                   <ResponsiveContainer width="100%" height="100%">
                     <LineChart data={sparklineData3.map((v) => ({ value: v }))}>
-                      <Line type="monotone" dataKey="value" stroke="#4C8DFF" strokeWidth={1.5} dot={false} />
+                      <Line type="monotone" dataKey="value" stroke="var(--color-primary)" strokeWidth={1.5} dot={false} />
                     </LineChart>
                   </ResponsiveContainer>
                 </div>
@@ -213,7 +213,7 @@ export default function DashboardPage() {
                 <div className="w-20 h-8 self-end opacity-50 shrink-0">
                   <ResponsiveContainer width="100%" height="100%">
                     <LineChart data={sparklineData4.map((v) => ({ value: v }))}>
-                      <Line type="monotone" dataKey="value" stroke="#4C8DFF" strokeWidth={1.5} dot={false} />
+                      <Line type="monotone" dataKey="value" stroke="var(--color-primary)" strokeWidth={1.5} dot={false} />
                     </LineChart>
                   </ResponsiveContainer>
                 </div>
@@ -283,15 +283,15 @@ export default function DashboardPage() {
                 ) : (
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={chartData}>
-                      <XAxis dataKey="name" stroke="#8A93A6" fontSize={9} tickLine={false} axisLine={false} fontFamily="JetBrains Mono" />
-                      <YAxis stroke="#8A93A6" fontSize={9} tickLine={false} axisLine={false} fontFamily="JetBrains Mono" />
+                      <XAxis dataKey="name" stroke="var(--text-muted)" fontSize={9} tickLine={false} axisLine={false} fontFamily="JetBrains Mono" />
+                      <YAxis stroke="var(--text-muted)" fontSize={9} tickLine={false} axisLine={false} fontFamily="JetBrains Mono" />
                       <Tooltip 
-                        contentStyle={{ backgroundColor: "#12161F", border: "1px solid #232838", borderRadius: "6px" }}
-                        labelStyle={{ color: "#E8EAED", fontWeight: "semibold", fontSize: "11px" }}
+                        contentStyle={{ backgroundColor: "var(--bg-surface)", border: "1px solid var(--border-hairline)", borderRadius: "6px" }}
+                        labelStyle={{ color: "var(--text-primary)", fontWeight: "semibold", fontSize: "11px" }}
                       />
-                      <Bar dataKey="Critical" fill="#FF5C4D" radius={[2, 2, 0, 0]} />
-                      <Bar dataKey="Warning" fill="#F2A94B" radius={[2, 2, 0, 0]} />
-                      <Bar dataKey="Info" fill="#4C8DFF" radius={[2, 2, 0, 0]} />
+                      <Bar dataKey="Critical" fill="var(--alert-red)" radius={[2, 2, 0, 0]} />
+                      <Bar dataKey="Warning" fill="var(--warn-amber)" radius={[2, 2, 0, 0]} />
+                      <Bar dataKey="Info" fill="var(--signal-blue)" radius={[2, 2, 0, 0]} />
                     </BarChart>
                   </ResponsiveContainer>
                 )}

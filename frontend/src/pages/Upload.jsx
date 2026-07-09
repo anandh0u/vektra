@@ -141,37 +141,37 @@ roleRef:
 
 function SecurityGraphVisual() {
   return (
-    <div className="w-full py-4 bg-[#12161F]/40 border border-[#232838] rounded-[6px] overflow-hidden relative">
-      <div className="absolute top-2 left-3 flex items-center gap-1.5 text-[9px] font-bold text-muted uppercase tracking-wider font-mono">
-        <Activity className="w-3 h-3 text-[#4C8DFF]" />
+    <div className="w-full py-4 bg-cardSurface/30 border border-cardBorder rounded-[6px] overflow-hidden relative">
+      <div className="absolute top-2.5 left-3.5 flex items-center gap-1.5 text-[8px] font-bold text-muted uppercase tracking-wider font-mono">
+        <Activity className="w-3 h-3 text-primary" />
         <span>Vulnerable Pathway Mapping Simulator</span>
       </div>
-      <svg className="w-full h-40 text-[#8A93A6]" viewBox="0 0 600 160" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path d="M120 80 H 260" stroke="#232838" strokeWidth="1.5" strokeDasharray="4" className="animate-[flow-dash_2s_linear_infinite]" />
-        <path d="M260 80 L 400 40" stroke="#FF5C4D" strokeWidth="1.5" strokeDasharray="4" className="animate-[flow-dash_1.5s_linear_infinite]" />
-        <path d="M260 80 L 400 120" stroke="#232838" strokeWidth="1.5" />
-        <path d="M400 40 H 530" stroke="#FF5C4D" strokeWidth="2" strokeDasharray="4" className="animate-[flow-dash_1s_linear_infinite]" />
+      <svg className="w-full h-32 text-muted" viewBox="0 0 600 160" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M120 80 H 260" stroke="var(--border-hairline)" strokeWidth="1" strokeDasharray="4" className="animate-[flow-dash_2.5s_linear_infinite]" />
+        <path d="M260 80 L 400 40" stroke="var(--border-hairline)" strokeWidth="1" strokeDasharray="4" className="animate-[flow-dash_2s_linear_infinite]" />
+        <path d="M260 80 L 400 120" stroke="var(--border-hairline)" strokeWidth="1" />
+        <path d="M400 40 H 530" stroke="var(--border-hairline)" strokeWidth="1" strokeDasharray="4" className="animate-[flow-dash_1.5s_linear_infinite]" />
         
         {/* Node 1: Identity */}
-        <circle cx="120" cy="80" r="16" fill="#12161F" stroke="#232838" strokeWidth="1.5" />
-        <text x="120" y="83" textAnchor="middle" fill="#E8EAED" fontSize="8" fontFamily="JetBrains Mono">User</text>
+        <circle cx="120" cy="80" r="16" fill="var(--bg-base)" stroke="var(--border-hairline)" strokeWidth="1" />
+        <text x="120" y="83" textAnchor="middle" fill="var(--text-primary)" fontSize="8" fontFamily="JetBrains Mono">User</text>
         
         {/* Node 2: Role */}
-        <circle cx="260" cy="80" r="20" fill="#1A1F2B" stroke="#4C8DFF" strokeWidth="1.5" />
-        <text x="260" y="83" textAnchor="middle" fill="#E8EAED" fontSize="8" fontFamily="JetBrains Mono">Role</text>
+        <circle cx="260" cy="80" r="20" fill="var(--bg-surface)" stroke="var(--color-primary)" strokeWidth="1" />
+        <text x="260" y="83" textAnchor="middle" fill="var(--text-primary)" fontSize="8" fontFamily="JetBrains Mono">Role</text>
         
         {/* Node 3: Escalate Policy */}
-        <circle cx="400" cy="40" r="16" fill="#1A1F2B" stroke="#FF5C4D" strokeWidth="1.5" className="animate-pulse" />
-        <text x="400" y="43" textAnchor="middle" fill="#FF5C4D" fontSize="8" fontFamily="JetBrains Mono">Policy</text>
+        <circle cx="400" cy="40" r="16" fill="var(--bg-surface)" stroke="var(--color-primary)" strokeWidth="1" />
+        <text x="400" y="43" textAnchor="middle" fill="var(--text-primary)" fontSize="8" fontFamily="JetBrains Mono">Policy</text>
         
         {/* Node 4: S3 Bucket */}
-        <circle cx="400" cy="120" r="16" fill="#12161F" stroke="#232838" strokeWidth="1.5" />
-        <text x="400" y="143" textAnchor="middle" fill="#8A93A6" fontSize="7" fontFamily="Inter">S3 Bucket</text>
-        <text x="400" y="123" textAnchor="middle" fill="#E8EAED" fontSize="8" fontFamily="JetBrains Mono">Data</text>
+        <circle cx="400" cy="120" r="16" fill="var(--bg-base)" stroke="var(--border-hairline)" strokeWidth="1" />
+        <text x="400" y="143" textAnchor="middle" fill="var(--text-muted)" fontSize="7" fontFamily="Inter">S3 Bucket</text>
+        <text x="400" y="123" textAnchor="middle" fill="var(--text-primary)" fontSize="8" fontFamily="JetBrains Mono">Data</text>
         
         {/* Node 5: Admin */}
-        <rect x="512" y="22" width="36" height="36" rx="6" fill="#1A1F2B" stroke="#FF5C4D" strokeWidth="1.5" />
-        <text x="530" y="44" textAnchor="middle" fill="#FF5C4D" fontSize="8" fontFamily="JetBrains Mono">Admin</text>
+        <rect x="512" y="22" width="36" height="36" rx="6" fill="var(--bg-surface)" stroke="var(--color-primary)" strokeWidth="1" />
+        <text x="530" y="44" textAnchor="middle" fill="var(--color-primary)" fontSize="8" fontFamily="JetBrains Mono">Admin</text>
       </svg>
     </div>
   );
@@ -326,7 +326,7 @@ export default function UploadPage() {
     <div className="min-h-screen bg-pageBg text-textMain flex flex-col justify-between selection:bg-primary/20 relative">
       
       {/* ── TOP NAV ── */}
-      <header className="h-16 flex items-center justify-between px-8 border-b border-cardBorder bg-[#0B0E14] z-30">
+      <header className="h-16 flex items-center justify-between px-8 border-b border-cardBorder bg-pageBg z-30">
         <div className="flex items-center gap-2.5">
           <div className="bg-cardSurface border border-cardBorder p-1.5 rounded-[6px]">
             <Network className="w-5 h-5 text-primary" />
@@ -364,7 +364,7 @@ export default function UploadPage() {
           {authNotice && (
             <button
               onClick={() => setAuthNotice("")}
-              className="mx-auto block rounded-[6px] border border-warning/20 bg-warning/5 px-3.5 py-1 text-[11px] font-semibold text-warning transition-fast hover:bg-warning/10 animate-pulse"
+              className="mx-auto block rounded-[6px] border border-warning/20 bg-warning/5 px-3.5 py-1 text-[11px] font-semibold text-warning transition-fast hover:bg-warning/10"
             >
               {authNotice}
             </button>
@@ -373,14 +373,14 @@ export default function UploadPage() {
             Cloud policy risk analysis.<br/>
             <span className="text-primary font-semibold">Deterministic attack path scanning.</span>
           </h1>
-          <p className="text-xs md:text-sm text-muted max-w-lg mx-auto leading-relaxed">
+          <p className="text-xs md:text-sm text-muted max-w-lg mx-auto leading-relaxed font-normal">
             Upload AWS IAM JSON or Kubernetes RBAC YAML configs. Vektra models permissions as a node graph to catch privilege escalations before deployments.
           </p>
         </div>
 
         {/* Action / Format Toggle */}
         <div className="flex justify-center">
-          <div className="flex bg-[#12161F] p-1 rounded-[6px] border border-cardBorder">
+          <div className="flex bg-cardSurface p-1 rounded-[6px] border border-cardBorder">
             <button
               onClick={() => setFormat("iam")}
               className={`px-4 py-1.5 rounded-[6px] text-xs font-medium tracking-wide transition-fast ${
@@ -433,7 +433,7 @@ export default function UploadPage() {
             className={`rounded-[6px] border border-dashed border-cardBorder transition-fast p-8 flex flex-col items-center justify-center text-center cursor-pointer min-h-[260px] ${
               dragActive 
                 ? "border-primary bg-primary/5" 
-                : "hover:border-muted/50 bg-[#12161F]/40"
+                : "hover:border-muted/50 bg-cardSurface/30"
             }`}
           >
             <input
@@ -463,7 +463,7 @@ export default function UploadPage() {
 
           {/* Text Editor Area */}
           <div className="flex flex-col border border-cardBorder rounded-[6px] overflow-hidden bg-cardSurface min-h-[260px]">
-            <div className="flex items-center justify-between px-4 py-2 border-b border-cardBorder bg-[#111113]">
+            <div className="flex items-center justify-between px-4 py-2 border-b border-cardBorder bg-bgElevated">
               <div className="flex items-center gap-2 text-muted">
                 <FileCode className="w-4 h-4 text-muted" />
                 <span className="text-[10px] font-bold tracking-wider uppercase font-mono">
@@ -472,7 +472,7 @@ export default function UploadPage() {
               </div>
               
               <div className={`px-2 py-0.5 rounded-full text-[8px] font-mono font-bold tracking-wider uppercase flex items-center gap-1 ${
-                policyText.trim() ? "bg-[#22C55E]/10 text-[#22C55E] border border-[#22C55E]/20" : "bg-[#27272A] text-muted border border-cardBorder"
+                policyText.trim() ? "bg-[#22C55E]/10 text-[#22C55E] border border-[#22C55E]/20" : "bg-bgElevated text-muted border border-cardBorder"
               }`}>
                 <div className={`w-1.5 h-1.5 rounded-full ${policyText.trim() ? "bg-[#22C55E]" : "bg-muted"}`} />
                 <span>{policyText.trim() ? "Active" : "Empty"}</span>
@@ -481,7 +481,7 @@ export default function UploadPage() {
             <textarea
               value={policyText}
               onChange={(e) => setPolicyText(e.target.value)}
-              className="flex-1 w-full bg-transparent p-4 text-[11px] font-mono text-slate-300 placeholder-muted focus:outline-none resize-none min-h-[200px]"
+              className="flex-1 w-full bg-transparent p-4 text-[11px] font-mono text-textMain placeholder-muted focus:outline-none resize-none min-h-[200px]"
               placeholder={
                 format === "iam" 
                   ? "Paste your AWS IAM JSON policy statement here..." 
@@ -515,7 +515,7 @@ export default function UploadPage() {
           <button
             onClick={handleTryDemo}
             disabled={isAnalyzing}
-            className="w-full h-10 bg-cardSurface hover:bg-[#1A1F2B] border border-cardBorder text-textMain font-sans font-semibold text-xs rounded-[6px] shadow-sm transition-fast flex items-center justify-center gap-1.5 disabled:opacity-40"
+            className="w-full h-10 bg-cardSurface hover:bg-bgElevated border border-cardBorder text-textMain font-sans font-semibold text-xs rounded-[6px] shadow-sm transition-fast flex items-center justify-center gap-1.5 disabled:opacity-40"
           >
             <Sparkles className="w-3.5 h-3.5 text-primary" />
             <span>Try Demo Mode</span>
@@ -538,7 +538,7 @@ export default function UploadPage() {
       </main>
 
       {/* Footer */}
-      <footer className="h-14 border-t border-cardBorder flex items-center justify-center text-[10px] text-muted bg-[#0B0E14] font-mono">
+      <footer className="h-14 border-t border-cardBorder flex items-center justify-center text-[10px] text-muted bg-pageBg font-mono">
         VEKTRA SECURITY PORTAL • Powered by Neo4j AuraDB & Sarvam AI
       </footer>
 

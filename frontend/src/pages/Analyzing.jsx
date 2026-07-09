@@ -121,7 +121,7 @@ export default function AnalyzingPage() {
       case "running":
         return <Loader2 className="w-4 h-4 text-primary animate-spin" />;
       default:
-        return <Circle className="w-4 h-4 text-[#232838]" />;
+        return <Circle className="w-4 h-4 text-cardBorder" />;
     }
   };
 
@@ -135,12 +135,12 @@ export default function AnalyzingPage() {
         key={step.name}
         className={`flex items-center justify-between py-2.5 px-3.5 rounded-[6px] border transition-fast ${
           status === "complete"
-            ? "bg-[#12161F]/60 border-cardBorder text-textMain"
+            ? "bg-cardSurface/60 border-cardBorder text-textMain"
             : status === "failed"
-            ? "bg-[#FF5C4D]/5 border-[#FF5C4D]/20 text-textMain"
+            ? "bg-danger/10 border-danger/25 text-textMain"
             : status === "running"
             ? "bg-bgElevated border-primary/30 text-textMain"
-            : "bg-[#12161F]/20 border-cardBorder/40 text-muted"
+            : "bg-cardSurface/20 border-cardBorder/40 text-muted"
         }`}
       >
         <div className="flex items-center gap-2.5 min-w-0">
@@ -193,7 +193,7 @@ export default function AnalyzingPage() {
           </div>
           <button
             onClick={handleRetry}
-            className="w-full h-10 bg-cardSurface hover:bg-[#1A1F2B] border border-[#FF5C4D]/30 text-[#FF5C4D] font-semibold rounded-[6px] transition-fast text-xs"
+            className="w-full h-10 bg-cardSurface hover:bg-bgElevated border border-[#FF5C4D]/30 text-[#FF5C4D] font-semibold rounded-[6px] transition-fast text-xs"
           >
             Retry Analysis
           </button>
@@ -206,7 +206,7 @@ export default function AnalyzingPage() {
     <div className="min-h-screen bg-pageBg flex flex-col text-textMain selection:bg-primary/20">
       
       {/* Header */}
-      <header className="h-16 flex items-center justify-between px-8 border-b border-cardBorder bg-[#0B0E14] z-30">
+      <header className="h-16 flex items-center justify-between px-8 border-b border-cardBorder bg-pageBg z-30">
         <div className="flex items-center gap-2.5">
           <div className="bg-cardSurface border border-cardBorder p-1.5 rounded-[6px]">
             <Network className="w-5 h-5 text-primary" />
@@ -234,7 +234,7 @@ export default function AnalyzingPage() {
             Analyzing Access Policy
           </h1>
           <div className="flex items-center justify-center">
-            <span className="text-[10px] font-mono text-muted bg-[#12161F] border border-cardBorder px-3 py-1 rounded-[6px]">
+            <span className="text-[10px] font-mono text-muted bg-cardSurface border border-cardBorder px-3 py-1 rounded-[6px]">
               session_id: {sessionId}
             </span>
           </div>
@@ -260,7 +260,7 @@ export default function AnalyzingPage() {
           {STEP_CONFIG.slice(0, 2).map((step, index) => renderStepRow(step, index))}
 
           {/* Parallel Execution visual connectors */}
-          <div className="border border-[#232838] bg-[#12161F]/20 p-4 rounded-[6px] space-y-3 relative">
+          <div className="border border-cardBorder bg-cardSurface/20 p-4 rounded-[6px] space-y-3 relative">
             <div className="absolute -left-[1px] top-1/2 -translate-y-1/2 h-8 w-[2px] bg-primary" />
             <div className="flex justify-between items-center text-[9px] font-bold text-muted uppercase tracking-widest font-mono">
               <span className="flex items-center gap-1.5">
@@ -292,7 +292,7 @@ export default function AnalyzingPage() {
       </main>
 
       {/* Footer */}
-      <footer className="h-12 border-t border-cardBorder flex items-center justify-center text-[10px] text-muted bg-[#0B0E14] font-mono">
+      <footer className="h-12 border-t border-cardBorder flex items-center justify-center text-[10px] text-muted bg-pageBg font-mono">
         VEKTRA PIPELINE ENGINE • SECURITY OPERATIONS ENVIRONMENT
       </footer>
     </div>
