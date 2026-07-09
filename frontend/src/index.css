@@ -15,34 +15,65 @@
   --text-muted: #8A93A6;
   --border-hairline: #232838;
   
-  --color-pageBg: var(--bg-base);
-  --color-sidebarBg: var(--bg-surface);
-  --color-cardSurface: var(--bg-surface);
-  --color-cardBorder: var(--border-hairline);
   --color-primary: var(--signal-blue);
   --color-secondary: var(--text-muted);
 }
 
-[data-theme="cyberpunk"], [data-theme="forest"] {
-  --color-pageBg: var(--bg-base);
-  --color-sidebarBg: var(--bg-surface);
-  --color-cardSurface: var(--bg-surface);
-  --color-cardBorder: var(--border-hairline);
+[data-theme="light"] {
+  --bg-base: #F8F9FA;
+  --bg-surface: #FFFFFF;
+  --bg-elevated: #E9ECEF;
+  --signal-blue: #0066FF;
+  --alert-red: #E63946;
+  --warn-amber: #F5A623;
+  --text-primary: #212529;
+  --text-muted: #6C757D;
+  --border-hairline: #DEE2E6;
+  
+  --color-primary: var(--signal-blue);
+  --color-secondary: var(--text-muted);
+}
+
+[data-theme="cyberpunk"] {
+  --bg-base: #0F091A;
+  --bg-surface: #171126;
+  --bg-elevated: #231B3A;
+  --signal-blue: #D946EF;
+  --alert-red: #F43F5E;
+  --warn-amber: #F59E0B;
+  --text-primary: #F8FAFC;
+  --text-muted: #A78BFA;
+  --border-hairline: #3B2E60;
+  
+  --color-primary: var(--signal-blue);
+  --color-secondary: var(--text-muted);
+}
+
+[data-theme="forest"] {
+  --bg-base: #0A0F0D;
+  --bg-surface: #101915;
+  --bg-elevated: #192620;
+  --signal-blue: #10B981;
+  --alert-red: #EF4444;
+  --warn-amber: #F59E0B;
+  --text-primary: #ECFDF5;
+  --text-muted: #6EE7B7;
+  --border-hairline: #1D3528;
+  
   --color-primary: var(--signal-blue);
   --color-secondary: var(--text-muted);
 }
 
 @layer base {
   body {
-    @apply bg-[#0B0E14] text-[#E8EAED] font-sans antialiased;
+    @apply bg-pageBg text-textMain font-sans antialiased;
     font-size: 14px;
     line-height: 1.5;
   }
   
-  /* Standardized Typography Scales */
-  h1 { @apply font-sans font-bold tracking-tight text-[#E8EAED]; }
-  h2 { @apply font-sans font-semibold tracking-tight text-[#E8EAED]; }
-  h3 { @apply font-sans font-semibold tracking-wide text-[#E8EAED]; }
+  h1 { @apply font-sans font-bold tracking-tight text-textMain; }
+  h2 { @apply font-sans font-semibold tracking-tight text-textMain; }
+  h3 { @apply font-sans font-semibold tracking-wide text-textMain; }
   
   code, pre {
     @apply font-mono;
