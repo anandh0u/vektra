@@ -32,6 +32,23 @@ def _fallback(vulnerability: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
+def safe_int_score(val: Any, default_val: int) -> int:
+    if val is None or val == "":
+        return default_val
+    try:
+        if isinstance(val, (int, float)):
+            return int(val)
+        cleaned = str(val).strip()
+        if "/" in cleaned:
+            cleaned = cleaned.split("/")[0].strip()
+        digits = "".join(c for c in cleaned if c.isdigit())
+        if digits:
+            return int(digits)
+    except Exception:
+        pass
+    return default_val
+
+
 async def analyze(vulnerability: Dict[str, Any], api_key: Optional[str] = None) -> Dict[str, Any]:
     user_prompt = f"Analyze this cloud policy vulnerability:\n{json.dumps(vulnerability, indent=2)}"
     data = await chat_json(SYSTEM_PROMPT, user_prompt, api_key=api_key)
@@ -42,7 +59,7 @@ async def analyze(vulnerability: Dict[str, Any], api_key: Optional[str] = None) 
     return {
         "danger_summary": data.get("danger_summary") or fallback["danger_summary"],
         "attack_scenario": data.get("attack_scenario") or fallback["attack_scenario"],
-        "exploitability_score": int(data.get("exploitability_score") or fallback["exploitability_score"]),
+        "exploitability_score": safe_int_score(data.get("exploitability_score"), fallback["exploitability_score"]),
         "attacker_capability_required": data.get("attacker_capability_required")
         or fallback["attacker_capability_required"],
     }
