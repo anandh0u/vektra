@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Search, ChevronRight } from "lucide-react";
+import { Search, ChevronRight, Sun, Moon } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import AuthNav from "./AuthNav";
 import { useVektraStore } from "../store/vektraStore";
 
 export default function TopBar() {
   const navigate = useNavigate();
-  const { recentAnalyses, loadRecentAnalysis } = useVektraStore();
+  const { recentAnalyses, loadRecentAnalysis, theme, setTheme } = useVektraStore();
   const [searchTerm, setSearchTerm] = useState("");
   const [showDropdown, setShowDropdown] = useState(false);
   const dropdownRef = useRef(null);
@@ -36,7 +36,7 @@ export default function TopBar() {
   };
 
   return (
-    <header className="h-16 border-b border-cardBorder bg-[#09090B] flex items-center justify-between px-8 select-none relative z-50">
+    <header className="h-16 border-b border-cardBorder bg-pageBg flex items-center justify-between px-8 select-none relative z-50">
       
       {/* Search Input & Dropdown */}
       <div className="relative w-96" ref={dropdownRef}>
@@ -47,7 +47,7 @@ export default function TopBar() {
           onChange={(e) => setSearchTerm(e.target.value)}
           onFocus={() => setShowDropdown(true)}
           placeholder="Search policy scans & sessions..."
-          className="w-full bg-[#111113] border border-cardBorder rounded-lg py-2 pl-10 pr-4 text-xs text-textMain placeholder-muted focus:outline-none focus:border-primary transition-fast"
+          className="w-full bg-cardSurface border border-cardBorder rounded-lg py-2 pl-10 pr-4 text-xs text-textMain placeholder-muted focus:outline-none focus:border-primary transition-fast"
         />
         {searchTerm === "" && (
           <div className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[9px] bg-cardSurface text-muted px-1.5 py-0.5 rounded border border-cardBorder font-mono">
@@ -57,7 +57,7 @@ export default function TopBar() {
 
         {/* Sessions Dropdown */}
         {showDropdown && (
-          <div className="absolute left-0 mt-2 w-full rounded-lg border border-cardBorder bg-[#18181B] p-1.5 shadow-xl space-y-1 max-h-72 overflow-y-auto z-50">
+          <div className="absolute left-0 mt-2 w-full rounded-lg border border-cardBorder bg-cardSurface p-1.5 shadow-xl space-y-1 max-h-72 overflow-y-auto z-50">
             <span className="px-3 py-1.5 text-[10px] font-bold text-muted uppercase tracking-wider block">
               Recent scan sessions
             </span>
@@ -82,7 +82,7 @@ export default function TopBar() {
                   <button
                     key={session.session_id || idx}
                     onClick={() => handleSelectSession(session)}
-                    className="w-full text-left p-2.5 rounded-md bg-[#18181B] hover:bg-[#27272A] transition-fast flex items-center justify-between gap-3 border border-transparent hover:border-cardBorder"
+                    className="w-full text-left p-2.5 rounded-md bg-cardSurface hover:bg-bgElevated transition-fast flex items-center justify-between gap-3 border border-transparent hover:border-cardBorder"
                   >
                     <div className="min-w-0 flex-1 space-y-0.5">
                       <div className="flex items-center gap-2">
@@ -110,7 +110,21 @@ export default function TopBar() {
         )}
       </div>
 
-      <AuthNav />
+      <div className="flex items-center gap-4">
+        {/* Quick Theme Switch */}
+        <button
+          onClick={() => setTheme(theme === "light" ? "dark" : "light")}
+          className="p-2 rounded-[6px] border border-cardBorder bg-cardSurface/50 text-muted hover:text-textMain transition-fast flex items-center justify-center"
+          title="Toggle Light/Dark Theme"
+        >
+          {theme === "light" ? (
+            <Moon className="w-4 h-4 text-primary" />
+          ) : (
+            <Sun className="w-4 h-4 text-primary" />
+          )}
+        </button>
+        <AuthNav />
+      </div>
     </header>
   );
 }

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useVektraStore } from "../store/vektraStore";
-import { Upload, FileCode, Play, Loader2, Sparkles, Network, Activity, ShieldAlert, Cpu, ArrowRight } from "lucide-react";
+import { Upload, FileCode, Play, Loader2, Sparkles, Network, Activity, ShieldAlert, Cpu, ArrowRight, Sun, Moon } from "lucide-react";
 import AuthNav from "../components/AuthNav";
 
 const HARDCODED_SAMPLE_IAM = `{
@@ -189,7 +189,9 @@ export default function UploadPage() {
     currentUser,
     authNotice,
     setAuthNotice,
-    setDemoMode
+    setDemoMode,
+    theme,
+    setTheme
   } = useVektraStore();
 
   const [dragActive, setDragActive] = useState(false);
@@ -352,6 +354,17 @@ export default function UploadPage() {
             Sample RBAC
           </button>
           <div className="h-4 w-[1px] bg-cardBorder mx-1" />
+          <button
+            onClick={() => setTheme(theme === "light" ? "dark" : "light")}
+            className="p-1.5 rounded-[6px] border border-cardBorder bg-cardSurface/50 text-muted hover:text-textMain transition-fast flex items-center justify-center"
+            title="Toggle Light/Dark Theme"
+          >
+            {theme === "light" ? (
+              <Moon className="w-3.5 h-3.5 text-primary" />
+            ) : (
+              <Sun className="w-3.5 h-3.5 text-primary" />
+            )}
+          </button>
           <AuthNav />
         </div>
       </header>
