@@ -269,10 +269,12 @@ export const useVektraStore = create((set, get) => ({
   sessionId: generateUUID(),
   policyText: "",
   format: "iam",
+  isDemoMode: false,
   setPolicyText: (text) => set({ policyText: text }),
   setFormat: (fmt) => {
     set({ format: fmt });
   },
+  setDemoMode: (val) => set({ isDemoMode: val }),
   resetSession: () => set({ sessionId: generateUUID() }),
 
   // Loaded Samples
