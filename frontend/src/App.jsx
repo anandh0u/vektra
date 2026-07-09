@@ -12,6 +12,10 @@ import DashboardPage from "./pages/Dashboard";
 import WalletPage from "./pages/Wallet";
 import AnalyzingPage from "./pages/Analyzing";
 import WorkflowEvidencePage from "./pages/WorkflowEvidence";
+import AccountsPage from "./pages/Accounts";
+import RiskAssessmentPage from "./pages/RiskAssessment";
+import CompliancePage from "./pages/Compliance";
+import ChatbotPage from "./pages/ChatbotPage";
 
 function ProtectedRoute({ children }) {
   const { currentUser } = useVektraStore();
@@ -78,6 +82,18 @@ export default function App() {
 
         {/* Account Scan History */}
         <Route path="/history" element={<ProtectedRoute><HistoryPage /></ProtectedRoute>} />
+
+        {/* AWS Accounts Integration */}
+        <Route path="/accounts" element={<ProtectedRoute><AccountsPage /></ProtectedRoute>} />
+
+        {/* Risk Assessments & Heatmap Matrices */}
+        <Route path="/risk" element={<ProtectedRoute><RiskAssessmentPage /></ProtectedRoute>} />
+
+        {/* Compliance benchmarks checklists */}
+        <Route path="/compliance" element={<ProtectedRoute><CompliancePage /></ProtectedRoute>} />
+
+        {/* Dedicated Chatbot Assistant page */}
+        <Route path="/chatbot" element={<ProtectedRoute><ChatbotPage /></ProtectedRoute>} />
 
         {/* Settings Console */}
         <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />

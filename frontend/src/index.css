@@ -5,15 +5,15 @@
 @tailwind utilities;
 
 :root {
-  --bg-base: #09090b;
-  --bg-surface: #18181b;
-  --bg-elevated: #27272a;
+  --bg-base: #030303;
+  --bg-surface: #0a0a0c;
+  --bg-elevated: #121215;
   --signal-blue: #3b82f6;
   --alert-red: #ef4444;
   --warn-amber: #f59e0b;
   --text-primary: #fafafa;
-  --text-muted: #a1a1aa;
-  --border-hairline: #27272a;
+  --text-muted: #8e8e93;
+  --border-hairline: #1e1e24;
   
   --color-primary: var(--signal-blue);
   --color-secondary: var(--text-muted);
@@ -34,41 +34,17 @@
   --color-secondary: var(--text-muted);
 }
 
-[data-theme="cyberpunk"] {
-  --bg-base: #0c0a0f;
-  --bg-surface: #17121e;
-  --bg-elevated: #261c33;
-  --signal-blue: #c084fc;
-  --alert-red: #f43f5e;
-  --warn-amber: #eab308;
-  --text-primary: #f8fafc;
-  --text-muted: #c084fc;
-  --border-hairline: #3b2a54;
-  
-  --color-primary: var(--signal-blue);
-  --color-secondary: var(--text-muted);
-}
-
-[data-theme="forest"] {
-  --bg-base: #050806;
-  --bg-surface: #0f1510;
-  --bg-elevated: #1b261e;
-  --signal-blue: #34d399;
-  --alert-red: #f87171;
-  --warn-amber: #fbbf24;
-  --text-primary: #f0fdf4;
-  --text-muted: #34d399;
-  --border-hairline: #1c2b20;
-  
-  --color-primary: var(--signal-blue);
-  --color-secondary: var(--text-muted);
-}
-
 @layer base {
   body {
     @apply bg-pageBg text-textMain font-sans antialiased;
     font-size: 14px;
     line-height: 1.5;
+    background-image: radial-gradient(at 0% 0%, rgba(59, 130, 246, 0.05) 0px, transparent 50%),
+                      radial-gradient(at 50% 0%, rgba(139, 92, 246, 0.03) 0px, transparent 50%);
+  }
+  
+  [data-theme="light"] body {
+    background-image: radial-gradient(at 0% 0%, rgba(37, 99, 235, 0.02) 0px, transparent 50%);
   }
   
   h1 { @apply font-sans font-bold tracking-tight text-textMain; }
@@ -78,6 +54,19 @@
   code, pre {
     @apply font-mono;
   }
+}
+
+/* Glassmorphism custom components */
+.glass-card {
+  background: rgba(10, 10, 12, 0.7);
+  backdrop-filter: blur(16px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+[data-theme="light"] .glass-card {
+  background: rgba(255, 255, 255, 0.75);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(0, 0, 0, 0.05);
 }
 
 /* Custom transitions and states */

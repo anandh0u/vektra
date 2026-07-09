@@ -3,14 +3,18 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { getAuthHeaders, useVektraStore } from "../store/vektraStore";
 import { 
   Shield, 
-  Home, 
-  Search, 
+  LayoutDashboard, 
+  Cloud, 
   Network, 
-  History as HistoryIcon, 
+  Activity, 
+  FileCode, 
+  ShieldAlert, 
+  ShieldCheck, 
   FileText, 
-  Gem, 
-  Coins, 
+  Bot, 
   Settings as SettingsIcon, 
+  Coins, 
+  History as HistoryIcon,
   LogOut
 } from "lucide-react";
 
@@ -63,13 +67,15 @@ export default function Sidebar() {
   const totalCredits = tier === "free" ? 5 : (tier === "pro" ? 200 : 1000);
 
   const navItems = [
-    { label: "Dashboard", path: "/dashboard", icon: Home, show: !!currentUser },
-    { label: "Analyze", path: "/", icon: Search, show: true },
-    { label: "Graph", path: "/analyze", icon: Network, show: hasScan },
-    { label: "History", path: "/history", icon: HistoryIcon, show: !!currentUser },
+    { label: "Dashboard", path: "/dashboard", icon: LayoutDashboard, show: !!currentUser },
+    { label: "AWS Accounts", path: "/accounts", icon: Cloud, show: !!currentUser },
+    { label: "IAM Analyzer", path: "/analyze", icon: Network, show: hasScan },
+    { label: "Vulnerability Scanner", path: "/analyze", icon: Activity, show: hasScan },
+    { label: "Policy Analyzer", path: "/", icon: FileCode, show: true },
+    { label: "Risk Assessment", path: "/risk", icon: ShieldAlert, show: !!currentUser },
+    { label: "Compliance", path: "/compliance", icon: ShieldCheck, show: !!currentUser },
     { label: "Reports", path: "/report", icon: FileText, show: hasScan },
-    { label: "Wallet", path: "/wallet", icon: Gem, show: !!currentUser },
-    { label: "Pricing", path: "/pricing", icon: Coins, show: true },
+    { label: "AI Chatbot", path: "/chatbot", icon: Bot, show: !!currentUser },
     { label: "Settings", path: "/settings", icon: SettingsIcon, show: !!currentUser },
   ];
 
@@ -97,7 +103,7 @@ export default function Sidebar() {
       <nav className="flex-1 px-3 py-6 space-y-4 overflow-y-auto">
         <div className="space-y-1">
           <span className="px-3 text-[10px] font-bold text-muted uppercase tracking-wider block mb-2">
-            Workspace
+            Vulnerability Center
           </span>
           {navItems.map((item) => {
             if (!item.show) return null;
@@ -127,7 +133,7 @@ export default function Sidebar() {
               Recent Scan Logs
             </span>
             <div className="space-y-1 max-h-48 overflow-y-auto px-1">
-              {scanHistory.slice(0, 5).map((item, idx) => {
+              {scanHistory.slice(0, 4).map((item, idx) => {
                 const format = (item.format || "").toUpperCase();
                 const riskLabel = (item.risk_label || "LOW").toUpperCase();
                 
