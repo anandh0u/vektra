@@ -660,9 +660,11 @@ async def chat_sse(
                             break
                         try:
                             data = json.loads(payload)
-                            delta = data.get("choices", [{}])[0].get("delta", {}).get("content")
-                            if delta:
-                                yield f"data: {json.dumps({'response': delta})}\n\n"
+                            choices = data.get("choices")
+                            if choices:
+                                delta = choices[0].get("delta", {}).get("content")
+                                if delta:
+                                    yield f"data: {json.dumps({'response': delta})}\n\n"
                         except json.JSONDecodeError:
                             yield f"data: {json.dumps({'response': payload})}\n\n"
         except Exception as exc:
