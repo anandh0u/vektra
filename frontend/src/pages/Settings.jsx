@@ -490,10 +490,11 @@ export default function SettingsPage() {
                   <label className="text-[9px] font-bold text-muted uppercase tracking-wider block font-mono">UI Color Theme</label>
                   <div className="grid grid-cols-2 gap-3">
                     {[
-                      { id: "dark", name: "Default Dark", desc: "Sleek dark graphite design" },
-                      { id: "light", name: "Default Light", desc: "Clean bright alabaster design" },
-                      { id: "cyberpunk", name: "Cyberpunk Mode", desc: "Deep vibrant violet neon" },
-                      { id: "forest", name: "Forest Mode", desc: "Obsidian Matrix green" },
+                      { id: "dark", name: "Default Dark", desc: "Sleek dark graphite layout (Inter)" },
+                      { id: "bluish", name: "Deep Space Navy", desc: "Classic dark blue SOC panels (Outfit)" },
+                      { id: "light", name: "Alabaster White", desc: "Clean bright whitish view (Jakarta)" },
+                      { id: "cyberpunk", name: "Cyberpunk Violet", desc: "Vibrant synthwave scheme (Space Grotesk)" },
+                      { id: "forest", name: "Matrix Terminal", desc: "Obsidian retro terminal (Fira Code)" },
                     ].map((t) => (
                       <button
                         key={t.id}

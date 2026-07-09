@@ -1,10 +1,11 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Space+Grotesk:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Outfit:wght@400;500;600;700&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-:root {
+/* Default Dark Theme */
+:root, [data-theme="dark"] {
   --bg-base: #030303;
   --bg-surface: #0a0a0c;
   --bg-elevated: #121215;
@@ -14,21 +15,80 @@
   --text-primary: #fafafa;
   --text-muted: #8e8e93;
   --border-hairline: #1e1e24;
+  --font-display: 'Inter', sans-serif;
+  --font-code: 'JetBrains Mono', monospace;
   
   --color-primary: var(--signal-blue);
   --color-secondary: var(--text-muted);
 }
 
-[data-theme="light"] {
-  --bg-base: #f9fafb;
+/* Bluish Theme (Deep Space Navy) */
+[data-theme="bluish"] {
+  --bg-base: #0b1120;
+  --bg-surface: #111b2f;
+  --bg-elevated: #1e293b;
+  --signal-blue: #60a5fa;
+  --alert-red: #f87171;
+  --warn-amber: #fbbf24;
+  --text-primary: #f8fafc;
+  --text-muted: #94a3b8;
+  --border-hairline: #1e293b;
+  --font-display: 'Outfit', sans-serif;
+  --font-code: 'JetBrains Mono', monospace;
+  
+  --color-primary: var(--signal-blue);
+  --color-secondary: var(--text-muted);
+}
+
+/* Whitish Theme (Alabaster White) */
+[data-theme="light"], [data-theme="whitish"] {
+  --bg-base: #fafaf9;
   --bg-surface: #ffffff;
-  --bg-elevated: #f3f4f6;
+  --bg-elevated: #f5f5f4;
   --signal-blue: #2563eb;
   --alert-red: #dc2626;
   --warn-amber: #d97706;
-  --text-primary: #111827;
-  --text-muted: #6b7280;
-  --border-hairline: #e5e7eb;
+  --text-primary: #1c1917;
+  --text-muted: #78716c;
+  --border-hairline: #e7e5e4;
+  --font-display: 'Plus Jakarta Sans', sans-serif;
+  --font-code: 'JetBrains Mono', monospace;
+  
+  --color-primary: var(--signal-blue);
+  --color-secondary: var(--text-muted);
+}
+
+/* Cyberpunk Theme (Synthwave Violet) */
+[data-theme="cyberpunk"] {
+  --bg-base: #0c0514;
+  --bg-surface: #160b24;
+  --bg-elevated: #231138;
+  --signal-blue: #ec4899;
+  --alert-red: #f43f5e;
+  --warn-amber: #eab308;
+  --text-primary: #fdf4ff;
+  --text-muted: #c084fc;
+  --border-hairline: #3c165a;
+  --font-display: 'Space Grotesk', sans-serif;
+  --font-code: 'JetBrains Mono', monospace;
+  
+  --color-primary: var(--signal-blue);
+  --color-secondary: var(--text-muted);
+}
+
+/* Forest Theme (Retro Terminal Matrix) */
+[data-theme="forest"] {
+  --bg-base: #050806;
+  --bg-surface: #0b120d;
+  --bg-elevated: #152217;
+  --signal-blue: #10b981;
+  --alert-red: #ef4444;
+  --warn-amber: #fbbf24;
+  --text-primary: #ecfdf5;
+  --text-muted: #6ee7b7;
+  --border-hairline: #1f3a24;
+  --font-display: 'JetBrains Mono', monospace;
+  --font-code: 'JetBrains Mono', monospace;
   
   --color-primary: var(--signal-blue);
   --color-secondary: var(--text-muted);
@@ -36,37 +96,60 @@
 
 @layer base {
   body {
-    @apply bg-pageBg text-textMain font-sans antialiased;
+    @apply bg-pageBg text-textMain antialiased;
+    font-family: var(--font-display);
     font-size: 14px;
     line-height: 1.5;
     background-image: radial-gradient(at 0% 0%, rgba(59, 130, 246, 0.05) 0px, transparent 50%),
                       radial-gradient(at 50% 0%, rgba(139, 92, 246, 0.03) 0px, transparent 50%);
   }
   
-  [data-theme="light"] body {
+  [data-theme="light"] body, [data-theme="whitish"] body {
     background-image: radial-gradient(at 0% 0%, rgba(37, 99, 235, 0.02) 0px, transparent 50%);
   }
   
-  h1 { @apply font-sans font-bold tracking-tight text-textMain; }
-  h2 { @apply font-sans font-semibold tracking-tight text-textMain; }
-  h3 { @apply font-sans font-semibold tracking-wide text-textMain; }
+  [data-theme="bluish"] body {
+    background-image: radial-gradient(at 0% 0%, rgba(96, 165, 250, 0.06) 0px, transparent 50%);
+  }
+  
+  h1 { @apply font-bold tracking-tight text-textMain; font-family: var(--font-display); }
+  h2 { @apply font-semibold tracking-tight text-textMain; font-family: var(--font-display); }
+  h3 { @apply font-semibold tracking-wide text-textMain; font-family: var(--font-display); }
   
   code, pre {
-    @apply font-mono;
+    font-family: var(--font-code);
   }
 }
 
 /* Glassmorphism custom components */
 .glass-card {
-  background: rgba(10, 10, 12, 0.7);
+  background: rgba(10, 10, 12, 0.65);
   backdrop-filter: blur(16px) saturate(180%);
   border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
-[data-theme="light"] .glass-card {
+[data-theme="light"] .glass-card, [data-theme="whitish"] .glass-card {
   background: rgba(255, 255, 255, 0.75);
   backdrop-filter: blur(16px);
   border: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+[data-theme="bluish"] .glass-card {
+  background: rgba(17, 27, 47, 0.7);
+  backdrop-filter: blur(16px) saturate(160%);
+  border: 1px solid rgba(96, 165, 250, 0.08);
+}
+
+[data-theme="cyberpunk"] .glass-card {
+  background: rgba(22, 11, 36, 0.75);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(236, 72, 153, 0.12);
+}
+
+[data-theme="forest"] .glass-card {
+  background: rgba(11, 18, 13, 0.8);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(16, 185, 129, 0.15);
 }
 
 /* Custom transitions and states */

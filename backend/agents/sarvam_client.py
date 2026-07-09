@@ -9,7 +9,7 @@ import httpx
 logger = logging.getLogger("vektra.agents.sarvam")
 
 SARVAM_URL = "https://api.sarvam.ai/v1/chat/completions"
-SARVAM_MODEL = "sarvam-m"
+SARVAM_MODEL = "sarvam-30b"
 
 
 def get_api_key(api_key: Optional[str] = None) -> Optional[str]:
