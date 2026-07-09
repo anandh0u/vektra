@@ -7,24 +7,35 @@ export default {
   theme: {
     extend: {
       colors: {
-        pageBg: "var(--color-pageBg)",
-        sidebarBg: "var(--color-sidebarBg)",
-        cardSurface: "var(--color-cardSurface)",
-        cardBorder: "var(--color-cardBorder)",
-        primary: "var(--color-primary)",
-        secondary: "var(--color-secondary)",
-        danger: "#ef4444",
-        warning: "#f59e0b",
-        safe: "#10b981",
-        textMain: "#f1f5f9",
-        muted: "#4a5280",
-        activeNav: "#1e2240",
+        pageBg: "#0B0E14",
+        sidebarBg: "#12161F",
+        cardSurface: "#12161F",
+        cardBorder: "#232838",
+        primary: "#4C8DFF",
+        secondary: "#8A93A6",
+        danger: "#FF5C4D",
+        critical: "#FF5C4D",
+        warning: "#F2A94B",
+        safe: "#4C8DFF", // safe/verified maps to signal-blue
+        info: "#4C8DFF",
+        textMain: "#E8EAED",
+        muted: "#8A93A6",
+        activeNav: "#1A1F2B",
+        bgElevated: "#1A1F2B",
       },
       fontFamily: {
         sans: ["Inter", "sans-serif"],
         mono: ["JetBrains Mono", "monospace"],
-        heading: ["Space Grotesk", "sans-serif"],
       },
+      borderWidth: {
+        DEFAULT: '1px',
+      },
+      borderRadius: {
+        lg: '6px',
+        md: '6px',
+        sm: '6px',
+        xl: '6px',
+      }
     },
   },
   plugins: [],

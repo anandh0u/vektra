@@ -1,89 +1,71 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
-  --color-pageBg: #07080f;
-  --color-sidebarBg: #04050a;
-  --color-cardSurface: #0d0f1f;
-  --color-cardBorder: #312e81;
-  --color-primary: #8b5cf6;
-  --color-secondary: #22d3ee;
+  --bg-base: #0B0E14;
+  --bg-surface: #12161F;
+  --bg-elevated: #1A1F2B;
+  --signal-blue: #4C8DFF;
+  --alert-red: #FF5C4D;
+  --warn-amber: #F2A94B;
+  --text-primary: #E8EAED;
+  --text-muted: #8A93A6;
+  --border-hairline: #232838;
+  
+  --color-pageBg: var(--bg-base);
+  --color-sidebarBg: var(--bg-surface);
+  --color-cardSurface: var(--bg-surface);
+  --color-cardBorder: var(--border-hairline);
+  --color-primary: var(--signal-blue);
+  --color-secondary: var(--text-muted);
 }
 
-[data-theme="cyberpunk"] {
-  --color-pageBg: #0f0217;
-  --color-sidebarBg: #07000d;
-  --color-cardSurface: #170324;
-  --color-cardBorder: #ff007f;
-  --color-primary: #ff007f;
-  --color-secondary: #00ffff;
-}
-
-[data-theme="forest"] {
-  --color-pageBg: #020a05;
-  --color-sidebarBg: #010502;
-  --color-cardSurface: #051a0d;
-  --color-cardBorder: #39ff14;
-  --color-primary: #39ff14;
-  --color-secondary: #ffdf00;
+[data-theme="cyberpunk"], [data-theme="forest"] {
+  --color-pageBg: var(--bg-base);
+  --color-sidebarBg: var(--bg-surface);
+  --color-cardSurface: var(--bg-surface);
+  --color-cardBorder: var(--border-hairline);
+  --color-primary: var(--signal-blue);
+  --color-secondary: var(--text-muted);
 }
 
 @layer base {
   body {
-    @apply bg-pageBg text-textMain font-sans;
+    @apply bg-[#0B0E14] text-[#E8EAED] font-sans antialiased;
+    font-size: 14px;
+    line-height: 1.5;
+  }
+  
+  /* Standardized Typography Scales */
+  h1 { @apply font-sans font-bold tracking-tight text-[#E8EAED]; }
+  h2 { @apply font-sans font-semibold tracking-tight text-[#E8EAED]; }
+  h3 { @apply font-sans font-semibold tracking-wide text-[#E8EAED]; }
+  
+  code, pre {
+    @apply font-mono;
   }
 }
 
-/* Custom CSS keyframe animations for graph visualization and agent status cards */
-@keyframes critical-pulse {
-  0% {
-    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
-    transform: scale(1);
-  }
-  50% {
-    box-shadow: 0 0 15px 6px rgba(239, 68, 68, 0.4);
-    transform: scale(1.05);
-  }
-  100% {
-    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
-    transform: scale(1);
-  }
+/* Custom transitions and states */
+.transition-fast {
+  transition: all 150ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-@keyframes warning-pulse {
-  0% {
-    box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.5);
-    transform: scale(1);
-  }
-  50% {
-    box-shadow: 0 0 12px 4px rgba(245, 158, 11, 0.3);
-    transform: scale(1.03);
-  }
-  100% {
-    box-shadow: 0 0 0 0 rgba(245, 158, 11, 0);
-    transform: scale(1);
-  }
+.hover-lift {
+  transition: transform 150ms cubic-bezier(0.4, 0, 0.2, 1), border-color 150ms;
+}
+.hover-lift:hover {
+  transform: translateY(-1px);
+  border-color: var(--signal-blue);
 }
 
-@keyframes flow-dash {
-  to {
-    stroke-dashoffset: -20;
-  }
-}
-
-/* Glow on hover for safe nodes */
-.node-safe-hover:hover {
-  box-shadow: 0 0 15px 4px rgba(16, 185, 129, 0.6);
-  transition: all 0.3s ease;
-}
-
-.animate-node-critical {
-  animation: critical-pulse 2s infinite ease-in-out;
-}
-
-.animate-node-warning {
-  animation: warning-pulse 2.2s infinite ease-in-out;
+/* Focus indicator outline styles */
+*:focus-visible {
+  outline: 2px solid var(--signal-blue);
+  outline-offset: 2px;
 }
 
 /* React Flow custom edge styles */
@@ -92,25 +74,28 @@
   animation: flow-dash 1.5s linear infinite;
 }
 
+@keyframes flow-dash {
+  to {
+    stroke-dashoffset: -20;
+  }
+}
+
 .react-flow__edge-path.overlap-edge {
   stroke-dasharray: 3;
 }
 
-/* Glassmorphism scrollbars */
+/* Custom Scrollbars */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
-
 ::-webkit-scrollbar-track {
-  background: #0a0c16;
+  background: var(--bg-base);
 }
-
 ::-webkit-scrollbar-thumb {
-  background: #1e2240;
+  background: var(--border-hairline);
   border-radius: 3px;
 }
-
 ::-webkit-scrollbar-thumb:hover {
-  background: #7c3aed;
+  background: var(--signal-blue);
 }
