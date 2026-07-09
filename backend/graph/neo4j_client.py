@@ -193,12 +193,12 @@ class Neo4jClient:
         with self.driver.session() as session:
             result = session.run(
                 """
-                CREATE (u:User {
+                 CREATE (u:User {
                   id: $id,
                   email: $email,
                   name: $name,
                   password_hash: $password_hash,
-                  tier: 'free',
+                  tier: $tier,
                   scans_today: 0,
                   last_scan_date: $today,
                   created_at: $now,
@@ -220,6 +220,7 @@ class Neo4jClient:
                 stellar_public_key=user.get("stellar_public_key", ""),
                 stellar_secret_key=user.get("stellar_secret_key", ""),
                 credits_balance=user.get("credits_balance", 0),
+                tier=user.get("tier", "team"),
             )
             record = result.single()
             return dict(record["u"])

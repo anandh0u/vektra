@@ -261,8 +261,8 @@ async def register(body: RegisterRequest):
         secret_key = wallet["secret_key"]
         
         await stellar_client.setup_user_trustlines(public_key, secret_key)
-        await stellar_client.mint_tier_nft(public_key, "free")
-        await stellar_client.issue_credits(public_key, 5)
+        await stellar_client.mint_tier_nft(public_key, "team")
+        await stellar_client.issue_credits(public_key, 1000)
     except Exception as exc:
         logger.exception("Failed to initialize user Stellar wallet. Using mock fallback keys.")
         public_key = "G" + str(uuid.uuid4()).replace("-", "")[:55]
@@ -276,7 +276,8 @@ async def register(body: RegisterRequest):
                 "password_hash": hash_password(password),
                 "stellar_public_key": public_key,
                 "stellar_secret_key": secret_key,
-                "credits_balance": 5,
+                "credits_balance": 1000,
+                "tier": "team",
             }
         )
     except Exception as exc:
