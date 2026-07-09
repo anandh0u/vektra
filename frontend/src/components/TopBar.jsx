@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { Search, ChevronRight, Sparkles, Activity } from "lucide-react";
+import { Search, ChevronRight } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import AuthNav from "./AuthNav";
 import { useVektraStore } from "../store/vektraStore";
@@ -11,7 +11,6 @@ export default function TopBar() {
   const [showDropdown, setShowDropdown] = useState(false);
   const dropdownRef = useRef(null);
 
-  // Close dropdown on click outside
   useEffect(() => {
     function handleClickOutside(event) {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
@@ -37,29 +36,30 @@ export default function TopBar() {
   };
 
   return (
-    <header className="h-16 border-b border-[#1e2240] bg-[#0d0f1a] flex items-center justify-between px-8 select-none relative z-50">
+    <header className="h-16 border-b border-cardBorder bg-[#09090B] flex items-center justify-between px-8 select-none relative z-50">
+      
       {/* Search Input & Dropdown */}
       <div className="relative w-96" ref={dropdownRef}>
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted" />
+        <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted" />
         <input
           type="text"
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           onFocus={() => setShowDropdown(true)}
-          placeholder="Search recent scans & sessions..."
-          className="w-full bg-[#141628] border border-[#1e2240] rounded-lg py-1.5 pl-10 pr-4 text-xs text-textMain placeholder-muted focus:outline-none focus:border-primary transition-all duration-200"
+          placeholder="Search policy scans & sessions..."
+          className="w-full bg-[#111113] border border-cardBorder rounded-lg py-2 pl-10 pr-4 text-xs text-textMain placeholder-muted focus:outline-none focus:border-primary transition-fast"
         />
         {searchTerm === "" && (
-          <div className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] bg-[#1e2240] text-muted px-1.5 py-0.5 rounded border border-cardBorder">
+          <div className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[9px] bg-cardSurface text-muted px-1.5 py-0.5 rounded border border-cardBorder font-mono">
             ⌘K
           </div>
         )}
 
         {/* Sessions Dropdown */}
         {showDropdown && (
-          <div className="absolute left-0 mt-2 w-full rounded-xl border border-[#1e2240] bg-[#0a0c16] p-2 shadow-2xl space-y-1.5 max-h-72 overflow-y-auto">
-            <span className="px-3 py-1 text-[9px] font-bold text-muted uppercase tracking-wider block">
-              Recent Scan Sessions
+          <div className="absolute left-0 mt-2 w-full rounded-lg border border-cardBorder bg-[#18181B] p-1.5 shadow-xl space-y-1 max-h-72 overflow-y-auto z-50">
+            <span className="px-3 py-1.5 text-[10px] font-bold text-muted uppercase tracking-wider block">
+              Recent scan sessions
             </span>
             {filteredAnalyses.length === 0 ? (
               <div className="px-3 py-4 text-center text-xs text-muted">
@@ -71,22 +71,22 @@ export default function TopBar() {
                 const riskLabel = (session.stats?.risk_label || "LOW").toUpperCase();
                 const score = session.stats?.risk_score ?? 0;
                 
-                let riskBadgeStyle = "bg-safe/10 text-safe border-safe/20";
+                let riskBadgeStyle = "bg-[#22C55E]/10 text-[#22C55E] border-[#22C55E]/20";
                 if (riskLabel === "CRITICAL" || riskLabel === "HIGH") {
-                  riskBadgeStyle = "bg-danger/10 text-danger border-danger/20";
+                  riskBadgeStyle = "bg-[#DC2626]/10 text-[#DC2626] border-[#DC2626]/20";
                 } else if (riskLabel === "WARNING" || riskLabel === "MEDIUM") {
-                  riskBadgeStyle = "bg-warning/10 text-warning border-warning/20";
+                  riskBadgeStyle = "bg-[#F59E0B]/10 text-[#F59E0B] border-[#F59E0B]/20";
                 }
 
                 return (
                   <button
                     key={session.session_id || idx}
                     onClick={() => handleSelectSession(session)}
-                    className="w-full text-left p-2.5 rounded-lg bg-[#141628]/40 border border-[#1e2240]/40 hover:bg-[#141628] hover:border-[#1e2240] transition-all duration-200 flex items-center justify-between gap-3"
+                    className="w-full text-left p-2.5 rounded-md bg-[#18181B] hover:bg-[#27272A] transition-fast flex items-center justify-between gap-3 border border-transparent hover:border-cardBorder"
                   >
-                    <div className="min-w-0 flex-1 space-y-1">
+                    <div className="min-w-0 flex-1 space-y-0.5">
                       <div className="flex items-center gap-2">
-                        <span className="px-1.5 py-0.5 rounded text-[8px] font-bold bg-[#1e2240] text-slate-300">
+                        <span className="px-1.5 py-0.2 rounded bg-cardSurface text-slate-300 text-[8px] font-bold tracking-wider font-mono">
                           {format}
                         </span>
                         <span className="text-[9px] text-muted truncate block">
@@ -98,7 +98,7 @@ export default function TopBar() {
                       </div>
                     </div>
                     <div className="text-right shrink-0">
-                      <span className={`px-1.5 py-0.5 rounded text-[8px] font-bold border ${riskBadgeStyle}`}>
+                      <span className={`px-1.5 py-0.2 rounded text-[8px] font-bold border ${riskBadgeStyle}`}>
                         {riskLabel} ({score}%)
                       </span>
                     </div>
