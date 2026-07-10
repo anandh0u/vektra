@@ -678,7 +678,8 @@ async def chat_sse(
                             data = json.loads(payload)
                             choices = data.get("choices")
                             if choices:
-                                delta = choices[0].get("delta", {}).get("content")
+                                delta_content = choices[0].get("delta", {})
+                                delta = delta_content.get("content") or delta_content.get("reasoning_content")
                                 if delta:
                                     yield f"data: {json.dumps({'response': delta})}\n\n"
                         except json.JSONDecodeError:
