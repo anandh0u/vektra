@@ -4,29 +4,63 @@
     "appVersionSource": "remote"
   },
   "build": {
+    "base": {
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://vektra-api.onrender.com",
+        "EXPO_PUBLIC_WEB_URL": "https://vektra-six.vercel.app"
+      }
+    },
     "development": {
+      "extends": "base",
       "developmentClient": true,
       "distribution": "internal",
       "android": {
-        "buildType": "apk"
+        "buildType": "apk",
+        "gradleCommand": ":app:assembleDebug"
+      },
+      "ios": {
+        "buildConfiguration": "Debug",
+        "simulator": true
+      },
+      "env": {
+        "APP_ENV": "development"
       }
     },
     "preview": {
+      "extends": "base",
       "distribution": "internal",
       "android": {
         "buildType": "apk"
       },
       "ios": {
         "simulator": false
-      }
+      },
+      "env": {
+        "APP_ENV": "preview"
+      },
+      "channel": "preview"
     },
     "production": {
+      "extends": "base",
+      "autoIncrement": true,
       "android": {
         "buildType": "app-bundle"
-      }
+      },
+      "ios": {
+        "buildConfiguration": "Release"
+      },
+      "env": {
+        "APP_ENV": "production"
+      },
+      "channel": "production"
     }
   },
   "submit": {
-    "production": {}
+    "production": {
+      "android": {
+        "serviceAccountKeyPath": "./google-service-account.json",
+        "track": "internal"
+      }
+    }
   }
 }
