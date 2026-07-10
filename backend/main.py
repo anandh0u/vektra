@@ -236,14 +236,11 @@ async def resolve_request_user(request: Request, required: bool = False) -> dict
 @app.get("/api/health")
 async def health_check():
     neo4j_ok = neo4j_client.connected or await ensure_neo4j_ready(timeout=6.0)
-    base44_ok = bool(
-        (os.getenv("BASE44_API_KEY") or "1ec5cf39c2ff457c9686d35b1c5650d0") and
-        (os.getenv("BASE44_APP_ID") or "6a494c246e43fac149974886")
-    )
+    base44_ok = bool(os.getenv("BASE44_API_KEY") and os.getenv("BASE44_APP_ID"))
     return {
         "status": "ok",
         "neo4j": neo4j_ok,
-        "sarvam": bool(os.getenv("SARVAM_API_KEY") or "sk_ofdpfh1o_zdhNv5LJscgGaqW2hvP16uPX"),
+        "sarvam": bool(os.getenv("SARVAM_API_KEY")),
         "base44": base44_ok,
     }
 

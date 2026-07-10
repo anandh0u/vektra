@@ -13,7 +13,7 @@ SARVAM_MODEL = "sarvam-30b"
 
 
 def get_api_key(api_key: Optional[str] = None) -> Optional[str]:
-    return api_key or os.getenv("SARVAM_API_KEY") or "sk_ofdpfh1o_zdhNv5LJscgGaqW2hvP16uPX"
+    return api_key or os.getenv("SARVAM_API_KEY")
 
 
 def parse_json_object(text: str) -> Dict[str, Any]:

@@ -6,8 +6,8 @@ import logging
 logger = logging.getLogger("vektra.base44")
 
 def get_base44_config():
-    app_id = os.getenv("BASE44_APP_ID") or "6a494c246e43fac149974886"
-    api_key = os.getenv("BASE44_API_KEY") or "1ec5cf39c2ff457c9686d35b1c5650d0"
+    app_id = os.getenv("BASE44_APP_ID")
+    api_key = os.getenv("BASE44_API_KEY")
     url = f"https://api.base44.com/v1/apps/{app_id}"
     headers = {
         "x-api-key": api_key or "",
