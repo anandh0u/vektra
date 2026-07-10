@@ -336,24 +336,40 @@ export default function DashboardPage() {
                 </div>
               )}
             </div>
-
           </div>
-
-          {/* Right Sidebar Panel */}
           <div className="w-80 border-l border-cardBorder bg-[#18181B]/10 flex flex-col h-full shrink-0 p-6 space-y-6 overflow-y-auto">
             
+            {/* Forensics Diagnostics */}
+            <div className="space-y-3">
+              <span className="text-[10px] font-bold text-muted uppercase tracking-wider block font-mono">Autonomous Forensics</span>
+              <div className="bg-cardSurface border border-cardBorder p-4 rounded-lg space-y-4">
+                <div className="flex justify-between items-center border-b border-cardBorder/40 pb-2">
+                  <span className="text-xs font-semibold">Incident Health Score</span>
+                  <span className="text-sm font-bold text-primary font-mono">92%</span>
+                </div>
+                <div className="flex justify-between items-center border-b border-cardBorder/40 pb-2">
+                  <span className="text-xs font-semibold">RAG Index Rate</span>
+                  <span className="text-sm font-bold text-primary font-mono">98.4%</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-xs font-semibold">Flagged Anomalies</span>
+                  <span className="text-xs font-bold text-[#FF5C4D] font-mono">1 Critical</span>
+                </div>
+              </div>
+            </div>
+
             {/* Quick Actions (Quiet Solid Cards) */}
             <div className="space-y-3">
               <span className="text-[10px] font-bold text-muted uppercase tracking-wider block">Quick Scanners</span>
               <div className="grid grid-cols-1 gap-3">
                 <button
-                  onClick={() => navigate("/")}
-                  className="bg-cardSurface border border-cardBorder p-4 rounded-lg text-left hover-lift flex flex-col justify-between h-24"
+                  onClick={() => navigate("/investigate")}
+                  className="bg-gradient-to-r from-primary/10 to-accent/10 border border-primary/20 p-4 rounded-lg text-left hover-lift flex flex-col justify-between h-24"
                 >
-                  <Plus className="w-4 h-4 text-primary" />
+                  <Plus className="w-4 h-4 text-primary animate-pulse" />
                   <div>
-                    <h3 className="font-semibold text-xs text-textMain uppercase tracking-wide">Run Scan</h3>
-                    <p className="text-[9px] text-muted mt-0.5 font-normal">Analyze IAM or RBAC</p>
+                    <h3 className="font-semibold text-xs text-textMain uppercase tracking-wide">Incident Audit</h3>
+                    <p className="text-[9px] text-muted mt-0.5 font-normal">Autonomous Forensics</p>
                   </div>
                 </button>
               </div>

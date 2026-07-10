@@ -14,20 +14,31 @@ import { ZoomIn, ZoomOut, Maximize2, RotateCcw } from "lucide-react";
 
 // ── CUSTOM NODE COMPONENT ──
 const CustomPolicyNode = ({ data, selected }) => {
-  const { severity, label, isCenter, effect } = data;
+  const { severity, label, isCenter, effect, type } = data;
   
   let bgColor = "bg-safe node-safe-hover";
   let pulseClass = "";
   
-  if (severity === "CRITICAL") {
+  if (severity === "CRITICAL" || type === "IPAddress" || type === "IP Location") {
     bgColor = "bg-danger";
     pulseClass = "animate-node-critical";
-  } else if (severity === "WARNING") {
+  } else if (severity === "WARNING" || type === "Role" || type === "IAM Role") {
     bgColor = "bg-warning";
     pulseClass = "animate-node-warning";
-  } else if (severity === "INFO") {
+  } else if (severity === "INFO" || type === "Action" || type === "API Call") {
     bgColor = "bg-blue-500";
+  } else if (type === "Identity" || type === "Principal") {
+    bgColor = "bg-purple-600";
+  } else if (type === "Document" || type === "Investigation Case") {
+    bgColor = "bg-emerald-600";
   }
+  
+  let symbol = effect === "Deny" ? "D" : "A";
+  if (type === "Identity" || type === "Principal") symbol = "U";
+  else if (type === "IPAddress" || type === "IP Location") symbol = "IP";
+  else if (type === "Role" || type === "IAM Role") symbol = "R";
+  else if (type === "Action" || type === "API Call") symbol = "ACT";
+  else if (type === "Document" || type === "Investigation Case") symbol = "DOC";
   
   return (
     <div className="flex flex-col items-center select-none">
@@ -36,9 +47,8 @@ const CustomPolicyNode = ({ data, selected }) => {
       <div className={`w-11 h-11 rounded-full ${bgColor} ${pulseClass} flex items-center justify-center border-2 ${
         selected ? "border-white scale-110 shadow-[0_0_12px_#7c3aed]" : "border-[#0d0f1a]"
       } cursor-pointer transition-all duration-200 relative`}>
-        {/* Emblem */}
-        <span className="text-[10px] font-bold text-white font-heading select-none">
-          {effect === "Deny" ? "D" : "A"}
+        <span className="text-[10px] font-bold text-white font-heading select-none uppercase">
+          {symbol}
         </span>
         {isCenter && (
           <span className="absolute -top-1 -right-1 bg-primary text-white text-[7px] font-extrabold px-1 rounded-full border border-[#0d0f1a] shadow-sm">

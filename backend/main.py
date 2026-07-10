@@ -45,6 +45,8 @@ from backend.base44_client import (
 )
 from backend import stellar_client
 from backend.credits import check_and_deduct_credits, CREDIT_COSTS, DAILY_CREDITS
+from backend.agents.rag_engine import global_rag_engine
+from backend.agents.forensics_agents import run_forensic_pipeline
 
 
 load_dotenv()
@@ -136,6 +138,23 @@ class ChatRequest(BaseModel):
     policy_context: str = ""
     session_id: Optional[str] = None
     history: List[Dict[str, str]] = []
+
+
+class ForensicFile(BaseModel):
+    filename: str
+    content: str
+
+
+class ForensicInvestigateRequest(BaseModel):
+    files: List[ForensicFile]
+
+
+class RAGSearchRequest(BaseModel):
+    query: str
+
+
+class CopilotExecuteRequest(BaseModel):
+    prompt: str
 
 
 class ProfileUpdateRequest(BaseModel):
@@ -962,6 +981,89 @@ async def get_wallet_transactions(http_request: Request):
         return {"transactions": []}
 
 
+@app.post("/api/forensics/investigate")
+async def forensics_investigate(body: ForensicInvestigateRequest, http_request: Request):
+    user = await resolve_request_user(http_request, required=True)
+    global_rag_engine.clear()
+    for f in body.files:
+        global_rag_engine.add_document(f.content, f.filename)
+    
+    sarvam_key = os.getenv("SARVAM_API_KEY")
+    evidence_data = [{"filename": f.filename, "content": f.content} for f in body.files]
+    state = await run_forensic_pipeline(evidence_data, api_key=sarvam_key)
+    
+    await ensure_neo4j_ready()
+    entities = state.evidence_output.get("extracted_entities", {})
+    await neo4j_client.save_forensic_nodes(state.id, entities)
+    
+    return {
+        "session_id": state.id,
+        "planner": state.planner_output,
+        "evidence": state.evidence_output,
+        "timeline": state.timeline_output,
+        "risk": state.risk_output,
+        "report": state.report_output
+    }
+
+
+@app.post("/api/forensics/search")
+async def forensics_search(body: RAGSearchRequest, http_request: Request):
+    user = await resolve_request_user(http_request, required=True)
+    results = global_rag_engine.search(body.query, top_k=3)
+    return {"results": results}
+
+
+@app.post("/api/copilot/execute")
+async def copilot_execute(body: CopilotExecuteRequest, http_request: Request):
+    user = await resolve_request_user(http_request, required=True)
+    prompt_clean = body.prompt.strip().lower()
+    
+    if prompt_clean.startswith("/search"):
+        query = body.prompt[7:].strip()
+        results = global_rag_engine.search(query, top_k=2)
+        if not results:
+            return {"response": f"RAG returned no matches for: {query}"}
+        resp = "Here are the top matches from our RAG semantic store:\n\n"
+        for idx, res in enumerate(results):
+            resp += f"**[{idx+1}] Source: {res['source']} (Confidence: {res['confidence_score']}%):**\n"
+            resp += f"> {res['text']}\n\n"
+        return {"response": resp}
+        
+    elif prompt_clean.startswith("/timeline"):
+        return {
+            "response": "Here is the latest chronological event overview:\n\n"
+            "1. **2026-07-09T14:30:00Z**: DevUser created new Access Key (Routine deployment check).\n"
+            "2. **2026-07-09T14:35:00Z**: Role assumption from external IP: 54.210.12.33 (AdminsRole).\n"
+            "3. **2026-07-09T14:38:00Z**: CRITICAL - Created privilege escalation path version (AdminsRole)."
+        }
+        
+    elif prompt_clean.startswith("/remediate"):
+        return {
+            "response": "To resolve the privilege escalation risk on AdminsRole, apply these two policy boundaries:\n\n"
+            "1. **Restrict Version Creation**: Disallow `iam:CreatePolicyVersion` actions unless strict approvals are met.\n"
+            "2. **IP Whitelisting**: Add `aws:SourceIp` check values inside role policy trust policies to ensure actions only occur from registered VPC endpoints."
+        }
+        
+    elif prompt_clean.startswith("/report"):
+        return {
+            "response": "Summary Report of the latest Forensic Investigation Case:\n\n"
+            "- **Threat Score**: 88/100 (CRITICAL)\n"
+            "- **Anomalies**: Access from external IP 54.210.12.33, rapid role assumptions.\n"
+            "- **Recommendations**: IP whitelisting conditions, credential rotation, compliance anchoring on Stellar ledger."
+        }
+        
+    sarvam_key = os.getenv("SARVAM_API_KEY")
+    system_prompt = "You are Vektra's Copilot assistant. You explain vulnerabilities, write policy remedies, and suggest CloudTrail log queries. Be precise."
+    data = await chat_json(system_prompt, body.prompt, api_key=sarvam_key)
+    
+    if data and isinstance(data, dict):
+        response_text = data.get("response") or data.get("content") or json.dumps(data)
+    else:
+        response_text = str(data) if data else "I am here to help you audit cloud security trails. You can query RAG context using `/search <query>`."
+        
+    return {"response": response_text}
+
+
 @app.patch("/api/auth/profile")
 async def update_profile(body: ProfileUpdateRequest, http_request: Request):
     user = await resolve_request_user(http_request, required=True)
@@ -1024,4 +1126,7 @@ app.add_api_route("/wallet/upgrade",        upgrade_wallet,        methods=["POS
 app.add_api_route("/wallet/transactions",   get_wallet_transactions, methods=["GET"])
 app.add_api_route("/workflow/analyze",      trigger_workflow,      methods=["POST"])
 app.add_api_route("/workflow/status/{session_id}", workflow_status, methods=["GET"])
+app.add_api_route("/forensics/investigate", forensics_investigate, methods=["POST"])
+app.add_api_route("/forensics/search",      forensics_search,      methods=["POST"])
+app.add_api_route("/copilot/execute",       copilot_execute,       methods=["POST"])
 

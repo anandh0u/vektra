@@ -16,6 +16,8 @@ import AccountsPage from "./pages/Accounts";
 import RiskAssessmentPage from "./pages/RiskAssessment";
 import CompliancePage from "./pages/Compliance";
 import ChatbotPage from "./pages/ChatbotPage";
+import Investigate from "./pages/Investigate";
+import ForensicTimeline from "./pages/ForensicTimeline";
 
 function ProtectedRoute({ children }) {
   const { currentUser } = useVektraStore();
@@ -97,6 +99,12 @@ export default function App() {
 
         {/* Settings Console */}
         <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
+
+        {/* Forensic Ingestion Console */}
+        <Route path="/investigate" element={<ProtectedRoute><Investigate /></ProtectedRoute>} />
+
+        {/* Forensic Timeline Chronology */}
+        <Route path="/timeline" element={<ProtectedRoute><ForensicTimeline /></ProtectedRoute>} />
 
         {/* Fallback to Upload */}
         <Route path="*" element={<Navigate to="/" replace />} />

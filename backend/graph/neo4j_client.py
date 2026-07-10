@@ -511,3 +511,78 @@ class Neo4jClient:
         except Exception as exc:
             logger.error("Neo4j get_step_output failed: %s", exc)
             return {}
+
+    async def save_forensic_nodes(self, session_id: str, entities: dict):
+        if not self.driver:
+            return
+        try:
+            with self.driver.session() as session:
+                # Merge Investigation Case Node
+                session.run(
+                    """
+                    MERGE (c:Document {id: $session_id})
+                    SET c.type = "Investigation Case", c.timestamp = $now
+                    """,
+                    session_id=session_id,
+                    now=datetime.now().isoformat(),
+                )
+
+                # Merge Principals
+                for principal in entities.get("principals", []):
+                    session.run(
+                        """
+                        MERGE (u:Principal {name: $name})
+                        SET u.type = "Identity"
+                        WITH u
+                        MATCH (c:Document {id: $session_id})
+                        MERGE (u)-[:INVOLVED_IN]->(c)
+                        """,
+                        name=principal,
+                        session_id=session_id,
+                    )
+
+                # Merge IPs
+                for ip in entities.get("ip_addresses", []):
+                    session.run(
+                        """
+                        MERGE (ip:IPAddress {address: $ip})
+                        SET ip.type = "IP Location"
+                        WITH ip
+                        MATCH (c:Document {id: $session_id})
+                        MERGE (ip)-[:ACCESSED]->(c)
+                        """,
+                        ip=ip,
+                        session_id=session_id,
+                    )
+
+                # Merge Roles
+                for role in entities.get("roles", []):
+                    session.run(
+                        """
+                        MERGE (r:Role {name: $name})
+                        SET r.type = "IAM Role"
+                        WITH r
+                        MATCH (c:Document {id: $session_id})
+                        MERGE (r)-[:CONTAINS_POLICIES_IN]->(c)
+                        """,
+                        name=role,
+                        session_id=session_id,
+                    )
+
+                # Merge Actions
+                for action in entities.get("actions", []):
+                    session.run(
+                        """
+                        MERGE (a:Action {name: $name})
+                        SET a.type = "API Call"
+                        WITH a
+                        MATCH (c:Document {id: $session_id})
+                        MERGE (a)-[:EXECUTED_IN]->(c)
+                        """,
+                        name=action,
+                        session_id=session_id,
+                    )
+
+        except Exception as exc:
+            logger.error("Neo4j save_forensic_nodes failed: %s", exc)
+

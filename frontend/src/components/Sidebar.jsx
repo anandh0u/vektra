@@ -73,6 +73,8 @@ export default function Sidebar() {
   const navItems = [
     { label: "Dashboard", path: "/dashboard", icon: LayoutDashboard, show: !!currentUser },
     { label: "AWS Accounts", path: "/accounts", icon: Cloud, show: !!currentUser },
+    { label: "Forensic Ingestion", path: "/investigate", icon: Shield, show: !!currentUser },
+    { label: "Forensic Timeline", path: "/timeline", icon: HistoryIcon, show: !!currentUser },
     { label: "IAM Analyzer", path: "/analyze", icon: Network, show: hasScan },
     { label: "Vulnerability Scanner", path: "/analyze", icon: Activity, show: hasScan },
     { label: "Policy Analyzer", path: "/", icon: FileCode, show: true },
