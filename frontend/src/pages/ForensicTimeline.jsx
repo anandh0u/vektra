@@ -116,7 +116,7 @@ export default function ForensicTimeline() {
   };
 
   return (
-    <div className="min-h-screen bg-background text-text p-6 lg:p-10 transition-colors duration-300">
+    <div className="min-h-screen bg-background text-text p-4 sm:p-6 lg:p-10 transition-colors duration-300">
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
         <div>

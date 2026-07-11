@@ -17,6 +17,16 @@ export default function TopBar() {
   const [searchTerm, setSearchTerm] = useState("");
   const [showDropdown, setShowDropdown] = useState(false);
   const dropdownRef = useRef(null);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 640);
+    };
+    handleResize();
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
   useEffect(() => {
     function handleClickOutside(event) {
@@ -43,31 +53,31 @@ export default function TopBar() {
   };
 
   return (
-    <header className="h-16 border-b border-cardBorder bg-pageBg flex items-center justify-between px-4 sm:px-8 select-none relative z-50">
+    <header className="h-16 border-b border-cardBorder bg-pageBg flex items-center justify-between px-3 sm:px-8 select-none relative z-50">
       
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2 sm:gap-3">
         {/* Mobile Sidebar Hamburger Trigger */}
         <button
           onClick={() => setMobileSidebarOpen(true)}
-          className="lg:hidden p-2 text-muted hover:text-textMain hover:bg-cardSurface border border-cardBorder rounded-[6px] transition-fast flex items-center justify-center"
+          className="lg:hidden p-2 text-muted hover:text-textMain hover:bg-cardSurface border border-cardBorder rounded-[6px] transition-fast flex items-center justify-center shrink-0"
           title="Open Menu"
         >
           <Menu className="w-4 h-4" />
         </button>
 
         {/* Search Input & Dropdown */}
-        <div className="relative w-full max-w-[160px] sm:max-w-xs md:max-w-lg" ref={dropdownRef}>
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted" />
+        <div className="relative w-full max-w-[120px] sm:max-w-xs md:max-w-lg" ref={dropdownRef}>
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted" />
           <input
             type="text"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             onFocus={() => setShowDropdown(true)}
-            placeholder="Search policy scans & sessions..."
-            className="w-full bg-cardSurface border border-cardBorder rounded-lg py-2 pl-10 pr-4 text-xs text-textMain placeholder-muted focus:outline-none focus:border-primary transition-fast"
+            placeholder={isMobile ? "Search..." : "Search policy scans & sessions..."}
+            className="w-full bg-cardSurface border border-cardBorder rounded-lg py-1.5 pl-8 pr-3 text-xs text-textMain placeholder-muted focus:outline-none focus:border-primary transition-fast"
           />
         {searchTerm === "" && (
-          <div className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[9px] bg-cardSurface text-muted px-1.5 py-0.5 rounded border border-cardBorder font-mono">
+          <div className="hidden sm:block absolute right-3.5 top-1/2 -translate-y-1/2 text-[9px] bg-cardSurface text-muted px-1.5 py-0.5 rounded border border-cardBorder font-mono">
             ⌘K
           </div>
         )}
@@ -128,7 +138,7 @@ export default function TopBar() {
       </div>
     </div>
 
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-2 sm:gap-4">
         {/* Quick Theme Switch */}
         <button
           onClick={() => setTheme(theme === "light" ? "dark" : "light")}

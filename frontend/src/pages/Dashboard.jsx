@@ -124,10 +124,10 @@ export default function DashboardPage() {
         <div className="flex-1 flex min-w-0">
           
           {/* Main Area */}
-          <div className="flex-1 flex flex-col p-8 space-y-6 overflow-y-auto min-w-0">
+          <div className="flex-1 flex flex-col p-4 sm:p-8 space-y-6 overflow-y-auto min-w-0">
             
             {/* Header / Greeting */}
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div>
                 <h1 className="text-xl font-bold tracking-tight text-textMain uppercase">
                   SOC COMMAND CONSOLE
@@ -138,8 +138,8 @@ export default function DashboardPage() {
               </div>
 
               {/* Alert Status Banner */}
-              <div className="flex items-center gap-2 bg-primary/10 border border-primary/25 rounded-[6px] px-3.5 py-1 text-xs text-primary font-semibold font-mono">
-                <Bell className="w-3.5 h-3.5 animate-bounce" />
+              <div className="flex items-center gap-2 bg-primary/10 border border-primary/25 rounded-[6px] px-3.5 py-1 text-xs text-primary font-semibold font-mono w-fit">
+                <Bell className="w-3.5 h-3.5 animate-bounce shrink-0" />
                 <span>REAL-TIME TELEMETRY FEED ACTIVE</span>
               </div>
             </div>

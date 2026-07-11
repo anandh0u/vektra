@@ -278,7 +278,7 @@ export default function SettingsPage() {
           </div>
 
           {/* Right tab panel content */}
-          <div className="flex-1 overflow-y-auto p-8 max-w-xl">
+          <div className="flex-1 overflow-y-auto p-4 sm:p-8 max-w-xl">
             
             {/* ── PROFILE TAB ── */}
             {activeTab === "profile" && (

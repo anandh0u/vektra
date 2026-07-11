@@ -46,7 +46,7 @@ export default function AuthNav() {
         </Link>
         <Link
           to="/pricing"
-          className="inline-flex h-9 items-center gap-2 rounded-lg bg-gradient-to-r from-primary to-secondary px-3.5 py-1.5 text-xs font-bold text-white hover:shadow-[0_0_16px_rgba(124,58,237,0.35)] transition-all"
+          className="hidden sm:inline-flex h-9 items-center gap-2 rounded-lg bg-gradient-to-r from-primary to-secondary px-3.5 py-1.5 text-xs font-bold text-white hover:shadow-[0_0_16px_rgba(124,58,237,0.35)] transition-all"
         >
           Start free
         </Link>
@@ -57,13 +57,13 @@ export default function AuthNav() {
   return (
     <div className="flex items-center gap-3">
       {/* Credits Chip */}
-      <span className="flex items-center gap-1.5 rounded-lg bg-primary/10 border border-primary/20 px-2.5 py-1.5 text-xs font-bold text-primary font-mono">
+      <span className="hidden sm:flex items-center gap-1.5 rounded-lg bg-primary/10 border border-primary/20 px-2.5 py-1.5 text-xs font-bold text-primary font-mono">
         💎 {credits}
       </span>
 
       {/* Notification Bell */}
       <button 
-        className="p-1.5 rounded-lg border border-[#1e2240] hover:bg-[#141628] transition-colors relative"
+        className="hidden sm:block p-1.5 rounded-lg border border-[#1e2240] hover:bg-[#141628] transition-colors relative"
         title="Notifications"
       >
         <Bell className="w-4 h-4 text-muted hover:text-white transition-colors" />

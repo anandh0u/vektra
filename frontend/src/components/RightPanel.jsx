@@ -46,10 +46,10 @@ export default function RightPanel() {
 
   return (
     <aside className={`
-      fixed lg:static top-16 right-0 bottom-0 z-40 lg:z-auto
-      w-full sm:w-85 lg:w-80 border-l border-[#1e2240] bg-[#0a0c16] flex flex-col h-[calc(100vh-4rem)] select-none
-      transition-transform duration-300 ease-in-out shadow-2xl lg:shadow-none
-      ${(selectedNode || selectedConflict) ? "translate-x-0" : "translate-x-full lg:translate-x-0"}
+      ${(selectedNode || selectedConflict) 
+        ? "fixed lg:static top-16 right-0 bottom-0 z-40 lg:z-auto w-full sm:w-96 lg:w-80 border-l border-[#1e2240] bg-[#0a0c16] flex flex-col h-[calc(100vh-4rem)] select-none transition-transform duration-300 ease-in-out shadow-2xl lg:shadow-none translate-x-0" 
+        : "hidden lg:flex lg:static lg:w-80 border-l border-[#1e2240] bg-[#0a0c16] flex-col h-[calc(100vh-4rem)] select-none lg:translate-x-0 lg:shadow-none"
+      }
     `}>
       {/* Detail Area */}
       <div className="flex-1 p-5 overflow-y-auto space-y-5">

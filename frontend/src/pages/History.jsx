@@ -142,7 +142,7 @@ export default function HistoryPage() {
       <Sidebar />
       <div className="flex-1 flex flex-col min-w-0">
         <TopBar />
-        <main className="flex-1 overflow-y-auto p-8">
+        <main className="flex-1 overflow-y-auto p-4 sm:p-8">
           <div className="mx-auto max-w-5xl space-y-6">
             
             {/* Header row */}

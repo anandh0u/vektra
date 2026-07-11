@@ -132,7 +132,7 @@ export default function ReportPage() {
         </div>
 
         {/* Report Content */}
-        <div className="flex-1 overflow-y-auto p-8 max-w-4xl mx-auto w-full space-y-6 print:p-0 print:max-w-full">
+        <div className="flex-1 overflow-y-auto p-4 sm:p-8 max-w-4xl mx-auto w-full space-y-6 print:p-0 print:max-w-full">
           
           {/* Action Row - hidden in print */}
           <div className="flex justify-between items-center border-b border-cardBorder pb-4 print:hidden">

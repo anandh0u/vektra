@@ -329,7 +329,7 @@ export default function UploadPage() {
       
       {/* ── TOP NAV ── */}
       <header className="h-16 flex items-center justify-between px-4 sm:px-8 border-b border-cardBorder bg-pageBg z-30">
-        <div className="flex items-center gap-2.5">
+        <div className={`${(typeof window !== "undefined" && window.__VEKTRA_NATIVE__) ? "hidden" : "flex"} items-center gap-2.5`}>
           <div className="bg-cardSurface border border-cardBorder p-1.5 rounded-[6px]">
             <Network className="w-5 h-5 text-primary" />
           </div>
@@ -343,17 +343,17 @@ export default function UploadPage() {
         <div className="flex items-center gap-2.5">
           <button 
             onClick={() => handleLoadSample("iam")}
-            className="hidden sm:inline-block px-2.5 py-1.5 rounded-[6px] border border-cardBorder text-xs text-muted hover:text-textMain hover:bg-cardSurface transition-fast"
+            className="hidden md:inline-block px-2.5 py-1.5 rounded-[6px] border border-cardBorder text-xs text-muted hover:text-textMain hover:bg-cardSurface transition-fast"
           >
             Sample IAM
           </button>
           <button 
             onClick={() => handleLoadSample("k8s")}
-            className="hidden sm:inline-block px-2.5 py-1.5 rounded-[6px] border border-cardBorder text-xs text-muted hover:text-textMain hover:bg-cardSurface transition-fast"
+            className="hidden md:inline-block px-2.5 py-1.5 rounded-[6px] border border-cardBorder text-xs text-muted hover:text-textMain hover:bg-cardSurface transition-fast"
           >
             Sample RBAC
           </button>
-          <div className="h-4 w-[1px] bg-cardBorder mx-1" />
+          <div className="hidden md:block h-4 w-[1px] bg-cardBorder mx-1" />
           <button
             onClick={() => setTheme(theme === "light" ? "dark" : "light")}
             className="p-1.5 rounded-[6px] border border-cardBorder bg-cardSurface/50 text-muted hover:text-textMain transition-fast flex items-center justify-center"
