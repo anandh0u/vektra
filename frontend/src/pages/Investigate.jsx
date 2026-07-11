@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { 
   Shield, 
   Upload, 
@@ -14,10 +14,10 @@ import {
   TrendingUp,
   FileText
 } from "lucide-react";
-import { useVektraStore } from "../store/vektraStore";
+import { useVektraStore, getAuthHeaders } from "../store/vektraStore";
 
 export default function Investigate() {
-  const { currentUser } = useVektraStore();
+  const { currentUser, activeCaseId } = useVektraStore();
   const [files, setFiles] = useState([]);
   const [analyzing, setAnalyzing] = useState(false);
   const [activeStep, setActiveStep] = useState(null);
@@ -29,6 +29,23 @@ export default function Investigate() {
   const [searching, setSearching] = useState(false);
   const [anchorTx, setAnchorTx] = useState("");
   const [anchoring, setAnchoring] = useState(false);
+
+  // Cases List State
+  const [cases, setCases] = useState([]);
+  const [selectedCaseId, setSelectedCaseId] = useState(activeCaseId || "");
+
+  useEffect(() => {
+    const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8000";
+    fetch(`${API_BASE}/api/cases`, { headers: getAuthHeaders() })
+      .then(res => res.json())
+      .then(data => {
+        setCases(data || []);
+        if (data.length > 0 && !selectedCaseId) {
+          setSelectedCaseId(data[0].id);
+        }
+      })
+      .catch(console.error);
+  }, []);
 
   // Collaboration Mock States
   const [notes, setNotes] = useState(
@@ -97,20 +114,32 @@ export default function Investigate() {
     const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
     try {
-      // Simulate multi-agent steps
-      const steps = ["planner", "evidence", "timeline", "risk", "report"];
+      // Simulate multi-agent steps representing all 11 agents
+      const steps = [
+        "planner", 
+        "evidence", 
+        "timeline", 
+        "risk", 
+        "threat_intel", 
+        "ioc", 
+        "mitre", 
+        "containment", 
+        "remediation", 
+        "executive_summary", 
+        "report"
+      ];
       for (const step of steps) {
         setActiveStep(step);
-        await new Promise((resolve) => setTimeout(resolve, 800));
+        await new Promise((resolve) => setTimeout(resolve, 500));
       }
 
-      const res = await fetch(`${API_BASE}/forensics/investigate`, {
+      const res = await fetch(`${API_BASE}/api/forensics/investigate`, {
         method: "POST",
         headers: { 
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${localStorage.getItem("token") || ""}`
+          ...getAuthHeaders()
         },
-        body: JSON.stringify({ files }),
+        body: JSON.stringify({ files, case_id: selectedCaseId }),
       });
 
       if (!res.ok) throw new Error("Forensics audit failed");
@@ -202,6 +231,24 @@ export default function Investigate() {
           </p>
         </div>
         <div className="flex items-center gap-3">
+          {cases.length > 0 && (
+            <div className="flex items-center gap-2 bg-muted/10 border border-border/20 px-3 py-1.5 rounded-lg">
+              <span className="text-xs text-muted font-bold uppercase">Case context:</span>
+              <select
+                value={selectedCaseId}
+                onChange={(e) => setSelectedCaseId(e.target.value)}
+                className="bg-transparent border-0 text-xs text-slate-200 focus:outline-none cursor-pointer"
+              >
+                <option value="" className="bg-[#0b0e1e]">-- Unassigned --</option>
+                {cases.map((c) => (
+                  <option key={c.id} value={c.id} className="bg-[#0b0e1e]">
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
           <button 
             onClick={handleDemoTrigger}
             className="px-4 py-2 text-sm font-semibold rounded-lg border border-primary/20 bg-primary/5 hover:bg-primary/10 text-primary transition-all"
@@ -277,21 +324,28 @@ export default function Investigate() {
                 Agent Orchestration Progression
               </h2>
               
-              <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
                 {[
                   { id: "planner", label: "Planner Agent", desc: "Strategy design" },
                   { id: "evidence", label: "Evidence Agent", desc: "Entity mapping" },
                   { id: "timeline", label: "Timeline Agent", desc: "Chronology rebuild" },
                   { id: "risk", label: "Risk Analyst", desc: "Anomalies find" },
-                  { id: "report", label: "Report Agent", desc: "Audit summary" }
+                  { id: "threat_intel", label: "ThreatIntel", desc: "IOC feed context" },
+                  { id: "ioc", label: "IOC Extraction", desc: "Extract hashes/IPs" },
+                  { id: "mitre", label: "MITRE Mapping", desc: "TTP classification" },
+                  { id: "containment", label: "Containment Advisor", desc: "Advisory playbook" },
+                  { id: "remediation", label: "Remediation Planner", desc: "Step-by-step resolution" },
+                  { id: "executive_summary", label: "Executive Summary", desc: "C-Level digest" },
+                  { id: "report", label: "Report Agent", desc: "Final compiler" }
                 ].map((step, i) => {
-                  const isDone = results || (activeStep !== null && ["planner", "evidence", "timeline", "risk", "report"].indexOf(activeStep) > ["planner", "evidence", "timeline", "risk", "report"].indexOf(step.id));
+                  const stepsArray = ["planner", "evidence", "timeline", "risk", "threat_intel", "ioc", "mitre", "containment", "remediation", "executive_summary", "report"];
+                  const isDone = results || (activeStep !== null && stepsArray.indexOf(activeStep) > stepsArray.indexOf(step.id));
                   const isActive = activeStep === step.id;
                   
                   return (
                     <div 
                       key={step.id} 
-                      className={`p-4 rounded-lg border text-center transition-all ${
+                      className={`p-3 rounded-lg border text-center transition-all ${
                         isDone 
                           ? "bg-primary/5 border-primary/30 text-primary" 
                           : isActive 
@@ -301,15 +355,15 @@ export default function Investigate() {
                     >
                       <div className="flex justify-center mb-1">
                         {isDone ? (
-                          <CheckCircle className="h-5 w-5 text-primary" />
+                          <CheckCircle className="h-4 w-4 text-primary" />
                         ) : isActive ? (
-                          <Loader2 className="h-5 w-5 animate-spin text-accent" />
+                          <Loader2 className="h-4 w-4 animate-spin text-accent" />
                         ) : (
-                          <span className="text-xs font-bold bg-muted/40 w-5 h-5 rounded-full flex items-center justify-center text-muted">{i+1}</span>
+                          <span className="text-[10px] font-bold bg-muted/40 w-4 h-4 rounded-full flex items-center justify-center text-muted">{i+1}</span>
                         )}
                       </div>
-                      <p className="text-xs font-bold">{step.label}</p>
-                      <p className="text-[10px] opacity-80 mt-0.5">{step.desc}</p>
+                      <p className="text-[10px] font-bold truncate">{step.label}</p>
+                      <p className="text-[9px] opacity-80 mt-0.5 truncate">{step.desc}</p>
                     </div>
                   );
                 })}
@@ -448,6 +502,90 @@ export default function Investigate() {
                   ))}
                 </ul>
               </div>
+
+              {/* Threat Intelligence Feed */}
+              {results.threat_intel && results.threat_intel.intel_summary && (
+                <div className="space-y-2 bg-[#0d122b]/50 p-4 rounded-lg border border-primary/20">
+                  <p className="text-xs font-bold uppercase tracking-wider text-primary flex items-center gap-1.5">
+                    Threat Intelligence Context
+                  </p>
+                  <p className="text-xs text-slate-300 leading-relaxed">
+                    {results.threat_intel.intel_summary}
+                  </p>
+                  {results.threat_intel.matched_feeds && results.threat_intel.matched_feeds.length > 0 && (
+                    <div className="text-[10px] text-muted font-mono mt-1">
+                      Matched Feeds: {results.threat_intel.matched_feeds.join(", ")}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Indicators of Compromise (IOCs) */}
+              {results.ioc && results.ioc.iocs && results.ioc.iocs.length > 0 && (
+                <div className="space-y-2">
+                  <p className="text-xs font-bold uppercase tracking-wider text-muted">Extracted Indicators of Compromise (IOCs)</p>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-[10px] font-mono">
+                    {results.ioc.iocs.map((ioc, idx) => (
+                      <div key={idx} className="bg-muted/15 p-2 rounded border border-border/20 flex justify-between">
+                        <span className="text-slate-300 font-bold">{ioc.value}</span>
+                        <span className="text-primary uppercase">[{ioc.type}]</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* MITRE ATT&CK Classification */}
+              {results.mitre && results.mitre.tactics && results.mitre.tactics.length > 0 && (
+                <div className="space-y-2">
+                  <p className="text-xs font-bold uppercase tracking-wider text-muted">MITRE ATT&CK Taxonomy Mapping</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {results.mitre.tactics.map((tactic, idx) => (
+                      <span key={idx} className="bg-destructive/10 text-destructive border border-destructive/20 text-[10px] px-2 py-0.5 rounded font-bold uppercase">
+                        {tactic}
+                      </span>
+                    ))}
+                    {results.mitre.techniques && results.mitre.techniques.map((tech, idx) => (
+                      <span key={idx} className="bg-warning/10 text-warning border border-warning/20 text-[10px] px-2 py-0.5 rounded font-bold uppercase font-mono">
+                        {tech}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Containment Playbook */}
+              {results.containment && results.containment.steps && results.containment.steps.length > 0 && (
+                <div className="space-y-2 bg-destructive/5 p-4 rounded-lg border border-destructive/20">
+                  <p className="text-xs font-bold uppercase tracking-wider text-destructive flex items-center gap-1.5">
+                    Immediate Containment Protocols
+                  </p>
+                  <ul className="list-decimal list-inside text-xs space-y-1 text-slate-300">
+                    {results.containment.steps.map((step, idx) => (
+                      <li key={idx} className="leading-relaxed">{step}</li>
+                    ))}
+                  </ul>
+                  {results.containment.estimated_mttc_mins && (
+                    <div className="text-[10px] text-muted font-mono mt-1 text-right">
+                      Estimated Containment Time: {results.containment.estimated_mttc_mins} minutes
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Remediation Plan */}
+              {results.remediation && results.remediation.steps && results.remediation.steps.length > 0 && (
+                <div className="space-y-2 bg-[#0c1b18] p-4 rounded-lg border border-green-500/20">
+                  <p className="text-xs font-bold uppercase tracking-wider text-green-500 flex items-center gap-1.5">
+                    Long-term Remediation Strategy
+                  </p>
+                  <ul className="list-decimal list-inside text-xs space-y-1 text-slate-300">
+                    {results.remediation.steps.map((step, idx) => (
+                      <li key={idx} className="leading-relaxed">{step}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
             </div>
           )}
         </div>

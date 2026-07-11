@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { getAuthHeaders, useVektraStore } from "../store/vektraStore";
 import { 
+  Briefcase,
   Shield, 
   LayoutDashboard, 
   Cloud, 
@@ -72,6 +73,7 @@ export default function Sidebar() {
 
   const navItems = [
     { label: "Dashboard", path: "/dashboard", icon: LayoutDashboard, show: !!currentUser },
+    { label: "Cases", path: "/cases", icon: Briefcase, show: !!currentUser },
     { label: "AWS Accounts", path: "/accounts", icon: Cloud, show: !!currentUser },
     { label: "Forensic Ingestion", path: "/investigate", icon: Shield, show: !!currentUser },
     { label: "Forensic Timeline", path: "/timeline", icon: HistoryIcon, show: !!currentUser },

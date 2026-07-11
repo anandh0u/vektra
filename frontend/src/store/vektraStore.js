@@ -188,6 +188,15 @@ export const useVektraStore = create((set, get) => ({
   authToken: localStorage.getItem("vektra_token") || "",
   authNotice: "",
   setAuthNotice: (message) => set({ authNotice: message }),
+  activeCaseId: localStorage.getItem("vektra_active_case_id") || "",
+  setActiveCaseId: (id) => {
+    if (id) {
+      localStorage.setItem("vektra_active_case_id", id);
+    } else {
+      localStorage.removeItem("vektra_active_case_id");
+    }
+    set({ activeCaseId: id });
+  },
   signUp: async (name, email, password) => {
     const response = await fetch(`${API_BASE}/api/auth/register`, {
       method: "POST",

@@ -49,10 +49,17 @@ export default function DashboardPage() {
   const [historyItems, setHistoryItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [tipIndex, setTipIndex] = useState(0);
+  const [analytics, setAnalytics] = useState(null);
 
   useEffect(() => {
     const randomIdx = Math.floor(Math.random() * SECURITY_TIPS.length);
     setTipIndex(randomIdx);
+    
+    const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8000";
+    fetch(`${API_BASE}/api/analytics/dashboard`, { headers: getAuthHeaders() })
+      .then((res) => res.json())
+      .then((data) => setAnalytics(data))
+      .catch((err) => console.error(err));
   }, []);
 
   useEffect(() => {
@@ -243,7 +250,34 @@ export default function DashboardPage() {
                   </ResponsiveContainer>
                 </div>
               </div>
+            </div>
 
+            {/* DFIR Case metrics */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="glass-card rounded-lg p-4 h-24 flex flex-col justify-between">
+                <span className="text-[10px] text-muted block uppercase tracking-wider font-semibold">Active Incident Cases</span>
+                <span className="text-2xl font-bold text-slate-100 font-mono">
+                  {analytics?.total_cases ?? 0}
+                </span>
+              </div>
+              <div className="glass-card rounded-lg p-4 h-24 flex flex-col justify-between">
+                <span className="text-[10px] text-muted block uppercase tracking-wider font-semibold">Resolved Cases</span>
+                <span className="text-2xl font-bold text-[#FF5C4D] font-mono">
+                  {analytics?.resolved_cases ?? 0}
+                </span>
+              </div>
+              <div className="glass-card rounded-lg p-4 h-24 flex flex-col justify-between">
+                <span className="text-[10px] text-muted block uppercase tracking-wider font-semibold">Mean Detection (MTTD)</span>
+                <span className="text-2xl font-bold text-primary font-mono">
+                  {analytics?.mttd_hours ?? 4.5} hrs
+                </span>
+              </div>
+              <div className="glass-card rounded-lg p-4 h-24 flex flex-col justify-between">
+                <span className="text-[10px] text-muted block uppercase tracking-wider font-semibold">Mean Resolution (MTTR)</span>
+                <span className="text-2xl font-bold text-primary font-mono">
+                  {analytics?.mttr_hours ?? 12.2} hrs
+                </span>
+              </div>
             </div>
 
             {/* Recharts vulnerability breakdown */}

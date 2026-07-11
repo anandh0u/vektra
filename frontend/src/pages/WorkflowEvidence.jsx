@@ -18,6 +18,7 @@ import {
   Wrench,
   BarChart3,
   Cpu,
+  Loader2,
 } from "lucide-react";
 
 const API = import.meta.env.VITE_API_URL || "";

@@ -4,7 +4,7 @@ import logging
 import os
 import uuid
 from datetime import date, datetime
-from typing import List
+from typing import List, Optional, Dict
 
 from neo4j import GraphDatabase
 
@@ -585,4 +585,350 @@ class Neo4jClient:
 
         except Exception as exc:
             logger.error("Neo4j save_forensic_nodes failed: %s", exc)
+
+    async def create_case(self, case_data: dict) -> dict:
+        if not self.driver:
+            # Offline mock fallback
+            return {**case_data, "id": str(uuid.uuid4()), "created_at": datetime.now().isoformat(), "updated_at": datetime.now().isoformat()}
+        case_id = case_data.get("id") or str(uuid.uuid4())
+        now = datetime.now().isoformat()
+        try:
+            with self.driver.session() as session:
+                result = session.run(
+                    """
+                    CREATE (c:Case {
+                        id: $id,
+                        name: $name,
+                        description: $description,
+                        status: $status,
+                        priority: $priority,
+                        created_at: $created_at,
+                        updated_at: $updated_at,
+                        due_date: $due_date,
+                        tags: $tags,
+                        owner_email: $owner_email,
+                        team_members: $team_members
+                    })
+                    RETURN c
+                    """,
+                    id=case_id,
+                    name=case_data.get("name", "Untitled Investigation"),
+                    description=case_data.get("description", ""),
+                    status=case_data.get("status", "Open"),
+                    priority=case_data.get("priority", "Medium"),
+                    created_at=now,
+                    updated_at=now,
+                    due_date=case_data.get("due_date", ""),
+                    tags=json.dumps(case_data.get("tags", [])),
+                    owner_email=case_data.get("owner_email", ""),
+                    team_members=json.dumps(case_data.get("team_members", []))
+                )
+                record = result.single()
+                if record:
+                    node = record["c"]
+                    props = dict(node)
+                    props["tags"] = json.loads(props.get("tags", "[]"))
+                    props["team_members"] = json.loads(props.get("team_members", "[]"))
+                    return props
+        except Exception as exc:
+            logger.error("Neo4j create_case failed: %s", exc)
+        return {**case_data, "id": case_id, "created_at": now, "updated_at": now}
+
+    async def get_case(self, case_id: str) -> Optional[dict]:
+        if not self.driver:
+            return None
+        try:
+            with self.driver.session() as session:
+                result = session.run(
+                    """
+                    MATCH (c:Case {id: $id})
+                    RETURN c
+                    """,
+                    id=case_id
+                )
+                record = result.single()
+                if record:
+                    node = record["c"]
+                    props = dict(node)
+                    props["tags"] = json.loads(props.get("tags", "[]"))
+                    props["team_members"] = json.loads(props.get("team_members", "[]"))
+                    return props
+        except Exception as exc:
+            logger.error("Neo4j get_case failed: %s", exc)
+        return None
+
+    async def list_cases(self, owner_email: str = None) -> List[dict]:
+        if not self.driver:
+            return []
+        try:
+            with self.driver.session() as session:
+                if owner_email:
+                    result = session.run(
+                        """
+                        MATCH (c:Case)
+                        WHERE c.owner_email = $owner_email OR c.team_members CONTAINS $owner_email
+                        RETURN c ORDER BY c.created_at DESC
+                        """,
+                        owner_email=owner_email
+                    )
+                else:
+                    result = session.run(
+                        """
+                        MATCH (c:Case)
+                        RETURN c ORDER BY c.created_at DESC
+                        """
+                    )
+                cases = []
+                for record in result:
+                    node = record["c"]
+                    props = dict(node)
+                    props["tags"] = json.loads(props.get("tags", "[]"))
+                    props["team_members"] = json.loads(props.get("team_members", "[]"))
+                    cases.append(props)
+                return cases
+        except Exception as exc:
+            logger.error("Neo4j list_cases failed: %s", exc)
+        return []
+
+    async def update_case(self, case_id: str, case_data: dict) -> dict:
+        if not self.driver:
+            return case_data
+        now = datetime.now().isoformat()
+        try:
+            with self.driver.session() as session:
+                result = session.run(
+                    """
+                    MATCH (c:Case {id: $id})
+                    SET c.name = COALESCE($name, c.name),
+                        c.description = COALESCE($description, c.description),
+                        c.status = COALESCE($status, c.status),
+                        c.priority = COALESCE($priority, c.priority),
+                        c.due_date = COALESCE($due_date, c.due_date),
+                        c.tags = COALESCE($tags, c.tags),
+                        c.team_members = COALESCE($team_members, c.team_members),
+                        c.updated_at = $now
+                    RETURN c
+                    """,
+                    id=case_id,
+                    name=case_data.get("name"),
+                    description=case_data.get("description"),
+                    status=case_data.get("status"),
+                    priority=case_data.get("priority"),
+                    due_date=case_data.get("due_date"),
+                    tags=json.dumps(case_data.get("tags")) if case_data.get("tags") is not None else None,
+                    team_members=json.dumps(case_data.get("team_members")) if case_data.get("team_members") is not None else None,
+                    now=now
+                )
+                record = result.single()
+                if record:
+                    node = record["c"]
+                    props = dict(node)
+                    props["tags"] = json.loads(props.get("tags", "[]"))
+                    props["team_members"] = json.loads(props.get("team_members", "[]"))
+                    return props
+        except Exception as exc:
+            logger.error("Neo4j update_case failed: %s", exc)
+        return case_data
+
+    async def delete_case(self, case_id: str) -> bool:
+        if not self.driver:
+            return True
+        try:
+            with self.driver.session() as session:
+                session.run(
+                    """
+                    MATCH (c:Case {id: $id})
+                    DETACH DELETE c
+                    """,
+                    id=case_id
+                )
+                return True
+        except Exception as exc:
+            logger.error("Neo4j delete_case failed: %s", exc)
+        return False
+
+    async def add_case_evidence(self, case_id: str, evidence: dict) -> dict:
+        ev_id = evidence.get("id") or str(uuid.uuid4())
+        now = datetime.now().isoformat()
+        if not self.driver:
+            return {**evidence, "id": ev_id, "upload_time": now}
+        try:
+            with self.driver.session() as session:
+                result = session.run(
+                    """
+                    MATCH (c:Case {id: $case_id})
+                    CREATE (e:Evidence {
+                        id: $id,
+                        filename: $filename,
+                        content_type: $content_type,
+                        sha256: $sha256,
+                        sha1: $sha1,
+                        md5: $md5,
+                        upload_time: $upload_time,
+                        investigator: $investigator,
+                        device: $device,
+                        source: $source,
+                        size_bytes: $size_bytes,
+                        stellar_tx_hash: $stellar_tx_hash
+                    })
+                    CREATE (c)-[:HAS_EVIDENCE]->(e)
+                    RETURN e
+                    """,
+                    case_id=case_id,
+                    id=ev_id,
+                    filename=evidence.get("filename", ""),
+                    content_type=evidence.get("content_type", ""),
+                    sha256=evidence.get("sha256", ""),
+                    sha1=evidence.get("sha1", ""),
+                    md5=evidence.get("md5", ""),
+                    upload_time=now,
+                    investigator=evidence.get("investigator", ""),
+                    device=evidence.get("device", ""),
+                    source=evidence.get("source", ""),
+                    size_bytes=evidence.get("size_bytes", 0),
+                    stellar_tx_hash=evidence.get("stellar_tx_hash", "")
+                )
+                record = result.single()
+                if record:
+                    return dict(record["e"])
+        except Exception as exc:
+            logger.error("Neo4j add_case_evidence failed: %s", exc)
+        return {**evidence, "id": ev_id, "upload_time": now}
+
+    async def get_case_evidence(self, case_id: str) -> List[dict]:
+        if not self.driver:
+            return []
+        try:
+            with self.driver.session() as session:
+                result = session.run(
+                    """
+                    MATCH (c:Case {id: $case_id})-[:HAS_EVIDENCE]->(e:Evidence)
+                    RETURN e ORDER BY e.upload_time DESC
+                    """,
+                    case_id=case_id
+                )
+                return [dict(record["e"]) for record in result]
+        except Exception as exc:
+            logger.error("Neo4j get_case_evidence failed: %s", exc)
+        return []
+
+    async def add_case_comment(self, case_id: str, author: str, text: str) -> dict:
+        cmt_id = str(uuid.uuid4())
+        now = datetime.now().isoformat()
+        if not self.driver:
+            return {"id": cmt_id, "author": author, "text": text, "timestamp": now}
+        try:
+            with self.driver.session() as session:
+                result = session.run(
+                    """
+                    MATCH (c:Case {id: $case_id})
+                    CREATE (cmt:Comment {
+                        id: $id,
+                        author: $author,
+                        text: $text,
+                        timestamp: $timestamp
+                    })
+                    CREATE (c)-[:HAS_COMMENT]->(cmt)
+                    RETURN cmt
+                    """,
+                    case_id=case_id,
+                    id=cmt_id,
+                    author=author,
+                    text=text,
+                    timestamp=now
+                )
+                record = result.single()
+                if record:
+                    return dict(record["cmt"])
+        except Exception as exc:
+            logger.error("Neo4j add_case_comment failed: %s", exc)
+        return {"id": cmt_id, "author": author, "text": text, "timestamp": now}
+
+    async def get_case_comments(self, case_id: str) -> List[dict]:
+        if not self.driver:
+            return []
+        try:
+            with self.driver.session() as session:
+                result = session.run(
+                    """
+                    MATCH (c:Case {id: $case_id})-[:HAS_COMMENT]->(cmt:Comment)
+                    RETURN cmt ORDER BY cmt.timestamp ASC
+                    """,
+                    case_id=case_id
+                )
+                return [dict(record["cmt"]) for record in result]
+        except Exception as exc:
+            logger.error("Neo4j get_case_comments failed: %s", exc)
+        return []
+
+    async def add_case_activity(self, case_id: str, actor: str, action: str, details: str) -> dict:
+        act_id = str(uuid.uuid4())
+        now = datetime.now().isoformat()
+        if not self.driver:
+            return {"id": act_id, "actor": actor, "action": action, "details": details, "timestamp": now}
+        try:
+            with self.driver.session() as session:
+                result = session.run(
+                    """
+                    MATCH (c:Case {id: $case_id})
+                    CREATE (act:ActivityLog {
+                        id: $id,
+                        actor: $actor,
+                        action: $action,
+                        details: $details,
+                        timestamp: $timestamp
+                    })
+                    CREATE (c)-[:HAS_ACTIVITY]->(act)
+                    RETURN act
+                    """,
+                    case_id=case_id,
+                    id=act_id,
+                    actor=actor,
+                    action=action,
+                    details=details,
+                    timestamp=now
+                )
+                record = result.single()
+                if record:
+                    return dict(record["act"])
+        except Exception as exc:
+            logger.error("Neo4j add_case_activity failed: %s", exc)
+        return {"id": act_id, "actor": actor, "action": action, "details": details, "timestamp": now}
+
+    async def get_case_activities(self, case_id: str) -> List[dict]:
+        if not self.driver:
+            return []
+        try:
+            with self.driver.session() as session:
+                result = session.run(
+                    """
+                    MATCH (c:Case {id: $case_id})-[:HAS_ACTIVITY]->(act:ActivityLog)
+                    RETURN act ORDER BY act.timestamp DESC
+                    """,
+                    case_id=case_id
+                )
+                return [dict(record["act"]) for record in result]
+        except Exception as exc:
+            logger.error("Neo4j get_case_activities failed: %s", exc)
+        return []
+
+    async def link_scan_to_case(self, case_id: str, scan_session_id: str) -> bool:
+        if not self.driver:
+            return True
+        try:
+            with self.driver.session() as session:
+                session.run(
+                    """
+                    MATCH (c:Case {id: $case_id})
+                    MATCH (s:ScanSession {session_id: $scan_session_id})
+                    MERGE (c)-[:HAS_SCAN]->(s)
+                    """,
+                    case_id=case_id,
+                    scan_session_id=scan_session_id
+                )
+                return True
+        except Exception as exc:
+            logger.error("Neo4j link_scan_to_case failed: %s", exc)
+        return False
+
 

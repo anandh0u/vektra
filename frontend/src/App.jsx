@@ -18,6 +18,7 @@ import CompliancePage from "./pages/Compliance";
 import ChatbotPage from "./pages/ChatbotPage";
 import Investigate from "./pages/Investigate";
 import ForensicTimeline from "./pages/ForensicTimeline";
+import CasesPage from "./pages/Cases";
 
 function ProtectedRoute({ children }) {
   const { currentUser } = useVektraStore();
@@ -78,6 +79,7 @@ export default function App() {
 
         {/* Dashboard Console */}
         <Route path="/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
+        <Route path="/cases" element={<ProtectedRoute><CasesPage /></ProtectedRoute>} />
 
         {/* Wallet Console */}
         <Route path="/wallet" element={<ProtectedRoute><WalletPage /></ProtectedRoute>} />
