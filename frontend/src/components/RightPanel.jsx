@@ -4,7 +4,7 @@ import CodeBlock from "./CodeBlock";
 import ExploitabilityBar from "./ExploitabilityBar";
 import ChatWidget from "./ChatWidget";
 import UpgradePrompt from "./UpgradePrompt";
-import { Network } from "lucide-react";
+import { Network, X } from "lucide-react";
 
 export default function RightPanel() {
   const { 
@@ -15,7 +15,8 @@ export default function RightPanel() {
     format,
     stats,
     upgradePrompt,
-    selectConflict
+    selectConflict,
+    selectNode
   } = useVektraStore();
 
   // Find selected node details
@@ -44,7 +45,12 @@ export default function RightPanel() {
   };
 
   return (
-    <aside className="w-80 border-l border-[#1e2240] bg-[#0a0c16] flex flex-col h-[calc(100vh-4rem)] select-none">
+    <aside className={`
+      fixed lg:static top-16 right-0 bottom-0 z-40 lg:z-auto
+      w-full sm:w-85 lg:w-80 border-l border-[#1e2240] bg-[#0a0c16] flex flex-col h-[calc(100vh-4rem)] select-none
+      transition-transform duration-300 ease-in-out shadow-2xl lg:shadow-none
+      ${(selectedNode || selectedConflict) ? "translate-x-0" : "translate-x-full lg:translate-x-0"}
+    `}>
       {/* Detail Area */}
       <div className="flex-1 p-5 overflow-y-auto space-y-5">
         
@@ -52,9 +58,18 @@ export default function RightPanel() {
         {selectedNode && (
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <span className="text-[10px] font-bold text-muted uppercase tracking-wider">
-                Node Properties
-              </span>
+              <div className="flex items-center gap-2">
+                <button 
+                  onClick={() => selectNode(null)}
+                  className="lg:hidden p-1 text-muted hover:text-textMain hover:bg-[#1e2240] rounded transition-fast"
+                  title="Close Details"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+                <span className="text-[10px] font-bold text-muted uppercase tracking-wider">
+                  Node Properties
+                </span>
+              </div>
               <span className={`px-2 py-0.5 rounded text-[9px] font-bold border ${severityColors[selectedNodeData.severity || "SAFE"]}`}>
                 {selectedNodeData.severity || "SAFE"}
               </span>
@@ -151,9 +166,18 @@ export default function RightPanel() {
         {selectedConflict && (
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <span className="text-[10px] font-bold text-muted uppercase tracking-wider">
-                Vulnerability Details
-              </span>
+              <div className="flex items-center gap-2">
+                <button 
+                  onClick={() => selectConflict(null)}
+                  className="lg:hidden p-1 text-muted hover:text-textMain hover:bg-[#1e2240] rounded transition-fast"
+                  title="Close Details"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+                <span className="text-[10px] font-bold text-muted uppercase tracking-wider">
+                  Vulnerability Details
+                </span>
+              </div>
               <span className={`px-2 py-0.5 rounded text-[9px] font-bold border ${severityColors[selectedConflict.severity]}`}>
                 {selectedConflict.severity}
               </span>

@@ -328,7 +328,7 @@ export default function UploadPage() {
     <div className="min-h-screen bg-pageBg text-textMain flex flex-col justify-between selection:bg-primary/20 relative" style={{backgroundImage: "radial-gradient(at 20% 0%, rgba(59,130,246,0.06) 0px, transparent 50%), radial-gradient(at 80% 10%, rgba(139,92,246,0.04) 0px, transparent 50%)"}}>
       
       {/* ── TOP NAV ── */}
-      <header className="h-16 flex items-center justify-between px-8 border-b border-cardBorder bg-pageBg z-30">
+      <header className="h-16 flex items-center justify-between px-4 sm:px-8 border-b border-cardBorder bg-pageBg z-30">
         <div className="flex items-center gap-2.5">
           <div className="bg-cardSurface border border-cardBorder p-1.5 rounded-[6px]">
             <Network className="w-5 h-5 text-primary" />
@@ -343,13 +343,13 @@ export default function UploadPage() {
         <div className="flex items-center gap-2.5">
           <button 
             onClick={() => handleLoadSample("iam")}
-            className="px-2.5 py-1.5 rounded-[6px] border border-cardBorder text-xs text-muted hover:text-textMain hover:bg-cardSurface transition-fast"
+            className="hidden sm:inline-block px-2.5 py-1.5 rounded-[6px] border border-cardBorder text-xs text-muted hover:text-textMain hover:bg-cardSurface transition-fast"
           >
             Sample IAM
           </button>
           <button 
             onClick={() => handleLoadSample("k8s")}
-            className="px-2.5 py-1.5 rounded-[6px] border border-cardBorder text-xs text-muted hover:text-textMain hover:bg-cardSurface transition-fast"
+            className="hidden sm:inline-block px-2.5 py-1.5 rounded-[6px] border border-cardBorder text-xs text-muted hover:text-textMain hover:bg-cardSurface transition-fast"
           >
             Sample RBAC
           </button>

@@ -43,7 +43,7 @@ export default function TopBar() {
   };
 
   return (
-    <header className="h-16 border-b border-cardBorder bg-pageBg flex items-center justify-between px-8 select-none relative z-50">
+    <header className="h-16 border-b border-cardBorder bg-pageBg flex items-center justify-between px-4 sm:px-8 select-none relative z-50">
       
       <div className="flex items-center gap-3">
         {/* Mobile Sidebar Hamburger Trigger */}
@@ -56,7 +56,7 @@ export default function TopBar() {
         </button>
 
         {/* Search Input & Dropdown */}
-        <div className="relative w-72 md:w-96" ref={dropdownRef}>
+        <div className="relative w-full max-w-[160px] sm:max-w-xs md:max-w-lg" ref={dropdownRef}>
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted" />
           <input
             type="text"
