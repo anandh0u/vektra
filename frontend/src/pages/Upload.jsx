@@ -141,12 +141,12 @@ roleRef:
 
 function SecurityGraphVisual() {
   return (
-    <div className="w-full py-4 bg-cardSurface/30 border border-cardBorder rounded-[6px] overflow-hidden relative">
+    <div className="w-full py-6 sm:py-10 bg-cardSurface/30 border border-cardBorder rounded-[6px] overflow-hidden relative">
       <div className="absolute top-2.5 left-3.5 flex items-center gap-1.5 text-[8px] font-bold text-muted uppercase tracking-wider font-mono">
         <Activity className="w-3 h-3 text-primary" />
         <span>Access Relationship Map</span>
       </div>
-      <svg className="w-full h-32 text-muted" viewBox="0 0 600 160" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <svg className="w-full h-auto min-h-[140px] sm:min-h-[220px] text-muted" viewBox="0 0 600 160" fill="none" xmlns="http://www.w3.org/2000/svg">
         <path d="M120 80 H 260" stroke="var(--border-hairline)" strokeWidth="1" strokeDasharray="4" className="animate-[flow-dash_2.5s_linear_infinite]" />
         <path d="M260 80 L 400 40" stroke="var(--border-hairline)" strokeWidth="1" strokeDasharray="4" className="animate-[flow-dash_2s_linear_infinite]" />
         <path d="M260 80 L 400 120" stroke="var(--border-hairline)" strokeWidth="1" />

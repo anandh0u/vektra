@@ -820,15 +820,13 @@ async def trigger_workflow(body: dict):
         # Step 2: Build graph (depends on step 1)
         await workflow_steps.step_build_graph({"session_id": session_id})
 
-        # Steps 3A + 3B: Run SIMULTANEOUSLY — Neo4j save and Base44 history
+        # Steps 3A + 3B + 4: Run SIMULTANEOUSLY — Neo4j save, Base44 history, and Vulnerability Analysts
         await asyncio.gather(
             workflow_steps.step_save_graph({"session_id": session_id}),
             workflow_steps.step_save_history({"session_id": session_id}),
-            return_exceptions=True,  # don't let Base44 failure kill Neo4j save
+            workflow_steps.step_run_analysts({"session_id": session_id}),
+            return_exceptions=True,  # don't let any step failure block others
         )
-
-        # Step 4: Run all vulnerability analysts in parallel (internal to step)
-        await workflow_steps.step_run_analysts({"session_id": session_id})
 
         # Step 5: Run all fix engineers in parallel (CRITICAL + WARNING only)
         await workflow_steps.step_run_fixes(
