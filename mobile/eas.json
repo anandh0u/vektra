@@ -6,7 +6,7 @@
   "build": {
     "base": {
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://vektra-api.onrender.com",
+        "EXPO_PUBLIC_API_URL": "https://vektra.onrender.com",
         "EXPO_PUBLIC_WEB_URL": "https://vektra-six.vercel.app"
       }
     },

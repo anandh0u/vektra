@@ -370,7 +370,12 @@ export default function UploadPage() {
       </header>
 
       {/* ── MAIN CONTENT ── */}
-      <main className="flex-1 flex flex-col max-w-5xl w-full mx-auto px-8 py-16 space-y-12 z-10">
+      <main className="flex-1 flex flex-col max-w-5xl w-full mx-auto px-4 sm:px-8 py-8 sm:py-16 space-y-8 sm:space-y-12 z-10">
+        {errorMsg && (
+          <div role="alert" className="rounded-lg border border-danger/40 bg-danger/10 px-4 py-3 text-sm text-danger">
+            {errorMsg}
+          </div>
+        )}
         
         {/* Hero Area */}
         <div className="text-center space-y-4 max-w-2xl mx-auto">

@@ -97,6 +97,17 @@ async def ensure_neo4j_ready(timeout: float = 6.0) -> bool:
     task = schedule_neo4j_verify()
     if not task:
         return False
+    asyncio.create_task(_execute_workflow(session_id, body))
+
+    return {
+        "session_id": session_id,
+        "workflow_triggered": True,
+        "status_url": f"/api/workflow/status/{session_id}",
+    }
+
+
+async def _execute_workflow(session_id: str, body: dict) -> None:
+    """Run the long analysis pipeline without blocking the trigger response."""
     try:
         return await asyncio.wait_for(asyncio.shield(task), timeout=timeout)
     except asyncio.TimeoutError:
@@ -192,7 +203,7 @@ class RAGSearchRequest(BaseModel):
     query: str
 
 
-class CopilotExecuteRequest(BaseModel):
+class AssistantMessageRequest(BaseModel):
     prompt: str
 
 
@@ -834,13 +845,13 @@ async def trigger_workflow(body: dict):
 
     except Exception as e:
         logger.exception("Workflow execution failed")
-        raise HTTPException(status_code=500, detail=str(e))
-
-    return {
-        "session_id": session_id,
-        "workflow_triggered": True,
-        "status_url": f"/api/workflow/status/{session_id}",
-    }
+        await neo4j_client.save_workflow_state(
+            session_id,
+            "workflow-error",
+            "failed",
+            {"error": str(e), "failed_at": datetime.now().isoformat()},
+            100,
+        )
 
 
 @app.get("/api/workflow/status/{session_id}")
@@ -1062,8 +1073,8 @@ async def forensics_search(body: RAGSearchRequest, http_request: Request):
     return {"results": results}
 
 
-@app.post("/api/copilot/execute")
-async def copilot_execute(body: CopilotExecuteRequest, http_request: Request):
+@app.post("/api/assistant/message")
+async def assistant_message(body: AssistantMessageRequest, http_request: Request):
     user = await resolve_request_user(http_request, required=True)
     prompt_clean = body.prompt.strip().lower()
     
@@ -1102,7 +1113,7 @@ async def copilot_execute(body: CopilotExecuteRequest, http_request: Request):
         }
         
     sarvam_key = os.getenv("SARVAM_API_KEY")
-    system_prompt = "You are Vektra's Copilot assistant. You explain vulnerabilities, write policy remedies, and suggest CloudTrail log queries. Be precise."
+    system_prompt = "You are the VEKTRA Security Assistant. Explain vulnerabilities, write least-privilege remedies, and suggest CloudTrail queries. Be precise, transparent about uncertainty, and never claim an action was performed when you only recommended it."
     data = await chat_json(system_prompt, body.prompt, api_key=sarvam_key)
     
     if data and isinstance(data, dict):
@@ -1344,7 +1355,10 @@ app.add_api_route("/workflow/analyze",      trigger_workflow,      methods=["POS
 app.add_api_route("/workflow/status/{session_id}", workflow_status, methods=["GET"])
 app.add_api_route("/forensics/investigate", forensics_investigate, methods=["POST"])
 app.add_api_route("/forensics/search",      forensics_search,      methods=["POST"])
-app.add_api_route("/copilot/execute",       copilot_execute,       methods=["POST"])
+app.add_api_route("/assistant/message",     assistant_message,     methods=["POST"])
+# Backward-compatible aliases for older web/mobile clients.
+app.add_api_route("/api/copilot/execute",  assistant_message,     methods=["POST"], include_in_schema=False)
+app.add_api_route("/copilot/execute",      assistant_message,     methods=["POST"], include_in_schema=False)
 
 # DFIR Case and Evidence Route Mappings
 app.add_api_route("/cases",                 list_cases_endpoint,   methods=["GET"])
@@ -1359,5 +1373,3 @@ app.add_api_route("/cases/{case_id}/comments", add_case_comment_endpoint, method
 app.add_api_route("/cases/{case_id}/activity", get_case_activities_endpoint, methods=["GET"])
 app.add_api_route("/search/global",         global_search_endpoint, methods=["GET"])
 app.add_api_route("/analytics/dashboard",   analytics_dashboard_endpoint, methods=["GET"])
-
-

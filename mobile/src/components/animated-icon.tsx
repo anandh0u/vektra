@@ -1,7 +1,7 @@
 import * as SplashScreen from 'expo-splash-screen';
 import { useState } from 'react';
-import { Dimensions, StyleSheet, View, Text } from 'react-native';
-import Animated, { Easing, Keyframe, FadeOut } from 'react-native-reanimated';
+import { StyleSheet, View, Text } from 'react-native';
+import Animated, { Easing, Keyframe } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
 
 const DURATION = 700;

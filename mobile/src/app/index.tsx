@@ -12,7 +12,6 @@ import { WebView } from 'react-native-webview';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 const VEKTRA_URL = process.env.EXPO_PUBLIC_WEB_URL || 'https://vektra-six.vercel.app';
-const API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://vektra-api.onrender.com';
 
 type PageState = 'loading' | 'loaded' | 'error';
 
@@ -48,7 +47,7 @@ export default function HomeScreen() {
     <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
       <StatusBar barStyle="light-content" backgroundColor="#0b0e14" />
 
-      {/* Top Navigation Bar */}
+      {/* Compact native controls; the web app renders its own primary header. */}
       <View style={styles.navbar}>
         <View style={styles.navLeft}>
           {canGoBack && (
@@ -67,7 +66,6 @@ export default function HomeScreen() {
             <View style={styles.logoDot} />
             <Text style={styles.logoText}>VEKTRA</Text>
           </View>
-          <Text style={styles.tagline}>Autonomous AI Forensics</Text>
         </View>
 
         <View style={styles.navRight}>
@@ -101,8 +99,10 @@ export default function HomeScreen() {
           sharedCookiesEnabled={true}
           thirdPartyCookiesEnabled={true}
           cacheEnabled={true}
-          originWhitelist={['*']}
-          mixedContentMode="always"
+          originWhitelist={['https://*']}
+          mixedContentMode="never"
+          setSupportMultipleWindows={false}
+          contentInsetAdjustmentBehavior="never"
           userAgent={`Vektra/${Platform.OS} ReactNative`}
         />
 
@@ -149,7 +149,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 16,
-    paddingVertical: 10,
+    paddingVertical: 5,
     backgroundColor: '#0b0e14',
     borderBottomWidth: 1,
     borderBottomColor: '#1e2533',
@@ -197,12 +197,6 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     letterSpacing: 3,
   },
-  tagline: {
-    color: '#4a5568',
-    fontSize: 10,
-    letterSpacing: 1,
-    marginTop: 1,
-  },
   webWrapper: {
     flex: 1,
     backgroundColor: '#0b0e14',
@@ -212,7 +206,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#0b0e14',
   },
   overlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: '#0b0e14',
     alignItems: 'center',
     justifyContent: 'center',

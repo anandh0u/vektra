@@ -13,7 +13,8 @@
       "infoPlist": {
         "NSCameraUsageDescription": "Vektra uses the camera to capture evidence for forensic investigations.",
         "NSPhotoLibraryUsageDescription": "Vektra accesses your photo library to attach evidence to investigations.",
-        "NSMicrophoneUsageDescription": "Vektra uses the microphone for voice-based forensic queries."
+        "NSMicrophoneUsageDescription": "Vektra uses the microphone for voice-based forensic queries.",
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
@@ -57,7 +58,7 @@
       "eas": {
         "projectId": "acb3f4bc-df30-4894-8349-ed73d3e6ae60"
       },
-      "apiUrl": "https://vektra-api.onrender.com",
+      "apiUrl": "https://vektra.onrender.com",
       "webUrl": "https://vektra-six.vercel.app"
     },
     "owner": "anndus-organization",

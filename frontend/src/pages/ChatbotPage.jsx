@@ -1,9 +1,9 @@
 import React, { useState, useRef, useEffect } from "react";
 import Sidebar from "../components/Sidebar";
 import TopBar from "../components/TopBar";
-import { Send, Loader2, Bot, User, Trash2, Sparkles, Terminal, Calendar, HelpCircle, Shield } from "lucide-react";
+import { Send, Loader2, Bot, Trash2, Sparkles, Terminal, Calendar, Shield } from "lucide-react";
 
-const COPILOT_COMMANDS = [
+const ASSISTANT_COMMANDS = [
   { text: "/search access key", icon: Terminal, query: "/search access key" },
   { text: "/timeline", icon: Calendar, query: "/timeline" },
   { text: "/remediate path risk", icon: Shield, query: "/remediate" },
@@ -12,13 +12,13 @@ const COPILOT_COMMANDS = [
 
 export default function ChatbotPage() {
   const [history, setHistory] = useState([
-    { role: "assistant", content: "Welcome to VEKTRA Copilot! I am connected to your RAG evidence database. You can ask general security questions, or execute one of these commands:\n\n- `/search <query>`: Scan incident documents\n- `/timeline`: View CloudTrail chronological sequence\n- `/remediate`: Get least-privilege remediation advice\n- `/report`: View executive summary" }
+    { role: "assistant", content: "Welcome to the VEKTRA Security Assistant. I can search your evidence, explain findings, build timelines, and suggest least-privilege fixes.\n\n- `/search <query>`: Search incident evidence\n- `/timeline`: Review the latest CloudTrail sequence\n- `/remediate`: Get remediation guidance\n- `/report`: View an executive summary" }
   ]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const scrollRef = useRef(null);
 
-  const executeCopilot = async (text) => {
+  const sendToAssistant = async (text) => {
     if (!text.trim() || loading) return;
     
     // Add user message
@@ -30,7 +30,7 @@ export default function ChatbotPage() {
     const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
     try {
-      const res = await fetch(`${API_BASE}/copilot/execute`, {
+      const res = await fetch(`${API_BASE}/api/assistant/message`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -38,14 +38,14 @@ export default function ChatbotPage() {
         },
         body: JSON.stringify({ prompt: text })
       });
-      if (!res.ok) throw new Error("Copilot call failed");
+      if (!res.ok) throw new Error(`Assistant request failed (${res.status})`);
       const data = await res.json();
       
       setHistory((prev) => [...prev, { role: "assistant", content: data.response }]);
-    } catch (err) {
+    } catch {
       setHistory((prev) => [
         ...prev,
-        { role: "assistant", content: "Error communicating with Copilot agent. Ensure your local backend is running." }
+        { role: "assistant", content: "I could not reach the VEKTRA assistant service. Check your connection and try again." }
       ]);
     } finally {
       setLoading(false);
@@ -54,7 +54,7 @@ export default function ChatbotPage() {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    executeCopilot(input);
+    sendToAssistant(input);
   };
 
   const clearChat = () => {
@@ -81,7 +81,7 @@ export default function ChatbotPage() {
             <div>
               <h1 className="text-xl font-bold text-textMain flex items-center gap-2 uppercase tracking-tight">
                 <Bot className="h-5 w-5 text-primary" />
-                Vektra Workflow Copilot
+                VEKTRA Security Assistant
               </h1>
               <p className="mt-0.5 text-xs text-muted font-normal">
                 Query RAG context, review chronological logs, and request policy remediations.
@@ -93,7 +93,7 @@ export default function ChatbotPage() {
                 className="bg-cardSurface hover:bg-bgElevated border border-cardBorder text-muted hover:text-[#FF5C4D] px-3 py-1.5 rounded-[6px] text-xs font-semibold flex items-center gap-1.5 transition-fast animate-fade-in"
               >
                 <Trash2 className="w-3.5 h-3.5" />
-                Reset Copilot
+                Clear conversation
               </button>
             )}
           </div>
@@ -112,14 +112,14 @@ export default function ChatbotPage() {
                   </p>
                 </div>
 
-                {/* Copilot Workflow Commands */}
+                {/* Assistant workflow commands */}
                 <div className="grid grid-cols-2 gap-3 w-full pt-4">
-                  {COPILOT_COMMANDS.map((cmd, idx) => {
+                  {ASSISTANT_COMMANDS.map((cmd) => {
                     const Icon = cmd.icon;
                     return (
                       <button
-                        key={idx}
-                        onClick={() => executeCopilot(cmd.query)}
+                        key={cmd.query}
+                        onClick={() => sendToAssistant(cmd.query)}
                         className="text-left p-3.5 bg-cardSurface border border-cardBorder hover:border-primary/40 rounded-lg text-xs text-textMain transition-all hover:bg-bgElevated/30 flex items-center gap-3"
                       >
                         <div className="p-2 rounded-lg bg-primary/10 border border-primary/20 text-primary">
@@ -155,7 +155,7 @@ export default function ChatbotPage() {
                       }`}>
                         <div className="space-y-1">
                           <span className={`text-[8px] font-bold uppercase tracking-wider block font-mono ${isUser ? "text-white/60" : "text-muted"}`}>
-                            {isUser ? "Security Operator" : "Copilot Agent"}
+                            {isUser ? "Security Operator" : "VEKTRA Assistant"}
                           </span>
                           <p className="whitespace-pre-line font-normal">{msg.content}</p>
                         </div>
