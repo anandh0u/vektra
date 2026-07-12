@@ -198,32 +198,60 @@ export const useVektraStore = create((set, get) => ({
     set({ activeCaseId: id });
   },
   signUp: async (name, email, password) => {
-    const response = await fetch(`${API_BASE}/api/auth/register`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, email, password }),
-    });
-    if (!response.ok) {
-      throw new Error(await parseApiError(response, "Unable to create account."));
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
+    
+    try {
+      const response = await fetch(`${API_BASE}/api/auth/register`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, email, password }),
+        signal: controller.signal,
+      });
+      clearTimeout(timeoutId);
+      
+      if (!response.ok) {
+        throw new Error(await parseApiError(response, "Unable to create account."));
+      }
+      const data = await response.json();
+      saveAuthSession(data);
+      set({ currentUser: data.user, authToken: data.token, authNotice: "" });
+      return data;
+    } catch (error) {
+      clearTimeout(timeoutId);
+      if (error.name === 'AbortError') {
+        throw new Error("Request timed out. Please check your connection and try again.");
+      }
+      throw error;
     }
-    const data = await response.json();
-    saveAuthSession(data);
-    set({ currentUser: data.user, authToken: data.token, authNotice: "" });
-    return data;
   },
   signIn: async (email, password) => {
-    const response = await fetch(`${API_BASE}/api/auth/login`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password }),
-    });
-    if (!response.ok) {
-      throw new Error(await parseApiError(response, "Invalid email or password."));
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
+    
+    try {
+      const response = await fetch(`${API_BASE}/api/auth/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+        signal: controller.signal,
+      });
+      clearTimeout(timeoutId);
+      
+      if (!response.ok) {
+        throw new Error(await parseApiError(response, "Invalid email or password."));
+      }
+      const data = await response.json();
+      saveAuthSession(data);
+      set({ currentUser: data.user, authToken: data.token, authNotice: "" });
+      return data;
+    } catch (error) {
+      clearTimeout(timeoutId);
+      if (error.name === 'AbortError') {
+        throw new Error("Request timed out. Please check your connection and try again.");
+      }
+      throw error;
     }
-    const data = await response.json();
-    saveAuthSession(data);
-    set({ currentUser: data.user, authToken: data.token, authNotice: "" });
-    return data;
   },
   refreshCurrentUser: async () => {
     const token = localStorage.getItem("vektra_token");
