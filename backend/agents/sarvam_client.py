@@ -45,6 +45,35 @@ def get_async_client() -> httpx.AsyncClient:
 
 
 async def chat_json(system_prompt: str, user_prompt: str, api_key: Optional[str] = None) -> Optional[Dict[str, Any]]:
+    gemini_key = os.getenv("GEMINI_API_KEY")
+    if gemini_key:
+        try:
+            client = get_async_client()
+            url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={gemini_key}"
+            payload = {
+                "systemInstruction": {
+                    "parts": [{"text": system_prompt}]
+                },
+                "contents": [
+                    {
+                        "parts": [{"text": user_prompt}]
+                    }
+                ],
+                "generationConfig": {
+                    "responseMimeType": "application/json",
+                    "temperature": 0.2
+                }
+            }
+            response = await client.post(url, json=payload)
+            response.raise_for_status()
+            res_data = response.json()
+            content = res_data["candidates"][0]["content"]["parts"][0]["text"]
+            return parse_json_object(content)
+        except Exception as exc:
+            logger.warning("Gemini agent call failed: %s", exc)
+            # Fall back to Sarvam if Gemini fails
+            pass
+
     resolved_key = get_api_key(api_key)
     if not resolved_key:
         return None

@@ -11,7 +11,7 @@ from typing import Dict, List, Optional
 
 import httpx
 from dotenv import load_dotenv
-from fastapi import FastAPI, Header, HTTPException, Request
+from fastapi import FastAPI, Header, HTTPException, Request, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse, JSONResponse
 from pydantic import BaseModel
@@ -794,7 +794,7 @@ async def internal_finalize(body: dict):
 # ============================================================================
 
 @app.post("/api/workflow/analyze")
-async def trigger_workflow(body: dict):
+async def trigger_workflow(body: dict, background_tasks: BackgroundTasks):
     session_id = body.get("session_id", str(uuid.uuid4()))
 
     # Ensure neo4j is injected into workflow_steps (idempotent)
@@ -813,43 +813,51 @@ async def trigger_workflow(body: dict):
         0,
     )
 
-    try:
-        # Step 1: Parse policy
-        await workflow_steps.step_parse(body)
+    async def run_workflow_bg():
+        try:
+            # Step 1: Parse policy
+            await workflow_steps.step_parse(body)
 
-        # Step 2: Build graph (depends on step 1)
-        await workflow_steps.step_build_graph({"session_id": session_id})
+            # Step 2: Build graph (depends on step 1)
+            await workflow_steps.step_build_graph({"session_id": session_id})
 
-        # Steps 3A + 3B + 4: Run SIMULTANEOUSLY — Neo4j save, Base44 history, and Vulnerability Analysts
-        await asyncio.gather(
-            workflow_steps.step_save_graph({"session_id": session_id}),
-            workflow_steps.step_save_history({"session_id": session_id}),
-            workflow_steps.step_run_analysts({"session_id": session_id}),
-            return_exceptions=True,  # don't let any step failure block others
-        )
+            # Steps 3A + 3B + 4: Run SIMULTANEOUSLY — Neo4j save, Base44 history, and Vulnerability Analysts
+            await asyncio.gather(
+                workflow_steps.step_save_graph({"session_id": session_id}),
+                workflow_steps.step_save_history({"session_id": session_id}),
+                workflow_steps.step_run_analysts({"session_id": session_id}),
+                return_exceptions=True,  # don't let any step failure block others
+            )
 
-        # Step 5: Run all fix engineers in parallel (CRITICAL + WARNING only)
-        await workflow_steps.step_run_fixes(
-            {"session_id": session_id, "policy_text": body.get("policy_text", "")}
-        )
+            # Step 5: Run all fix engineers in parallel (CRITICAL + WARNING only)
+            await workflow_steps.step_run_fixes(
+                {"session_id": session_id, "policy_text": body.get("policy_text", "")}
+            )
 
-        # Step 6: Risk scorer (depends on step 5)
-        await workflow_steps.step_run_scorer({"session_id": session_id})
+            # Step 6: Risk scorer (depends on step 5)
+            await workflow_steps.step_run_scorer({"session_id": session_id})
 
-        # Step 7: Finalize — aggregates all previous outputs
-        await workflow_steps.step_finalize(
-            {"session_id": session_id, "user_id": body.get("user_id")}
-        )
+            # Step 7: Finalize — aggregates all previous outputs
+            await workflow_steps.step_finalize(
+                {"session_id": session_id, "user_id": body.get("user_id")}
+            )
 
-    except Exception as e:
-        logger.exception("Workflow execution failed")
-        await neo4j_client.save_workflow_state(
-            session_id,
-            "workflow-error",
-            "failed",
-            {"error": str(e), "failed_at": datetime.now().isoformat()},
-            100,
-        )
+        except Exception as e:
+            logger.exception("Workflow execution failed")
+            await neo4j_client.save_workflow_state(
+                session_id,
+                "workflow-error",
+                "failed",
+                {"error": str(e), "failed_at": datetime.now().isoformat()},
+                100,
+            )
+
+    background_tasks.add_task(run_workflow_bg)
+
+    return {
+        "status": "triggered",
+        "session_id": session_id
+    }
 
 
 @app.get("/api/workflow/status/{session_id}")

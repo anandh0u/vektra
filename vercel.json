@@ -8,11 +8,11 @@
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "https://vektra.onrender.com/api/:path*"
+      "destination": "https://vektra-backend.onrender.com/api/:path*"
     },
     {
       "source": "/workflow/:path*",
-      "destination": "https://vektra.onrender.com/workflow/:path*"
+      "destination": "https://vektra-backend.onrender.com/workflow/:path*"
     }
   ]
 }

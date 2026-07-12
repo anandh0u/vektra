@@ -58,7 +58,7 @@
       "eas": {
         "projectId": "acb3f4bc-df30-4894-8349-ed73d3e6ae60"
       },
-      "apiUrl": "https://vektra.onrender.com",
+      "apiUrl": "https://vektra-backend.onrender.com",
       "webUrl": "https://vektra-six.vercel.app"
     },
     "owner": "anndus-organization",
