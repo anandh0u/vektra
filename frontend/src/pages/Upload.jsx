@@ -4,6 +4,141 @@ import { useVektraStore } from "../store/vektraStore";
 import { Upload, FileCode, Play, Loader2, Sparkles, Network, Activity, ShieldAlert, Cpu, ArrowRight, Sun, Moon } from "lucide-react";
 import AuthNav from "../components/AuthNav";
 
+const HARDCODED_SAMPLE_IAM = `{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "AllowS3PutObject",
+      "Effect": "Allow",
+      "Action": ["s3:PutObject"],
+      "Resource": ["arn:aws:s3:::prod-bucket/*"]
+    },
+    {
+      "Sid": "DenyS3PutObject",
+      "Effect": "Deny",
+      "Action": ["s3:PutObject"],
+      "Resource": ["arn:aws:s3:::prod-bucket/*"]
+    },
+    {
+      "Sid": "AllowPolicyVersionEscalation",
+      "Effect": "Allow",
+      "Action": ["iam:CreatePolicyVersion"],
+      "Resource": ["arn:aws:iam::111122223333:policy/AppPolicy"]
+    },
+    {
+      "Sid": "AllowSensitiveDeleteWildcard",
+      "Effect": "Allow",
+      "Action": ["s3:DeleteBucket"],
+      "Resource": ["*"]
+    },
+    {
+      "Sid": "AllowAdminWildcard",
+      "Effect": "Allow",
+      "Action": ["*"],
+      "Resource": ["*"]
+    },
+    {
+      "Sid": "AllowS3WildcardSpecificBucket",
+      "Effect": "Allow",
+      "Action": ["s3:*"],
+      "Resource": ["arn:aws:s3:::prod-bucket/*"]
+    },
+    {
+      "Sid": "DenyGetObjectWithCondition",
+      "Effect": "Deny",
+      "Action": ["s3:GetObject"],
+      "Resource": ["arn:aws:s3:::prod-bucket/*"],
+      "Condition": {
+        "NotIpAddress": {
+          "aws:SourceIp": "203.0.113.0/24"
+        }
+      }
+    },
+    {
+      "Sid": "DenyUnusedDynamoDelete",
+      "Effect": "Deny",
+      "Action": ["dynamodb:DeleteTable"],
+      "Resource": ["arn:aws:dynamodb:us-east-1:111122223333:table/archive"]
+    },
+    {
+      "Sid": "AllowTerminateInstances",
+      "Effect": "Allow",
+      "Action": ["ec2:TerminateInstances"],
+      "Resource": ["*"]
+    }
+  ]
+}`;
+
+const HARDCODED_SAMPLE_K8S = `apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: platform-admin
+rules:
+- apiGroups: ["*"]
+  resources: ["*"]
+  verbs: ["*"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  namespace: monitoring
+  name: monitoring-readonly
+rules:
+- apiGroups: [""]
+  resources: ["pods", "services", "endpoints"]
+  verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  namespace: monitoring
+  name: secret-reader
+rules:
+- apiGroups: [""]
+  resources: ["secrets"]
+  verbs: ["get", "list"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: monitoring-admin-binding
+subjects:
+- kind: ServiceAccount
+  name: monitoring-sa
+  namespace: monitoring
+roleRef:
+  kind: ClusterRole
+  name: platform-admin
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  namespace: monitoring
+  name: monitoring-readonly-binding
+subjects:
+- kind: ServiceAccount
+  name: monitoring-sa
+  namespace: monitoring
+roleRef:
+  kind: Role
+  name: monitoring-readonly
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  namespace: monitoring
+  name: secret-reader-binding
+subjects:
+- kind: User
+  name: analyst
+  apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: Role
+  name: secret-reader
+  apiGroup: rbac.authorization.k8s.io`;
+
 function SecurityGraphVisual() {
   return (
     <div className="w-full py-6 sm:py-10 bg-cardSurface/30 border border-cardBorder rounded-[6px] overflow-hidden relative">
@@ -160,6 +295,34 @@ export default function UploadPage() {
     }
   };
 
+  const handleTryDemo = async () => {
+    setErrorMsg("");
+    setFormat("iam");
+    setPolicyText(HARDCODED_SAMPLE_IAM);
+    setDemoMode(true);
+
+    try {
+      const result = await runAnalysis();
+      if (result && result.session_id) {
+        navigate(`/analyzing/${result.session_id}`);
+      } else {
+        navigate("/analyze");
+      }
+    } catch (e) {
+      setErrorMsg(e.message || "Failed to initialize demo session. Please try again.");
+    }
+  };
+
+  const handleLoadSample = (sampleType) => {
+    setDemoMode(false);
+    if (sampleType === "iam") {
+      setFormat("iam");
+      setPolicyText(HARDCODED_SAMPLE_IAM);
+    } else {
+      setFormat("k8s");
+      setPolicyText(HARDCODED_SAMPLE_K8S);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-pageBg text-textMain flex flex-col justify-between selection:bg-primary/20 relative" style={{backgroundImage: "radial-gradient(at 20% 0%, rgba(59,130,246,0.06) 0px, transparent 50%), radial-gradient(at 80% 10%, rgba(139,92,246,0.04) 0px, transparent 50%)"}}>
@@ -178,6 +341,23 @@ export default function UploadPage() {
           </span>
         </div>
         <div className="flex items-center gap-2.5">
+          {isFree && (
+            <>
+              <button 
+                onClick={() => handleLoadSample("iam")}
+                className="hidden md:inline-block px-2.5 py-1.5 rounded-[6px] border border-cardBorder text-xs text-muted hover:text-textMain hover:bg-cardSurface transition-fast"
+              >
+                Sample IAM
+              </button>
+              <button 
+                onClick={() => handleLoadSample("k8s")}
+                className="hidden md:inline-block px-2.5 py-1.5 rounded-[6px] border border-cardBorder text-xs text-muted hover:text-textMain hover:bg-cardSurface transition-fast"
+              >
+                Sample RBAC
+              </button>
+              <div className="hidden md:block h-4 w-[1px] bg-cardBorder mx-1" />
+            </>
+          )}
           <button
             onClick={() => setTheme(theme === "light" ? "dark" : "light")}
             className="p-1.5 rounded-[6px] border border-cardBorder bg-cardSurface/50 text-muted hover:text-textMain transition-fast flex items-center justify-center"
@@ -352,6 +532,17 @@ export default function UploadPage() {
               </>
             )}
           </button>
+
+          {isFree && (
+            <button
+              onClick={handleTryDemo}
+              disabled={isAnalyzing}
+              className="w-full h-10 bg-cardSurface hover:bg-bgElevated border border-cardBorder text-textMain font-sans font-semibold text-xs rounded-[6px] shadow-sm transition-fast flex items-center justify-center gap-1.5 disabled:opacity-40"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-primary" />
+              <span>Load Demo</span>
+            </button>
+          )}
         </div>
 
         {/* Trusted By Section (Muted, Enterprise style) */}
