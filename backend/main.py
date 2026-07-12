@@ -303,7 +303,7 @@ anonymous_scans = {}
 
 
 @app.post("/api/auth/register")
-async def register(body: RegisterRequest):
+async def register(body: RegisterRequest, background_tasks: BackgroundTasks):
     name = body.name.strip()
     email = body.email.strip().lower()
     password = body.password
@@ -320,17 +320,13 @@ async def register(body: RegisterRequest):
     if existing:
         raise HTTPException(status_code=400, detail="Email is already registered.")
 
-    # Create Stellar wallet and setup trustlines/tokens
+    # Generate Stellar key pair locally (instant)
     try:
-        wallet = await stellar_client.create_user_wallet()
-        public_key = wallet["public_key"]
-        secret_key = wallet["secret_key"]
-        
-        await stellar_client.setup_user_trustlines(public_key, secret_key)
-        await stellar_client.mint_tier_nft(public_key, "team")
-        await stellar_client.issue_credits(public_key, 1000)
-    except Exception as exc:
-        logger.exception("Failed to initialize user Stellar wallet. Using mock fallback keys.")
+        from stellar_sdk import Keypair
+        keypair = Keypair.random()
+        public_key = keypair.public_key
+        secret_key = keypair.secret
+    except Exception:
         public_key = "G" + str(uuid.uuid4()).replace("-", "")[:55]
         secret_key = "S" + str(uuid.uuid4()).replace("-", "")[:55]
 
@@ -350,55 +346,70 @@ async def register(body: RegisterRequest):
         logger.exception("User registration failed.")
         raise HTTPException(status_code=503, detail="User storage is unavailable.") from exc
 
+    # Set up wallet trustlines and assets asynchronously in background
+    async def setup_stellar_bg(pub_key: str, sec_key: str):
+        if pub_key.startswith("G") and len(pub_key) > 50 and not sec_key.startswith("S" + pub_key[1:5]):
+            try:
+                async with httpx.AsyncClient(timeout=30) as client:
+                    res = await client.get(f"https://friendbot.stellar.org/?addr={pub_key}")
+                    res.raise_for_status()
+                await stellar_client.setup_user_trustlines(pub_key, sec_key)
+                await stellar_client.mint_tier_nft(pub_key, "team")
+                await stellar_client.issue_credits(pub_key, 1000)
+            except Exception as e:
+                logger.error("Failed to setup Stellar wallet in background for %s: %s", pub_key, e)
+
+    background_tasks.add_task(setup_stellar_bg, public_key, secret_key)
+
     token = create_token(created["id"], created["email"], created.get("tier", "free"))
     return {"user": public_user(created), "token": token}
 
 
 @app.post("/api/auth/login")
-async def login(body: LoginRequest):
+async def login(body: LoginRequest, background_tasks: BackgroundTasks):
     email = body.email.strip().lower()
     await ensure_neo4j_ready()
     user = await neo4j_client.get_user_by_email(email)
     if not user or not verify_password(body.password, user.get("password_hash", "")):
         raise HTTPException(status_code=401, detail="Invalid credentials.")
 
-    # Fetch live wallet balance from Stellar & sync to Neo4j
-    if user.get("stellar_public_key") and not user["stellar_public_key"].startswith("G"):
+    # Sync wallet balance from Stellar asynchronously in background
+    async def sync_balance_bg(u_id: str, pub_key: str):
         try:
-            balance_data = await stellar_client.get_wallet_balance(user["stellar_public_key"])
+            balance_data = await stellar_client.get_wallet_balance(pub_key)
             credits_val = balance_data.get("credits", 0)
             nft_tier = balance_data.get("nft_tier", "free")
             
-            if credits_val != user.get("credits_balance") or nft_tier != user.get("tier"):
-                user["credits_balance"] = credits_val
-                user["tier"] = nft_tier
-                await neo4j_client.update_credits(user["id"], credits_val)
-                await neo4j_client.update_user_tier(user["id"], nft_tier)
+            await neo4j_client.update_credits(u_id, credits_val)
+            await neo4j_client.update_user_tier(u_id, nft_tier)
         except Exception:
-            logger.warning("Stellar balance sync failed during login.")
+            logger.warning("Stellar balance sync failed in background.")
+
+    if user.get("stellar_public_key") and not user["stellar_public_key"].startswith("G"):
+        background_tasks.add_task(sync_balance_bg, user["id"], user["stellar_public_key"])
 
     token = create_token(user["id"], user["email"], user.get("tier", "free"))
     return {"user": public_user(user), "token": token}
 
 
 @app.get("/api/auth/me")
-async def me(http_request: Request):
+async def me(http_request: Request, background_tasks: BackgroundTasks):
     user = await resolve_request_user(http_request, required=True)
     
-    # Sync wallet balance from Stellar
-    if user.get("stellar_public_key") and not user["stellar_public_key"].startswith("G"):
+    # Sync wallet balance from Stellar in background
+    async def sync_balance_bg(u_id: str, pub_key: str):
         try:
-            balance_data = await stellar_client.get_wallet_balance(user["stellar_public_key"])
+            balance_data = await stellar_client.get_wallet_balance(pub_key)
             credits_val = balance_data.get("credits", 0)
             nft_tier = balance_data.get("nft_tier", "free")
             
-            if credits_val != user.get("credits_balance") or nft_tier != user.get("tier"):
-                user["credits_balance"] = credits_val
-                user["tier"] = nft_tier
-                await neo4j_client.update_credits(user["id"], credits_val)
-                await neo4j_client.update_user_tier(user["id"], nft_tier)
+            await neo4j_client.update_credits(u_id, credits_val)
+            await neo4j_client.update_user_tier(u_id, nft_tier)
         except Exception:
             pass
+
+    if user.get("stellar_public_key") and not user["stellar_public_key"].startswith("G"):
+        background_tasks.add_task(sync_balance_bg, user["id"], user["stellar_public_key"])
 
     return {"user": public_user(user)}
 
