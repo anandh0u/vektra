@@ -71,24 +71,19 @@ function PricingCard({ plan, annual, currentUser, onOpenCheckout }) {
 
         <button
           onClick={handleAction}
-          disabled={isUpgrading || isCurrentPlan}
+          disabled={isCurrentPlan}
           className={`flex w-full items-center justify-center gap-1.5 rounded-[6px] py-2 text-xs font-semibold transition-fast mt-6 ${
             isCurrentPlan 
               ? "bg-[#1A1F2B] text-muted cursor-not-allowed border border-cardBorder"
               : plan.ctaClass
           }`}
         >
-          {isUpgrading ? (
-            <>
-              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-              Processing...
-            </>
-          ) : isCurrentPlan ? (
+          {isCurrentPlan ? (
             "Current Plan"
           ) : (
             plan.cta
           )}
-          {!isCurrentPlan && !isUpgrading && <ArrowRight className="h-3.5 w-3.5" />}
+          {!isCurrentPlan && <ArrowRight className="h-3.5 w-3.5" />}
         </button>
       </div>
     </article>
