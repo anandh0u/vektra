@@ -3,7 +3,7 @@ import { create } from "zustand";
 const API_BASE =
   import.meta.env.VITE_API_URL ||
   (typeof window !== "undefined" && !["localhost", "127.0.0.1"].includes(window.location.hostname)
-    ? ""
+    ? window.location.origin
     : "http://localhost:8000");
 
 const readStoredUser = () => {
