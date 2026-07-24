@@ -33,6 +33,7 @@ class Neo4jClient:
         self.password = os.getenv("NEO4J_PASSWORD") or "gFiaIt6kAEvMAAiDWSmU6GpqktdTPL1N79hYQuwYhwg"
         self.driver = None
         self.connected = False
+        self._in_memory_users: Dict[str, dict] = {}
 
         if self.uri and self.username and self.password:
             try:
@@ -184,68 +185,101 @@ class Neo4jClient:
             return []
 
     async def create_user(self, user: dict) -> dict:
-        if not self.driver:
-            raise RuntimeError("Neo4j is not connected.")
         user_id = str(uuid.uuid4())
         jwt_secret = str(uuid.uuid4())
         today = date.today().isoformat()
         now = datetime.now().isoformat()
-        with self.driver.session() as session:
-            result = session.run(
-                """
-                 CREATE (u:User {
-                  id: $id,
-                  email: $email,
-                  name: $name,
-                  password_hash: $password_hash,
-                  tier: $tier,
-                  scans_today: 0,
-                  last_scan_date: $today,
-                  created_at: $now,
-                  jwt_secret: $jwt_secret,
-                  stellar_public_key: $stellar_public_key,
-                  stellar_secret_key: $stellar_secret_key,
-                  credits_balance: $credits_balance,
-                  credits_reset_date: $today
-                })
-                RETURN u
-                """,
-                id=user_id,
-                email=user["email"],
-                name=user["name"],
-                password_hash=user["password_hash"],
-                today=today,
-                now=now,
-                jwt_secret=jwt_secret,
-                stellar_public_key=user.get("stellar_public_key", ""),
-                stellar_secret_key=user.get("stellar_secret_key", ""),
-                credits_balance=user.get("credits_balance", 0),
-                tier=user.get("tier", "team"),
-            )
-            record = result.single()
-            return dict(record["u"])
+        user_data = {
+            "id": user_id,
+            "email": user["email"],
+            "name": user["name"],
+            "password_hash": user["password_hash"],
+            "tier": user.get("tier", "team"),
+            "scans_today": 0,
+            "last_scan_date": today,
+            "created_at": now,
+            "jwt_secret": jwt_secret,
+            "stellar_public_key": user.get("stellar_public_key", ""),
+            "stellar_secret_key": user.get("stellar_secret_key", ""),
+            "credits_balance": user.get("credits_balance", 0),
+            "credits_reset_date": today,
+        }
+
+        if self.driver and self.connected:
+            try:
+                with self.driver.session() as session:
+                    result = session.run(
+                        """
+                         CREATE (u:User {
+                          id: $id,
+                          email: $email,
+                          name: $name,
+                          password_hash: $password_hash,
+                          tier: $tier,
+                          scans_today: 0,
+                          last_scan_date: $today,
+                          created_at: $now,
+                          jwt_secret: $jwt_secret,
+                          stellar_public_key: $stellar_public_key,
+                          stellar_secret_key: $stellar_secret_key,
+                          credits_balance: $credits_balance,
+                          credits_reset_date: $today
+                        })
+                        RETURN u
+                        """,
+                        id=user_id,
+                        email=user["email"],
+                        name=user["name"],
+                        password_hash=user["password_hash"],
+                        today=today,
+                        now=now,
+                        jwt_secret=jwt_secret,
+                        stellar_public_key=user.get("stellar_public_key", ""),
+                        stellar_secret_key=user.get("stellar_secret_key", ""),
+                        credits_balance=user.get("credits_balance", 0),
+                        tier=user.get("tier", "team"),
+                    )
+                    record = result.single()
+                    if record:
+                        user_data = dict(record["u"])
+            except Exception as exc:
+                logger.warning("Neo4j create_user failed, falling back to in-memory store: %s", exc)
+
+        self._in_memory_users[user["email"]] = user_data
+        self._in_memory_users[user_id] = user_data
+        return user_data
 
     async def get_user_by_email(self, email: str):
-        if not self.driver:
-            return None
-        with self.driver.session() as session:
-            result = session.run(
-                "MATCH (u:User {email: $email}) RETURN u",
-                email=email,
-            )
-            record = result.single()
-            return dict(record["u"]) if record else None
+        if self.driver and self.connected:
+            try:
+                with self.driver.session() as session:
+                    result = session.run(
+                        "MATCH (u:User {email: $email}) RETURN u",
+                        email=email,
+                    )
+                    record = result.single()
+                    if record:
+                        return dict(record["u"])
+            except Exception as exc:
+                logger.warning("Neo4j get_user_by_email failed, falling back to in-memory store: %s", exc)
+
+        return self._in_memory_users.get(email)
 
     async def get_user_by_id(self, user_id: str):
-        if not self.driver:
-            return None
-        with self.driver.session() as session:
-            result = session.run(
-                "MATCH (u:User {id: $id}) RETURN u",
-                id=user_id,
-            )
-            record = result.single()
-            return dict(record["u"]) if record else None
+        if self.driver and self.connected:
+            try:
+                with self.driver.session() as session:
+                    result = session.run(
+                        "MATCH (u:User {id: $id}) RETURN u",
+                        id=user_id,
+                    )
+                    record = result.single()
+                    if record:
+                        return dict(record["u"])
+            except Exception as exc:
+                logger.warning("Neo4j get_user_by_id failed, falling back to in-memory store: %s", exc)
+
+        return self._in_memory_users.get(user_id)
 
     async def increment_scan_count(self, user_id: str):
         if not self.driver:

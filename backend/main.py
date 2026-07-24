@@ -97,17 +97,6 @@ async def ensure_neo4j_ready(timeout: float = 6.0) -> bool:
     task = schedule_neo4j_verify()
     if not task:
         return False
-    asyncio.create_task(_execute_workflow(session_id, body))
-
-    return {
-        "session_id": session_id,
-        "workflow_triggered": True,
-        "status_url": f"/api/workflow/status/{session_id}",
-    }
-
-
-async def _execute_workflow(session_id: str, body: dict) -> None:
-    """Run the long analysis pipeline without blocking the trigger response."""
     try:
         return await asyncio.wait_for(asyncio.shield(task), timeout=timeout)
     except asyncio.TimeoutError:
