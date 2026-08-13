@@ -20,6 +20,7 @@ import Investigate from "./pages/Investigate";
 import ForensicTimeline from "./pages/ForensicTimeline";
 import CasesPage from "./pages/Cases";
 import SimulatorPage from "./pages/Simulator";
+import SecurityTwin from "./pages/SecurityTwin";
 
 function ProtectedRoute({ children }) {
   const { currentUser } = useVektraStore();
@@ -60,6 +61,7 @@ export default function App() {
         <Route path="/login" element={<LoginPage />} />
         <Route path="/pricing" element={<PricingPage />} />
         <Route path="/simulator" element={<SimulatorPage />} />
+        <Route path="/twin" element={<SecurityTwin />} />
 
         {/* Upload Landing Page */}
         <Route path="/" element={<UploadPage />} />
