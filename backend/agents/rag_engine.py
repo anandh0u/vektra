@@ -4,14 +4,14 @@ from typing import Any, Dict, List, Tuple
 
 class RAGEngine:
     def __init__(self):
-        # List of dicts: {"text": str, "source": str, "index": int}
-        self.chunks: List[Dict[str, Any]] = []
+        self.namespaces: Dict[str, List[Dict[str, Any]]] = {}
 
-    def clear(self):
-        self.chunks.clear()
+    def clear(self, namespace: str):
+        self.namespaces.pop(namespace, None)
 
-    def add_document(self, text: str, source: str):
+    def add_document(self, text: str, source: str, namespace: str):
         """Splits document text into overlapping chunks of ~500 chars."""
+        chunks = self.namespaces.setdefault(namespace, [])
         cleaned = re.sub(r'\s+', ' ', text).strip()
         chunk_size = 500
         overlap = 100
@@ -21,7 +21,7 @@ class RAGEngine:
         while start < len(cleaned):
             end = start + chunk_size
             chunk_text = cleaned[start:end].strip()
-            self.chunks.append({
+            chunks.append({
                 "text": chunk_text,
                 "source": source,
                 "index": idx
@@ -41,9 +41,10 @@ class RAGEngine:
             tf[k] /= length
         return tf
 
-    def search(self, query: str, top_k: int = 3) -> List[Dict[str, Any]]:
+    def search(self, query: str, top_k: int = 3, namespace: str = "") -> List[Dict[str, Any]]:
         """Performs semantic-like TF-IDF keyword overlap vector query search."""
-        if not self.chunks or not query:
+        chunks = self.namespaces.get(namespace, [])
+        if not chunks or not query:
             return []
 
         query_tokens = self._tokenize(query)
@@ -51,10 +52,10 @@ class RAGEngine:
             return []
 
         # Build vocabulary across all chunks
-        all_tokens_lists = [self._tokenize(chunk["text"]) for chunk in self.chunks]
+        all_tokens_lists = [self._tokenize(chunk["text"]) for chunk in chunks]
         
         # Calculate Inverse Document Frequency (IDF)
-        num_documents = len(self.chunks)
+        num_documents = len(chunks)
         idf = {}
         unique_words = set(token for tokens in all_tokens_lists for token in tokens)
         for word in unique_words:
@@ -68,7 +69,7 @@ class RAGEngine:
 
         results: List[Tuple[float, Dict[str, Any]]] = []
 
-        for idx, chunk in enumerate(self.chunks):
+        for idx, chunk in enumerate(chunks):
             chunk_tokens = all_tokens_lists[idx]
             chunk_tf = self._term_frequency(chunk_tokens)
             chunk_vector = {word: tf * idf.get(word, 0.0) for word, tf in chunk_tf.items() if word in query_vector}

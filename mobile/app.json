@@ -27,10 +27,7 @@
       "package": "com.anndus.vektra",
       "versionCode": 1,
       "permissions": [
-        "android.permission.INTERNET",
-        "android.permission.CAMERA",
-        "android.permission.READ_EXTERNAL_STORAGE",
-        "android.permission.WRITE_EXTERNAL_STORAGE"
+        "android.permission.INTERNET"
       ],
       "predictiveBackGestureEnabled": false
     },
@@ -48,7 +45,10 @@
           "image": "./assets/images/splash-icon.png",
           "imageWidth": 120
         }
-      ]
+      ],
+      "expo-image",
+      "expo-status-bar",
+      "expo-web-browser"
     ],
     "experiments": {
       "typedRoutes": true,
@@ -58,7 +58,7 @@
       "eas": {
         "projectId": "acb3f4bc-df30-4894-8349-ed73d3e6ae60"
       },
-      "apiUrl": "https://vektra-backend.onrender.com",
+      "apiUrl": "https://vektra.onrender.com",
       "webUrl": "https://vektra-six.vercel.app"
     },
     "owner": "anndus-organization",

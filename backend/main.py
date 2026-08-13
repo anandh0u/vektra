@@ -2,9 +2,12 @@ import asyncio
 import json
 import logging
 import os
+import secrets
 import sys
 import types
 import uuid
+import time
+from collections import defaultdict, deque
 from datetime import date, datetime
 from pathlib import Path
 from typing import Dict, List, Optional
@@ -14,7 +17,7 @@ from dotenv import load_dotenv
 from fastapi import FastAPI, Header, HTTPException, Request, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse, JSONResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 def _ensure_backend_package_importable():
@@ -40,7 +43,6 @@ from backend import workflow_steps
 from backend.base44_client import (
     save_scan_history,
     save_report,
-    get_scan_history,
     get_saved_report
 )
 from backend import stellar_client
@@ -72,6 +74,68 @@ class ApiPrefixMiddleware:
         await self.app(scope, receive, send)
 
 
+class SecurityMiddleware:
+    """Apply basic request-size, security-header, and abuse protections."""
+    def __init__(self, app, max_body_bytes: int = 2 * 1024 * 1024):
+        self.app = app
+        self.max_body_bytes = max_body_bytes
+        self.requests = defaultdict(deque)
+
+    async def __call__(self, scope, receive, send):
+        if scope["type"] != "http":
+            return await self.app(scope, receive, send)
+        headers = dict(scope.get("headers", []))
+        try:
+            content_length = int(headers.get(b"content-length", b"0"))
+        except ValueError:
+            content_length = self.max_body_bytes + 1
+        if content_length > self.max_body_bytes:
+            response = JSONResponse({"detail": "Request body is too large."}, status_code=413)
+            return await response(scope, receive, send)
+
+        path = scope.get("path", "")
+        normalized_path = path if path.startswith("/api/") else f"/api{path}"
+        if normalized_path.startswith("/api/internal/"):
+            expected = os.getenv("INTERNAL_API_KEY", "")
+            supplied = headers.get(b"x-internal-api-key", b"").decode("utf-8", "ignore")
+            if not expected or not secrets.compare_digest(supplied, expected):
+                response = JSONResponse({"detail": "Not found."}, status_code=404)
+                return await response(scope, receive, send)
+        limited_paths = {
+            "/api/auth/login": 10,
+            "/api/auth/register": 5,
+            "/api/analyze": 10,
+            "/api/workflow/analyze": 10,
+            "/api/chat": 30,
+            "/api/assistant/message": 30,
+            "/api/forensics/investigate": 5,
+        }
+        if normalized_path in limited_paths:
+            client = scope.get("client") or ("unknown", 0)
+            key = (client[0], normalized_path)
+            now = time.monotonic()
+            bucket = self.requests[key]
+            while bucket and bucket[0] < now - 60:
+                bucket.popleft()
+            if len(bucket) >= limited_paths[normalized_path]:
+                response = JSONResponse({"detail": "Too many requests. Try again shortly."}, status_code=429)
+                return await response(scope, receive, send)
+            bucket.append(now)
+
+        async def secure_send(message):
+            if message["type"] == "http.response.start":
+                response_headers = list(message.get("headers", []))
+                response_headers.extend([
+                    (b"x-content-type-options", b"nosniff"),
+                    (b"x-frame-options", b"DENY"),
+                    (b"referrer-policy", b"strict-origin-when-cross-origin"),
+                    (b"permissions-policy", b"camera=(), microphone=(), geolocation=()"),
+                ])
+                message["headers"] = response_headers
+            await send(message)
+        await self.app(scope, receive, secure_send)
+
+
 def schedule_neo4j_verify() -> Optional[asyncio.Task]:
     global neo4j_verify_task
     if neo4j_client.connected or not neo4j_client.driver:
@@ -87,6 +151,8 @@ async def startup_event():
     schedule_neo4j_verify()
     # Inject shared neo4j client into workflow_steps so all steps use one connection
     workflow_steps.neo4j = neo4j_client
+    if await ensure_neo4j_ready(timeout=6.0):
+        await neo4j_client.purge_stored_wallet_secrets()
 
 
 async def ensure_neo4j_ready(timeout: float = 6.0) -> bool:
@@ -107,9 +173,13 @@ async def ensure_neo4j_ready(timeout: float = 6.0) -> bool:
 
 
 app.add_middleware(ApiPrefixMiddleware)
+app.add_middleware(SecurityMiddleware)
+cors_origins = [origin.strip() for origin in os.getenv(
+    "CORS_ORIGINS", "https://vektra-six.vercel.app,http://localhost:5173"
+).split(",") if origin.strip()]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -117,36 +187,36 @@ app.add_middleware(
 
 
 class AnalyzeRequest(BaseModel):
-    policy_text: str
+    policy_text: str = Field(min_length=2, max_length=500_000)
     format: str
     session_id: Optional[str] = None
 
 
 class RegisterRequest(BaseModel):
-    name: str
-    email: str
-    password: str
+    name: str = Field(min_length=1, max_length=100)
+    email: str = Field(min_length=3, max_length=254)
+    password: str = Field(min_length=12, max_length=72)
 
 
 class LoginRequest(BaseModel):
-    email: str
-    password: str
+    email: str = Field(min_length=3, max_length=254)
+    password: str = Field(min_length=1, max_length=72)
 
 
 class ChatRequest(BaseModel):
-    message: str
-    policy_context: str = ""
+    message: str = Field(min_length=1, max_length=8_000)
+    policy_context: str = Field(default="", max_length=50_000)
     session_id: Optional[str] = None
-    history: List[Dict[str, str]] = []
+    history: List[Dict[str, str]] = Field(default_factory=list, max_length=20)
 
 
 class ForensicFile(BaseModel):
-    filename: str
-    content: str
+    filename: str = Field(min_length=1, max_length=255)
+    content: str = Field(min_length=1, max_length=500_000)
 
 
 class ForensicInvestigateRequest(BaseModel):
-    files: List[ForensicFile]
+    files: List[ForensicFile] = Field(min_length=1, max_length=20)
     case_id: Optional[str] = None
 
 
@@ -156,8 +226,8 @@ class CaseCreateRequest(BaseModel):
     priority: Optional[str] = "Medium"
     status: Optional[str] = "Open"
     due_date: Optional[str] = ""
-    tags: Optional[List[str]] = []
-    team_members: Optional[List[str]] = []
+    tags: Optional[List[str]] = Field(default_factory=list, max_length=20)
+    team_members: Optional[List[str]] = Field(default_factory=list, max_length=20)
 
 
 class CaseUpdateRequest(BaseModel):
@@ -180,20 +250,20 @@ class ActivityCreateRequest(BaseModel):
 
 
 class EvidenceCreateRequest(BaseModel):
-    filename: str
-    content: str
-    content_type: Optional[str] = "text/plain"
+    filename: str = Field(min_length=1, max_length=255)
+    content: str = Field(min_length=1, max_length=500_000)
+    content_type: Optional[str] = Field(default="text/plain", max_length=100)
     device: Optional[str] = "Unknown"
     source: Optional[str] = "Upload"
 
 
 
 class RAGSearchRequest(BaseModel):
-    query: str
+    query: str = Field(min_length=1, max_length=1_000)
 
 
 class AssistantMessageRequest(BaseModel):
-    prompt: str
+    prompt: str = Field(min_length=1, max_length=8_000)
 
 
 class ProfileUpdateRequest(BaseModel):
@@ -201,8 +271,8 @@ class ProfileUpdateRequest(BaseModel):
 
 
 class ChangePasswordRequest(BaseModel):
-    current_password: str
-    new_password: str
+    current_password: str = Field(min_length=1, max_length=72)
+    new_password: str = Field(min_length=12, max_length=72)
 
 
 class DeleteAccountRequest(BaseModel):
@@ -301,8 +371,8 @@ async def register(body: RegisterRequest, background_tasks: BackgroundTasks):
         raise HTTPException(status_code=400, detail="Name is required.")
     if "@" not in email:
         raise HTTPException(status_code=400, detail="Enter a valid email address.")
-    if len(password) < 6:
-        raise HTTPException(status_code=400, detail="Password must be at least 6 characters.")
+    if len(password) < 12:
+        raise HTTPException(status_code=400, detail="Password must be at least 12 characters.")
 
     await ensure_neo4j_ready()
     existing = await neo4j_client.get_user_by_email(email)
@@ -326,9 +396,8 @@ async def register(body: RegisterRequest, background_tasks: BackgroundTasks):
                 "email": email,
                 "password_hash": hash_password(password),
                 "stellar_public_key": public_key,
-                "stellar_secret_key": secret_key,
-                "credits_balance": 1000,
-                "tier": "team",
+                "credits_balance": DAILY_CREDITS.get("free", 5),
+                "tier": "free",
             }
         )
     except Exception as exc:
@@ -343,8 +412,8 @@ async def register(body: RegisterRequest, background_tasks: BackgroundTasks):
                     res = await client.get(f"https://friendbot.stellar.org/?addr={pub_key}")
                     res.raise_for_status()
                 await stellar_client.setup_user_trustlines(pub_key, sec_key)
-                await stellar_client.mint_tier_nft(pub_key, "team")
-                await stellar_client.issue_credits(pub_key, 1000)
+                await stellar_client.mint_tier_nft(pub_key, "free")
+                await stellar_client.issue_credits(pub_key, DAILY_CREDITS.get("free", 5))
             except Exception as e:
                 logger.error("Failed to setup Stellar wallet in background for %s: %s", pub_key, e)
 
@@ -566,6 +635,8 @@ async def rerun_analysis(
     x_sarvam_api_key: Optional[str] = Header(None),
 ):
     user = await resolve_request_user(http_request, required=True)
+    if not await neo4j_client.session_belongs_to_user(body.session_id, user["id"]):
+        raise HTTPException(status_code=404, detail="Analysis session not found.")
     tier = user.get("tier", "free")
     
     # Check and deduct credits (cost is 2 credits for rerun_agents)
@@ -676,8 +747,13 @@ async def rerun_analysis(
 @app.post("/api/chat")
 async def chat_sse(
     request: ChatRequest,
+    http_request: Request,
     x_sarvam_api_key: Optional[str] = Header(None),
 ):
+    user = await resolve_request_user(http_request, required=True)
+    deduct_res = await check_and_deduct_credits(user, "chat_message", neo4j_client)
+    if not deduct_res["allowed"]:
+        raise HTTPException(status_code=429, detail=deduct_res.get("error", "Insufficient credits."))
     sarvam_key = x_sarvam_api_key or os.getenv("SARVAM_API_KEY")
     if not sarvam_key:
         raise HTTPException(status_code=400, detail="No Sarvam API key supplied. Set SARVAM_API_KEY or save one in Settings.")
@@ -702,7 +778,8 @@ async def chat_sse(
 
     async def stream():
         try:
-            async with httpx.AsyncClient(timeout=None) as client:
+            timeout = httpx.Timeout(45.0, connect=10.0)
+            async with httpx.AsyncClient(timeout=timeout) as client:
                 async with client.stream(
                     "POST",
                     SARVAM_URL,
@@ -794,8 +871,15 @@ async def internal_finalize(body: dict):
 # ============================================================================
 
 @app.post("/api/workflow/analyze")
-async def trigger_workflow(body: dict, background_tasks: BackgroundTasks):
+async def trigger_workflow(body: dict, background_tasks: BackgroundTasks, http_request: Request):
+    user = await resolve_request_user(http_request, required=True)
+    policy_text = body.get("policy_text", "")
+    if not isinstance(policy_text, str) or not 2 <= len(policy_text) <= 500_000:
+        raise HTTPException(status_code=422, detail="Policy text must be between 2 and 500000 characters.")
+    if body.get("format") not in {"iam", "k8s"}:
+        raise HTTPException(status_code=422, detail="Invalid policy format.")
     session_id = body.get("session_id", str(uuid.uuid4()))
+    body["user_id"] = user["id"]
 
     # Ensure neo4j is injected into workflow_steps (idempotent)
     workflow_steps.neo4j = neo4j_client
@@ -809,6 +893,7 @@ async def trigger_workflow(body: dict, background_tasks: BackgroundTasks):
             "format": body.get("format", ""),
             "policy_length": len(body.get("policy_text", "")),
             "triggered_at": datetime.now().isoformat(),
+            "owner_id": user["id"],
         },
         0,
     )
@@ -861,8 +946,12 @@ async def trigger_workflow(body: dict, background_tasks: BackgroundTasks):
 
 
 @app.get("/api/workflow/status/{session_id}")
-async def workflow_status(session_id: str):
+async def workflow_status(session_id: str, http_request: Request):
+    user = await resolve_request_user(http_request, required=True)
     state = await neo4j_client.get_workflow_state(session_id)
+    trigger = state.get("workflow-trigger", {}).get("output", {})
+    if trigger.get("owner_id") != user["id"]:
+        raise HTTPException(status_code=404, detail="Workflow not found.")
 
     steps_complete = [k for k, v in state.items() if v["status"] == "complete"]
     steps_failed = [k for k, v in state.items() if v["status"] == "failed"]
@@ -900,9 +989,10 @@ async def workflow_status(session_id: str):
 
 
 @app.post("/api/report/save")
-async def save_report_endpoint(body: dict):
+async def save_report_endpoint(body: dict, http_request: Request):
+    user = await resolve_request_user(http_request, required=True)
     session_id = body["session_id"]
-    report_data = body["report_data"]
+    report_data = {**body["report_data"], "owner_id": user["id"]}
     title = body.get("title", f"Scan {session_id[:8]}")
     await save_report(session_id, report_data, title)
     return {"status": "saved"}
@@ -910,20 +1000,20 @@ async def save_report_endpoint(body: dict):
 
 @app.get("/api/history")
 async def get_history(http_request: Request):
-    user = await resolve_request_user(http_request, required=False)
-    if user:
-        neo4j_history = await neo4j_client.get_user_scan_history(user["id"], limit=50)
-        if neo4j_history:
-            return {"history": neo4j_history}
-    history = await get_scan_history(limit=10)
-    return {"history": history}
+    user = await resolve_request_user(http_request, required=True)
+    neo4j_history = await neo4j_client.get_user_scan_history(user["id"], limit=50)
+    return {"history": neo4j_history}
 
 
 @app.get("/api/report/{session_id}")
-async def get_report(session_id: str):
+async def get_report(session_id: str, http_request: Request):
+    user = await resolve_request_user(http_request, required=True)
     report = await get_saved_report(session_id)
     if not report:
         return JSONResponse(status_code=404, content={"error": "Report not found"})
+    report_payload = report.get("report_json", {}) if isinstance(report, dict) else {}
+    if report_payload.get("owner_id") != user["id"]:
+        raise HTTPException(status_code=404, detail="Report not found.")
     return report
 
 
@@ -962,32 +1052,11 @@ async def get_wallet(http_request: Request):
 
 @app.post("/api/wallet/upgrade")
 async def upgrade_wallet(body: UpgradeRequest, http_request: Request):
-    user = await resolve_request_user(http_request, required=True)
-    plan = body.plan.lower()
-    if plan not in {"free", "pro", "team"}:
-        raise HTTPException(status_code=400, detail="Invalid plan selected.")
-    
-    # Update user tier in Neo4j
-    await neo4j_client.update_user_tier(user["id"], plan)
-    
-    # Add monthly/tier credits
-    added_credits = DAILY_CREDITS.get(plan, 5)
-    new_credits = user.get("credits_balance", 0) + added_credits
-    await neo4j_client.update_credits(user["id"], new_credits)
-    
-    # Mint tier NFT and issue credits on Stellar Horizon in background
-    if user.get("stellar_public_key") and not user["stellar_public_key"].startswith("G"):
-        try:
-            await stellar_client.mint_tier_nft(user["stellar_public_key"], plan)
-            await stellar_client.issue_credits(user["stellar_public_key"], added_credits)
-        except Exception as exc:
-            logger.exception("Failed to issue assets on Stellar Horizon during upgrade.")
-
-    return {
-        "status": "success",
-        "tier": plan,
-        "credits": new_credits
-    }
+    await resolve_request_user(http_request, required=True)
+    raise HTTPException(
+        status_code=503,
+        detail="Plan upgrades are temporarily unavailable until verified payment processing is configured.",
+    )
 
 
 @app.get("/api/wallet/transactions")
@@ -1038,9 +1107,10 @@ async def get_wallet_transactions(http_request: Request):
 @app.post("/api/forensics/investigate")
 async def forensics_investigate(body: ForensicInvestigateRequest, http_request: Request):
     user = await resolve_request_user(http_request, required=True)
-    global_rag_engine.clear()
+    rag_namespace = f"user:{user['id']}"
+    global_rag_engine.clear(rag_namespace)
     for f in body.files:
-        global_rag_engine.add_document(f.content, f.filename)
+        global_rag_engine.add_document(f.content, f.filename, rag_namespace)
     
     sarvam_key = os.getenv("SARVAM_API_KEY")
     evidence_data = [{"filename": f.filename, "content": f.content} for f in body.files]
@@ -1051,6 +1121,7 @@ async def forensics_investigate(body: ForensicInvestigateRequest, http_request: 
     await neo4j_client.save_forensic_nodes(state.id, entities)
     
     if body.case_id:
+        await require_case_access(body.case_id, user)
         await neo4j_client.link_scan_to_case(body.case_id, state.id)
         await neo4j_client.add_case_activity(
             body.case_id, user["email"], "scan_attached", f"Autonomous forensic scan run (Session ID: {state.id}) and attached to case."
@@ -1075,7 +1146,7 @@ async def forensics_investigate(body: ForensicInvestigateRequest, http_request: 
 @app.post("/api/forensics/search")
 async def forensics_search(body: RAGSearchRequest, http_request: Request):
     user = await resolve_request_user(http_request, required=True)
-    results = global_rag_engine.search(body.query, top_k=3)
+    results = global_rag_engine.search(body.query, top_k=3, namespace=f"user:{user['id']}")
     return {"results": results}
 
 
@@ -1086,7 +1157,7 @@ async def assistant_message(body: AssistantMessageRequest, http_request: Request
     
     if prompt_clean.startswith("/search"):
         query = body.prompt[7:].strip()
-        results = global_rag_engine.search(query, top_k=2)
+        results = global_rag_engine.search(query, top_k=2, namespace=f"user:{user['id']}")
         if not results:
             return {"response": f"RAG returned no matches for: {query}"}
         resp = "Here are the top matches from our RAG semantic store:\n\n"
@@ -1096,27 +1167,19 @@ async def assistant_message(body: AssistantMessageRequest, http_request: Request
         return {"response": resp}
         
     elif prompt_clean.startswith("/timeline"):
-        return {
-            "response": "Here is the latest chronological event overview:\n\n"
-            "1. **2026-07-09T14:30:00Z**: DevUser created new Access Key (Routine deployment check).\n"
-            "2. **2026-07-09T14:35:00Z**: Role assumption from external IP: 54.210.12.33 (AdminsRole).\n"
-            "3. **2026-07-09T14:38:00Z**: CRITICAL - Created privilege escalation path version (AdminsRole)."
-        }
+        results = global_rag_engine.search("event timeline timestamp", top_k=5, namespace=f"user:{user['id']}")
+        if not results:
+            return {"response": "No indexed timeline evidence is available yet."}
+        return {"response": "\n\n".join(f"**{r['source']}**\n{r['text']}" for r in results)}
         
     elif prompt_clean.startswith("/remediate"):
-        return {
-            "response": "To resolve the privilege escalation risk on AdminsRole, apply these two policy boundaries:\n\n"
-            "1. **Restrict Version Creation**: Disallow `iam:CreatePolicyVersion` actions unless strict approvals are met.\n"
-            "2. **IP Whitelisting**: Add `aws:SourceIp` check values inside role policy trust policies to ensure actions only occur from registered VPC endpoints."
-        }
+        return {"response": "Describe the exact finding or policy statement to remediate. I will not invent a fix without evidence context."}
         
     elif prompt_clean.startswith("/report"):
-        return {
-            "response": "Summary Report of the latest Forensic Investigation Case:\n\n"
-            "- **Threat Score**: 88/100 (CRITICAL)\n"
-            "- **Anomalies**: Access from external IP 54.210.12.33, rapid role assumptions.\n"
-            "- **Recommendations**: IP whitelisting conditions, credential rotation, compliance anchoring on Stellar ledger."
-        }
+        results = global_rag_engine.search("executive summary risk recommendation", top_k=5, namespace=f"user:{user['id']}")
+        if not results:
+            return {"response": "No indexed investigation evidence is available for a report."}
+        return {"response": "\n\n".join(f"**{r['source']}**\n{r['text']}" for r in results)}
         
     sarvam_key = os.getenv("SARVAM_API_KEY")
     system_prompt = "You are the VEKTRA Security Assistant. Explain vulnerabilities, write least-privilege remedies, and suggest CloudTrail queries. Be precise, transparent about uncertainty, and never claim an action was performed when you only recommended it."
@@ -1146,8 +1209,8 @@ async def change_password(body: ChangePasswordRequest, http_request: Request):
     user = await resolve_request_user(http_request, required=True)
     if not verify_password(body.current_password, user.get("password_hash", "")):
         raise HTTPException(status_code=401, detail="Incorrect current password.")
-    if len(body.new_password) < 8:
-        raise HTTPException(status_code=400, detail="New password must be at least 8 characters.")
+    if len(body.new_password) < 12:
+        raise HTTPException(status_code=400, detail="New password must be at least 12 characters.")
     
     password_hash = hash_password(body.new_password)
     await neo4j_client.update_user_password(user["id"], password_hash)
@@ -1171,6 +1234,18 @@ async def delete_account(body: DeleteAccountRequest, http_request: Request):
 
 
 import hashlib
+
+
+async def require_case_access(case_id: str, user: dict, *, owner_only: bool = False) -> dict:
+    case = await neo4j_client.get_case(case_id)
+    if not case:
+        raise HTTPException(status_code=404, detail="Case not found.")
+    is_owner = case.get("owner_email") == user.get("email")
+    is_member = user.get("email") in (case.get("team_members") or [])
+    if not is_owner and (owner_only or not is_member):
+        # Do not reveal that another tenant's case exists.
+        raise HTTPException(status_code=404, detail="Case not found.")
+    return case
 
 @app.post("/api/cases")
 async def create_case_endpoint(body: CaseCreateRequest, http_request: Request):
@@ -1202,15 +1277,14 @@ async def list_cases_endpoint(http_request: Request):
 async def get_case_endpoint(case_id: str, http_request: Request):
     user = await resolve_request_user(http_request, required=True)
     await ensure_neo4j_ready()
-    case = await neo4j_client.get_case(case_id)
-    if not case:
-        raise HTTPException(status_code=404, detail="Case not found.")
+    case = await require_case_access(case_id, user)
     return case
 
 @app.put("/api/cases/{case_id}")
 async def update_case_endpoint(case_id: str, body: CaseUpdateRequest, http_request: Request):
     user = await resolve_request_user(http_request, required=True)
     await ensure_neo4j_ready()
+    await require_case_access(case_id, user, owner_only=True)
     updated = await neo4j_client.update_case(case_id, body.dict(exclude_none=True))
     await neo4j_client.add_case_activity(
         case_id, user["email"], "case_updated", f"Case properties updated: {body.dict(exclude_none=True)}"
@@ -1221,6 +1295,7 @@ async def update_case_endpoint(case_id: str, body: CaseUpdateRequest, http_reque
 async def delete_case_endpoint(case_id: str, http_request: Request):
     user = await resolve_request_user(http_request, required=True)
     await ensure_neo4j_ready()
+    await require_case_access(case_id, user, owner_only=True)
     success = await neo4j_client.delete_case(case_id)
     return {"status": "ok" if success else "failed"}
 
@@ -1228,6 +1303,7 @@ async def delete_case_endpoint(case_id: str, http_request: Request):
 async def add_case_evidence_endpoint(case_id: str, body: EvidenceCreateRequest, http_request: Request):
     user = await resolve_request_user(http_request, required=True)
     await ensure_neo4j_ready()
+    await require_case_access(case_id, user)
     
     # Calculate checksums
     content_bytes = body.content.encode("utf-8")
@@ -1252,12 +1328,13 @@ async def add_case_evidence_endpoint(case_id: str, body: EvidenceCreateRequest, 
     }
     
     evidence_node = await neo4j_client.add_case_evidence(case_id, evidence_data)
+    anchor_status = "anchored to Stellar" if tx_hash else "stored; Stellar anchoring unavailable"
     await neo4j_client.add_case_activity(
-        case_id, user["email"], "evidence_uploaded", f"Evidence file '{body.filename}' uploaded and anchored to Stellar."
+        case_id, user["email"], "evidence_uploaded", f"Evidence file '{body.filename}' uploaded and {anchor_status}."
     )
     
     # Add to global RAG engine automatically
-    global_rag_engine.add_document(body.content, body.filename)
+    global_rag_engine.add_document(body.content, body.filename, namespace=f"user:{user['id']}")
     
     return evidence_node
 
@@ -1265,12 +1342,14 @@ async def add_case_evidence_endpoint(case_id: str, body: EvidenceCreateRequest, 
 async def get_case_evidence_endpoint(case_id: str, http_request: Request):
     user = await resolve_request_user(http_request, required=True)
     await ensure_neo4j_ready()
+    await require_case_access(case_id, user)
     return await neo4j_client.get_case_evidence(case_id)
 
 @app.post("/api/cases/{case_id}/comments")
 async def add_case_comment_endpoint(case_id: str, body: CommentCreateRequest, http_request: Request):
     user = await resolve_request_user(http_request, required=True)
     await ensure_neo4j_ready()
+    await require_case_access(case_id, user)
     comment = await neo4j_client.add_case_comment(case_id, user["name"], body.text)
     await neo4j_client.add_case_activity(
         case_id, user["email"], "comment_added", f"Investigator comment added to discussion thread."
@@ -1281,12 +1360,14 @@ async def add_case_comment_endpoint(case_id: str, body: CommentCreateRequest, ht
 async def get_case_comments_endpoint(case_id: str, http_request: Request):
     user = await resolve_request_user(http_request, required=True)
     await ensure_neo4j_ready()
+    await require_case_access(case_id, user)
     return await neo4j_client.get_case_comments(case_id)
 
 @app.get("/api/cases/{case_id}/activity")
 async def get_case_activities_endpoint(case_id: str, http_request: Request):
     user = await resolve_request_user(http_request, required=True)
     await ensure_neo4j_ready()
+    await require_case_access(case_id, user)
     return await neo4j_client.get_case_activities(case_id)
 
 @app.get("/api/search/global")
@@ -1320,20 +1401,13 @@ async def analytics_dashboard_endpoint(http_request: Request):
     critical_cases = len([c for c in cases if c.get("priority") == "Critical"])
     
     return {
-        "mttd_hours": 4.5,
-        "mttr_hours": 12.2,
+        "mttd_hours": None,
+        "mttr_hours": None,
         "total_cases": total_cases,
         "resolved_cases": resolved_cases,
         "investigating_cases": investigating_cases,
         "critical_cases": critical_cases,
-        "threat_trends": [
-            {"date": "2026-07-05", "count": 2},
-            {"date": "2026-07-06", "count": 5},
-            {"date": "2026-07-07", "count": 8},
-            {"date": "2026-07-08", "count": 4},
-            {"date": "2026-07-09", "count": 12},
-            {"date": "2026-07-10", "count": 14}
-        ]
+        "threat_trends": []
     }
 
 

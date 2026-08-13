@@ -5,7 +5,7 @@ import TopBar from "../components/TopBar";
 import { Sparkles, CreditCard, ShieldCheck, ShoppingBag, Loader2, CheckCircle2, ArrowRight } from "lucide-react";
 
 export default function StorePage() {
-  const { credits, addCredits } = useVektraStore();
+  const { credits } = useVektraStore();
   const [selectedPack, setSelectedPack] = useState(null); // null or package object
   const [checkoutStep, setCheckoutStep] = useState("idle"); // "idle" | "form" | "processing" | "success"
   
@@ -62,18 +62,14 @@ export default function StorePage() {
 
   const handleOpenCheckout = (pack) => {
     setSelectedPack(pack);
-    setCheckoutStep("form");
+    setCheckoutStep("unavailable");
   };
 
   const handlePay = (e) => {
     e.preventDefault();
     setCheckoutStep("processing");
     
-    // Simulate mock checkout delay
-    setTimeout(() => {
-      addCredits(selectedPack.credits);
-      setCheckoutStep("success");
-    }, 2000);
+    setCheckoutStep("unavailable");
   };
 
   const handleCloseCheckout = () => {

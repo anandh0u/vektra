@@ -41,6 +41,9 @@ SARVAM_API_KEY=...
 NEO4J_URI=...
 NEO4J_USERNAME=neo4j
 NEO4J_PASSWORD=...
+JWT_SECRET=... # at least 32 random characters
+INTERNAL_API_KEY=... # separate random service-to-service key
+CORS_ORIGINS=http://localhost:5173
 ```
 
 The analyzer works without Neo4j or Sarvam keys. Neo4j writes are skipped when credentials are missing, and agent output falls back to deterministic local text.
@@ -76,4 +79,7 @@ Set these Render environment variables before production use:
 - `NEO4J_URI`
 - `NEO4J_USERNAME`
 - `NEO4J_PASSWORD`
+- `JWT_SECRET`
+- `INTERNAL_API_KEY`
+- `CORS_ORIGINS` (set to the deployed frontend origin)
 - `VITE_API_URL` on the frontend, pointed at the backend service URL.

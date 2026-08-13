@@ -28,9 +28,9 @@ ALLOWED_EDGE_TYPES = {
 
 class Neo4jClient:
     def __init__(self):
-        self.uri = os.getenv("NEO4J_URI") or "neo4j+s://a8e8e1ba.databases.neo4j.io"
-        self.username = os.getenv("NEO4J_USERNAME") or "a8e8e1ba"
-        self.password = os.getenv("NEO4J_PASSWORD") or "gFiaIt6kAEvMAAiDWSmU6GpqktdTPL1N79hYQuwYhwg"
+        self.uri = os.getenv("NEO4J_URI", "")
+        self.username = os.getenv("NEO4J_USERNAME", "")
+        self.password = os.getenv("NEO4J_PASSWORD", "")
         self.driver = None
         self.connected = False
         self._in_memory_users: Dict[str, dict] = {}
@@ -194,13 +194,12 @@ class Neo4jClient:
             "email": user["email"],
             "name": user["name"],
             "password_hash": user["password_hash"],
-            "tier": user.get("tier", "team"),
+            "tier": user.get("tier", "free"),
             "scans_today": 0,
             "last_scan_date": today,
             "created_at": now,
             "jwt_secret": jwt_secret,
             "stellar_public_key": user.get("stellar_public_key", ""),
-            "stellar_secret_key": user.get("stellar_secret_key", ""),
             "credits_balance": user.get("credits_balance", 0),
             "credits_reset_date": today,
         }
@@ -221,7 +220,6 @@ class Neo4jClient:
                           created_at: $now,
                           jwt_secret: $jwt_secret,
                           stellar_public_key: $stellar_public_key,
-                          stellar_secret_key: $stellar_secret_key,
                           credits_balance: $credits_balance,
                           credits_reset_date: $today
                         })
@@ -235,9 +233,8 @@ class Neo4jClient:
                         now=now,
                         jwt_secret=jwt_secret,
                         stellar_public_key=user.get("stellar_public_key", ""),
-                        stellar_secret_key=user.get("stellar_secret_key", ""),
                         credits_balance=user.get("credits_balance", 0),
-                        tier=user.get("tier", "team"),
+                        tier=user.get("tier", "free"),
                     )
                     record = result.single()
                     if record:
@@ -248,6 +245,16 @@ class Neo4jClient:
         self._in_memory_users[user["email"]] = user_data
         self._in_memory_users[user_id] = user_data
         return user_data
+
+    async def purge_stored_wallet_secrets(self) -> None:
+        """Remove legacy plaintext wallet seeds; VEKTRA must never retain user private keys."""
+        if not self.driver or not self.connected:
+            return
+        try:
+            with self.driver.session() as session:
+                session.run("MATCH (u:User) REMOVE u.stellar_secret_key")
+        except Exception as exc:
+            logger.error("Failed to purge legacy wallet secrets: %s", exc)
 
     async def get_user_by_email(self, email: str):
         if self.driver and self.connected:
@@ -370,6 +377,21 @@ class Neo4jClient:
                 uid=user_id,
                 sid=session_id,
             )
+
+    async def session_belongs_to_user(self, session_id: str, user_id: str) -> bool:
+        if not self.driver:
+            return False
+        try:
+            with self.driver.session() as session:
+                record = session.run(
+                    "MATCH (s:ScanSession {session_id: $sid, user_id: $uid}) RETURN count(s) AS count",
+                    sid=session_id,
+                    uid=user_id,
+                ).single()
+                return bool(record and record["count"])
+        except Exception as exc:
+            logger.error("Neo4j session ownership check failed: %s", exc)
+            return False
 
     async def update_user_tier(self, user_id: str, tier: str):
         if tier not in {"free", "pro", "team"}:

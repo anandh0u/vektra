@@ -54,6 +54,7 @@ class PlannerAgent:
         data = await chat_json(self.SYSTEM_PROMPT, user_prompt, api_key=api_key)
         
         if not data:
+            raise RuntimeError("Forensic planning service is unavailable; no result was fabricated.")
             # Fallback output
             data = {
                 "strategy_summary": "Perform automated entity extraction, timeline analysis, and risk scoring on the uploaded security files.",
@@ -95,6 +96,7 @@ class EvidenceAgent:
         
         data = await chat_json(self.SYSTEM_PROMPT, user_prompt, api_key=api_key)
         if not data:
+            raise RuntimeError("Evidence extraction service is unavailable; no result was fabricated.")
             data = {
                 "extracted_entities": {
                     "principals": ["Operator-Alpha", "arn:aws:iam::123456789012:user/DevUser"],
@@ -132,6 +134,7 @@ class TimelineAgent:
         
         data = await chat_json(self.SYSTEM_PROMPT, user_prompt, api_key=api_key)
         if not data:
+            raise RuntimeError("Timeline service is unavailable; no result was fabricated.")
             data = {
                 "events": [
                     {"timestamp": "2026-07-09T14:30:00Z", "actor": "DevUser", "action": "CreateAccessKey", "status": "SUCCESS", "anomaly": "Routine deployment check"},
@@ -163,6 +166,7 @@ class RiskAgent:
         user_prompt = f"Analyze risk factors using timeline:\n{json.dumps(state.timeline_output)}"
         data = await chat_json(self.SYSTEM_PROMPT, user_prompt, api_key=api_key)
         if not data:
+            raise RuntimeError("Risk analysis service is unavailable; no result was fabricated.")
             data = {
                 "threat_score": 88,
                 "risk_classification": "CRITICAL",
@@ -204,6 +208,7 @@ class ReportAgent:
         user_prompt = f"Consolidate following forensic telemetry into final report:\n{json.dumps(context)}"
         data = await chat_json(self.SYSTEM_PROMPT, user_prompt, api_key=api_key)
         if not data:
+            raise RuntimeError("Forensic reporting service is unavailable; no result was fabricated.")
             data = {
                 "executive_summary": "VEKTRA completed a multi-stage forensic audit of the uploaded policy/log evidence. We identified critical privilege escalation risks where DevUser assumed the AdminsRole from external IP 54.210.12.33, immediately modifying permissions to gain administrator control.",
                 "findings": [
@@ -252,6 +257,7 @@ class ThreatIntelAgent:
         
         data = await chat_json(self.SYSTEM_PROMPT, user_prompt, api_key=api_key)
         if not data:
+            raise RuntimeError("Threat-intelligence service is unavailable; no result was fabricated.")
             data = {
                 "threat_enrichments": [
                     {
@@ -293,6 +299,7 @@ class IOCExtractionAgent:
         
         data = await chat_json(self.SYSTEM_PROMPT, user_prompt, api_key=api_key)
         if not data:
+            raise RuntimeError("IOC extraction service is unavailable; no result was fabricated.")
             data = {
                 "iocs": {
                     "ips": ["54.210.12.33"],
@@ -330,6 +337,7 @@ class MITREMappingAgent:
         
         data = await chat_json(self.SYSTEM_PROMPT, user_prompt, api_key=api_key)
         if not data:
+            raise RuntimeError("MITRE mapping service is unavailable; no result was fabricated.")
             data = {
                 "mitre_mappings": [
                     {
@@ -374,6 +382,7 @@ class ContainmentAdvisor:
         
         data = await chat_json(self.SYSTEM_PROMPT, user_prompt, api_key=api_key)
         if not data:
+            raise RuntimeError("Containment service is unavailable; no result was fabricated.")
             data = {
                 "containment_steps": [
                     {
@@ -418,6 +427,7 @@ class RemediationPlanner:
         
         data = await chat_json(self.SYSTEM_PROMPT, user_prompt, api_key=api_key)
         if not data:
+            raise RuntimeError("Remediation service is unavailable; no result was fabricated.")
             data = {
                 "remediations": [
                     {
@@ -451,6 +461,7 @@ class ExecutiveSummaryAgent:
         
         data = await chat_json(self.SYSTEM_PROMPT, user_prompt, api_key=api_key)
         if not data:
+            raise RuntimeError("Executive-summary service is unavailable; no result was fabricated.")
             data = {
                 "briefing_summary": "VEKTRA investigated a high-severity security incident where stolen credentials were used to compromise 'DevUser' and escalate privileges. All access pathways have been successfully contained.",
                 "operational_risks": [
@@ -496,4 +507,3 @@ async def run_forensic_pipeline(evidence: List[Dict[str, str]], api_key: Optiona
     await report.run(state, api_key)
     
     return state
-

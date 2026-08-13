@@ -1,12 +1,21 @@
 import os
-from datetime import datetime, timedelta
+import secrets
+from datetime import datetime, timedelta, timezone
 
 import bcrypt
 import jwt
 
 
-JWT_SECRET = os.getenv("JWT_SECRET", "vektra-secret")
-JWT_EXPIRY_HOURS = 72
+JWT_SECRET = os.getenv("JWT_SECRET", "")
+JWT_ISSUER = "vektra-api"
+JWT_AUDIENCE = "vektra-clients"
+JWT_EXPIRY_HOURS = 12
+
+
+def _jwt_secret() -> str:
+    if len(JWT_SECRET) < 32:
+        raise RuntimeError("JWT_SECRET must be configured with at least 32 characters.")
+    return JWT_SECRET
 
 
 def hash_password(password: str) -> str:
@@ -14,22 +23,39 @@ def hash_password(password: str) -> str:
 
 
 def verify_password(password: str, hashed: str) -> bool:
-    return bcrypt.checkpw(password.encode(), hashed.encode())
+    try:
+        return bcrypt.checkpw(password.encode(), hashed.encode())
+    except (ValueError, TypeError):
+        return False
 
 
 def create_token(user_id: str, email: str, tier: str) -> str:
+    now = datetime.now(timezone.utc)
     payload = {
+        "sub": user_id,
         "user_id": user_id,
         "email": email,
         "tier": tier,
-        "exp": datetime.utcnow() + timedelta(hours=JWT_EXPIRY_HOURS),
+        "iss": JWT_ISSUER,
+        "aud": JWT_AUDIENCE,
+        "iat": now,
+        "nbf": now,
+        "jti": secrets.token_urlsafe(16),
+        "exp": now + timedelta(hours=JWT_EXPIRY_HOURS),
     }
-    return jwt.encode(payload, JWT_SECRET, algorithm="HS256")
+    return jwt.encode(payload, _jwt_secret(), algorithm="HS256")
 
 
 def decode_token(token: str) -> dict | None:
     try:
-        return jwt.decode(token, JWT_SECRET, algorithms=["HS256"])
+        return jwt.decode(
+            token,
+            _jwt_secret(),
+            algorithms=["HS256"],
+            issuer=JWT_ISSUER,
+            audience=JWT_AUDIENCE,
+            options={"require": ["exp", "iat", "nbf", "iss", "aud", "sub", "jti"]},
+        )
     except jwt.ExpiredSignatureError:
         return None
     except jwt.InvalidTokenError:
