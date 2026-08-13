@@ -29,13 +29,14 @@ def verify_password(password: str, hashed: str) -> bool:
         return False
 
 
-def create_token(user_id: str, email: str, tier: str) -> str:
+def create_token(user_id: str, email: str, tier: str, session_version: str) -> str:
     now = datetime.now(timezone.utc)
     payload = {
         "sub": user_id,
         "user_id": user_id,
         "email": email,
         "tier": tier,
+        "sv": session_version,
         "iss": JWT_ISSUER,
         "aud": JWT_AUDIENCE,
         "iat": now,
@@ -54,7 +55,7 @@ def decode_token(token: str) -> dict | None:
             algorithms=["HS256"],
             issuer=JWT_ISSUER,
             audience=JWT_AUDIENCE,
-            options={"require": ["exp", "iat", "nbf", "iss", "aud", "sub", "jti"]},
+            options={"require": ["exp", "iat", "nbf", "iss", "aud", "sub", "jti", "sv"]},
         )
     except jwt.ExpiredSignatureError:
         return None
@@ -64,9 +65,7 @@ def decode_token(token: str) -> dict | None:
 
 def get_current_user(request) -> dict | None:
     auth = request.headers.get("Authorization", "")
-    if not auth.startswith("Bearer "):
-        return None
-    token = auth.split(" ", 1)[1].strip()
+    token = auth.split(" ", 1)[1].strip() if auth.startswith("Bearer ") else request.cookies.get("vektra_session", "")
     if not token:
         return None
     return decode_token(token)

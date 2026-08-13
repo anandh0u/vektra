@@ -11,9 +11,6 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.anndus.vektra",
       "infoPlist": {
-        "NSCameraUsageDescription": "Vektra uses the camera to capture evidence for forensic investigations.",
-        "NSPhotoLibraryUsageDescription": "Vektra accesses your photo library to attach evidence to investigations.",
-        "NSMicrophoneUsageDescription": "Vektra uses the microphone for voice-based forensic queries.",
         "ITSAppUsesNonExemptEncryption": false
       }
     },

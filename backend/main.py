@@ -8,13 +8,14 @@ import types
 import uuid
 import time
 from collections import defaultdict, deque
+from contextlib import asynccontextmanager
 from datetime import date, datetime
 from pathlib import Path
 from typing import Dict, List, Optional
 
 import httpx
 from dotenv import load_dotenv
-from fastapi import FastAPI, Header, HTTPException, Request, BackgroundTasks
+from fastapi import FastAPI, Header, HTTPException, Request, Response, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse, JSONResponse
 from pydantic import BaseModel, Field
@@ -32,7 +33,7 @@ def _ensure_backend_package_importable():
 
 _ensure_backend_package_importable()
 
-from backend.auth import create_token, get_current_user, hash_password, verify_password
+from backend.auth import JWT_EXPIRY_HOURS, create_token, get_current_user, hash_password, verify_password
 from backend.agents.orchestrator import run_agents
 from backend.agents.sarvam_client import SARVAM_MODEL, SARVAM_URL
 from backend.graph.analyzer import build_and_analyze
@@ -43,8 +44,6 @@ from backend.parser.k8s_parser import parse_k8s_rbac
 from backend import workflow_steps
 from backend.base44_client import (
     save_scan_history,
-    save_report,
-    get_saved_report
 )
 from backend import stellar_client
 from backend.credits import check_and_deduct_credits, CREDIT_COSTS, DAILY_CREDITS
@@ -56,7 +55,17 @@ load_dotenv()
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("vektra.main")
 
-app = FastAPI(title="VEKTRA API", version="1.0.0", servers=[{"url": "/"}])
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
+    schedule_neo4j_verify()
+    workflow_steps.neo4j = neo4j_client
+    if await ensure_neo4j_ready(timeout=6.0):
+        await neo4j_client.purge_stored_wallet_secrets()
+    yield
+    neo4j_client.close()
+
+
+app = FastAPI(title="VEKTRA API", version="1.0.0", servers=[{"url": "/"}], lifespan=lifespan)
 neo4j_client = Neo4jClient()
 neo4j_verify_task: Optional[asyncio.Task] = None
 
@@ -132,6 +141,7 @@ class SecurityMiddleware:
                     (b"x-frame-options", b"DENY"),
                     (b"referrer-policy", b"strict-origin-when-cross-origin"),
                     (b"permissions-policy", b"camera=(), microphone=(), geolocation=()"),
+                    (b"strict-transport-security", b"max-age=63072000; includeSubDomains; preload"),
                 ])
                 message["headers"] = response_headers
             await send(message)
@@ -146,16 +156,6 @@ def schedule_neo4j_verify() -> Optional[asyncio.Task]:
         return neo4j_verify_task
     neo4j_verify_task = asyncio.create_task(neo4j_client.verify_connection_async())
     return neo4j_verify_task
-
-@app.on_event("startup")
-async def startup_event():
-    # Warm Neo4j in the background so serverless startup stays responsive.
-    schedule_neo4j_verify()
-    # Inject shared neo4j client into workflow_steps so all steps use one connection
-    workflow_steps.neo4j = neo4j_client
-    if await ensure_neo4j_ready(timeout=6.0):
-        await neo4j_client.purge_stored_wallet_secrets()
-
 
 async def ensure_neo4j_ready(timeout: float = 6.0) -> bool:
     if neo4j_client.connected:
@@ -200,6 +200,12 @@ class SimulationRequest(BaseModel):
     format: str
 
 
+class ReportSaveRequest(BaseModel):
+    session_id: str = Field(min_length=1, max_length=100)
+    report_data: Dict = Field(default_factory=dict)
+    title: Optional[str] = Field(default=None, max_length=200)
+
+
 class RegisterRequest(BaseModel):
     name: str = Field(min_length=1, max_length=100)
     email: str = Field(min_length=3, max_length=254)
@@ -229,40 +235,40 @@ class ForensicInvestigateRequest(BaseModel):
 
 
 class CaseCreateRequest(BaseModel):
-    name: str
-    description: Optional[str] = ""
-    priority: Optional[str] = "Medium"
-    status: Optional[str] = "Open"
-    due_date: Optional[str] = ""
+    name: str = Field(min_length=1, max_length=200)
+    description: Optional[str] = Field(default="", max_length=10_000)
+    priority: Optional[str] = Field(default="Medium", max_length=20)
+    status: Optional[str] = Field(default="Open", max_length=30)
+    due_date: Optional[str] = Field(default="", max_length=50)
     tags: Optional[List[str]] = Field(default_factory=list, max_length=20)
     team_members: Optional[List[str]] = Field(default_factory=list, max_length=20)
 
 
 class CaseUpdateRequest(BaseModel):
-    name: Optional[str] = None
-    description: Optional[str] = None
-    priority: Optional[str] = None
-    status: Optional[str] = None
-    due_date: Optional[str] = None
-    tags: Optional[List[str]] = None
-    team_members: Optional[List[str]] = None
+    name: Optional[str] = Field(default=None, min_length=1, max_length=200)
+    description: Optional[str] = Field(default=None, max_length=10_000)
+    priority: Optional[str] = Field(default=None, max_length=20)
+    status: Optional[str] = Field(default=None, max_length=30)
+    due_date: Optional[str] = Field(default=None, max_length=50)
+    tags: Optional[List[str]] = Field(default=None, max_length=20)
+    team_members: Optional[List[str]] = Field(default=None, max_length=20)
 
 
 class CommentCreateRequest(BaseModel):
-    text: str
+    text: str = Field(min_length=1, max_length=10_000)
 
 
 class ActivityCreateRequest(BaseModel):
-    action: str
-    details: str
+    action: str = Field(min_length=1, max_length=100)
+    details: str = Field(min_length=1, max_length=10_000)
 
 
 class EvidenceCreateRequest(BaseModel):
     filename: str = Field(min_length=1, max_length=255)
     content: str = Field(min_length=1, max_length=500_000)
     content_type: Optional[str] = Field(default="text/plain", max_length=100)
-    device: Optional[str] = "Unknown"
-    source: Optional[str] = "Upload"
+    device: Optional[str] = Field(default="Unknown", max_length=200)
+    source: Optional[str] = Field(default="Upload", max_length=200)
 
 
 
@@ -275,7 +281,7 @@ class AssistantMessageRequest(BaseModel):
 
 
 class ProfileUpdateRequest(BaseModel):
-    name: str
+    name: str = Field(min_length=1, max_length=100)
 
 
 class ChangePasswordRequest(BaseModel):
@@ -284,15 +290,15 @@ class ChangePasswordRequest(BaseModel):
 
 
 class DeleteAccountRequest(BaseModel):
-    confirm: str
+    confirm: str = Field(min_length=1, max_length=20)
 
 
 class NotificationsRequest(BaseModel):
-    preferences: dict
+    preferences: dict = Field(default_factory=dict)
 
 
 class UpgradeRequest(BaseModel):
-    plan: str
+    plan: str = Field(min_length=1, max_length=20)
 
 
 class RerunRequest(BaseModel):
@@ -327,7 +333,8 @@ def public_user(user: dict) -> dict:
 
 async def resolve_request_user(request: Request, required: bool = False) -> dict | None:
     auth_header = request.headers.get("Authorization", "")
-    if not auth_header:
+    has_cookie = bool(request.cookies.get("vektra_session"))
+    if not auth_header and not has_cookie:
         if required:
             raise HTTPException(status_code=401, detail="Authentication required.")
         return None
@@ -336,24 +343,40 @@ async def resolve_request_user(request: Request, required: bool = False) -> dict
     if not claims:
         raise HTTPException(status_code=401, detail="Session expired, please sign in.")
 
-    await ensure_neo4j_ready()
+    if not await ensure_neo4j_ready(timeout=6.0):
+        raise HTTPException(status_code=503, detail="Account storage is temporarily unavailable.")
     user = await neo4j_client.get_user_by_id(claims["user_id"])
     if user:
+        if not secrets.compare_digest(str(claims.get("sv", "")), str(user.get("jwt_secret", ""))):
+            raise HTTPException(status_code=401, detail="Session expired, please sign in.")
         return user
     if required:
         raise HTTPException(status_code=401, detail="User account not found.")
-    return {
-        "id": claims["user_id"],
-        "email": claims.get("email"),
-        "name": claims.get("email", "VEKTRA User").split("@")[0],
-        "tier": claims.get("tier", "free"),
-    }
+    return None
+
+
+def set_session_cookie(response: Response, request: Request, token: str) -> None:
+    forwarded_proto = request.headers.get("x-forwarded-proto", "").split(",", 1)[0].strip()
+    secure = request.url.scheme == "https" or forwarded_proto == "https"
+    response.set_cookie(
+        "vektra_session",
+        token,
+        max_age=JWT_EXPIRY_HOURS * 3600,
+        httponly=True,
+        secure=secure,
+        samesite="lax",
+        path="/",
+    )
 
 
 @app.get("/api/health")
 async def health_check():
     neo4j_ok = neo4j_client.connected or await ensure_neo4j_ready(timeout=6.0)
-    base44_ok = bool(os.getenv("BASE44_API_KEY") and os.getenv("BASE44_APP_ID"))
+    base44_ok = bool(
+        os.getenv("BASE44_API_KEY")
+        and os.getenv("BASE44_APP_ID")
+        and os.getenv("BASE44_DATA_EXPORT_ENABLED", "false").lower() == "true"
+    )
     return {
         "status": "ok",
         "neo4j": neo4j_ok,
@@ -370,7 +393,7 @@ anonymous_scans = {}
 
 
 @app.post("/api/auth/register")
-async def register(body: RegisterRequest, background_tasks: BackgroundTasks):
+async def register(body: RegisterRequest, background_tasks: BackgroundTasks, response: Response, http_request: Request):
     name = body.name.strip()
     email = body.email.strip().lower()
     password = body.password
@@ -382,7 +405,8 @@ async def register(body: RegisterRequest, background_tasks: BackgroundTasks):
     if len(password) < 12:
         raise HTTPException(status_code=400, detail="Password must be at least 12 characters.")
 
-    await ensure_neo4j_ready()
+    if not await ensure_neo4j_ready(timeout=6.0):
+        raise HTTPException(status_code=503, detail="Account storage is temporarily unavailable.")
     existing = await neo4j_client.get_user_by_email(email)
     if existing:
         raise HTTPException(status_code=400, detail="Email is already registered.")
@@ -427,14 +451,16 @@ async def register(body: RegisterRequest, background_tasks: BackgroundTasks):
 
     background_tasks.add_task(setup_stellar_bg, public_key, secret_key)
 
-    token = create_token(created["id"], created["email"], created.get("tier", "free"))
-    return {"user": public_user(created), "token": token}
+    token = create_token(created["id"], created["email"], created.get("tier", "free"), created["jwt_secret"])
+    set_session_cookie(response, http_request, token)
+    return {"user": public_user(created)}
 
 
 @app.post("/api/auth/login")
-async def login(body: LoginRequest, background_tasks: BackgroundTasks):
+async def login(body: LoginRequest, background_tasks: BackgroundTasks, response: Response, http_request: Request):
     email = body.email.strip().lower()
-    await ensure_neo4j_ready()
+    if not await ensure_neo4j_ready(timeout=6.0):
+        raise HTTPException(status_code=503, detail="Account storage is temporarily unavailable.")
     user = await neo4j_client.get_user_by_email(email)
     if not user or not verify_password(body.password, user.get("password_hash", "")):
         raise HTTPException(status_code=401, detail="Invalid credentials.")
@@ -454,8 +480,9 @@ async def login(body: LoginRequest, background_tasks: BackgroundTasks):
     if user.get("stellar_public_key") and not user["stellar_public_key"].startswith("G"):
         background_tasks.add_task(sync_balance_bg, user["id"], user["stellar_public_key"])
 
-    token = create_token(user["id"], user["email"], user.get("tier", "free"))
-    return {"user": public_user(user), "token": token}
+    token = create_token(user["id"], user["email"], user.get("tier", "free"), user["jwt_secret"])
+    set_session_cookie(response, http_request, token)
+    return {"user": public_user(user)}
 
 
 @app.get("/api/auth/me")
@@ -481,7 +508,8 @@ async def me(http_request: Request, background_tasks: BackgroundTasks):
 
 
 @app.post("/api/auth/logout")
-async def logout():
+async def logout(response: Response):
+    response.delete_cookie("vektra_session", path="/", httponly=True, samesite="lax")
     return {"status": "ok"}
 
 
@@ -910,6 +938,8 @@ async def internal_finalize(body: dict):
 @app.post("/api/workflow/analyze")
 async def trigger_workflow(body: dict, background_tasks: BackgroundTasks, http_request: Request):
     user = await resolve_request_user(http_request, required=True)
+    if not await ensure_neo4j_ready(timeout=6.0):
+        raise HTTPException(status_code=503, detail="Workflow storage is temporarily unavailable. Use direct analysis or retry shortly.")
     policy_text = body.get("policy_text", "")
     if not isinstance(policy_text, str) or not 2 <= len(policy_text) <= 500_000:
         raise HTTPException(status_code=422, detail="Policy text must be between 2 and 500000 characters.")
@@ -1026,12 +1056,16 @@ async def workflow_status(session_id: str, http_request: Request):
 
 
 @app.post("/api/report/save")
-async def save_report_endpoint(body: dict, http_request: Request):
+async def save_report_endpoint(body: ReportSaveRequest, http_request: Request):
     user = await resolve_request_user(http_request, required=True)
-    session_id = body["session_id"]
-    report_data = {**body["report_data"], "owner_id": user["id"]}
-    title = body.get("title", f"Scan {session_id[:8]}")
-    await save_report(session_id, report_data, title)
+    session_id = body.session_id
+    if not await neo4j_client.session_belongs_to_user(session_id, user["id"]):
+        raise HTTPException(status_code=404, detail="Analysis session not found.")
+    report_data = {**body.report_data, "owner_id": user["id"]}
+    title = body.title or f"Scan {session_id[:8]}"
+    saved = await neo4j_client.save_user_report(session_id, user["id"], title, report_data)
+    if not saved:
+        raise HTTPException(status_code=503, detail="Report storage is temporarily unavailable.")
     return {"status": "saved"}
 
 
@@ -1045,12 +1079,9 @@ async def get_history(http_request: Request):
 @app.get("/api/report/{session_id}")
 async def get_report(session_id: str, http_request: Request):
     user = await resolve_request_user(http_request, required=True)
-    report = await get_saved_report(session_id)
+    report = await neo4j_client.get_user_report(session_id, user["id"])
     if not report:
         return JSONResponse(status_code=404, content={"error": "Report not found"})
-    report_payload = report.get("report_json", {}) if isinstance(report, dict) else {}
-    if report_payload.get("owner_id") != user["id"]:
-        raise HTTPException(status_code=404, detail="Report not found.")
     return report
 
 
@@ -1242,7 +1273,7 @@ async def update_profile(body: ProfileUpdateRequest, http_request: Request):
 
 
 @app.post("/api/auth/change-password")
-async def change_password(body: ChangePasswordRequest, http_request: Request):
+async def change_password(body: ChangePasswordRequest, http_request: Request, response: Response):
     user = await resolve_request_user(http_request, required=True)
     if not verify_password(body.current_password, user.get("password_hash", "")):
         raise HTTPException(status_code=401, detail="Incorrect current password.")
@@ -1250,7 +1281,10 @@ async def change_password(body: ChangePasswordRequest, http_request: Request):
         raise HTTPException(status_code=400, detail="New password must be at least 12 characters.")
     
     password_hash = hash_password(body.new_password)
-    await neo4j_client.update_user_password(user["id"], password_hash)
+    new_session_version = secrets.token_urlsafe(32)
+    await neo4j_client.update_user_password(user["id"], password_hash, new_session_version)
+    token = create_token(user["id"], user["email"], user.get("tier", "free"), new_session_version)
+    set_session_cookie(response, http_request, token)
     return {"status": "ok"}
 
 
@@ -1414,7 +1448,7 @@ async def global_search_endpoint(q: str, http_request: Request):
     cases = await neo4j_client.list_cases(owner_email=user["email"])
     
     # Simple fuzzy search filter on cases
-    query = q.lower().strip()
+    query = q[:500].lower().strip()
     matching_cases = [
         c for c in cases
         if query in c.get("name", "").lower() or query in c.get("description", "").lower()
@@ -1422,7 +1456,7 @@ async def global_search_endpoint(q: str, http_request: Request):
     return {
         "cases": matching_cases,
         "artifacts": [],
-        "suggestions": ["Escalation path discovered", "AdminsRole Wildcards"]
+        "suggestions": []
     }
 
 @app.get("/api/analytics/dashboard")

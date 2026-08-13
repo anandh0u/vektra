@@ -19,6 +19,8 @@ services:
         sync: false
       - key: BASE44_APP_ID
         sync: false
+      - key: BASE44_DATA_EXPORT_ENABLED
+        value: "false"
       - key: JWT_SECRET
         sync: false
       - key: INTERNAL_API_KEY

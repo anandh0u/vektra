@@ -418,6 +418,55 @@ class Neo4jClient:
     async def session_belongs_to_user(self, session_id: str, user_id: str) -> bool:
         if not self.driver:
             return False
+
+    async def save_user_report(self, session_id: str, user_id: str, title: str, report_data: dict) -> bool:
+        if not self.driver or not self.connected:
+            return False
+        try:
+            with self.driver.session() as session:
+                record = session.run(
+                    """
+                    MATCH (u:User {id: $user_id})-[:HAS_SESSION]->(s:ScanSession {session_id: $session_id})
+                    MERGE (s)-[:HAS_REPORT]->(r:SavedReport {session_id: $session_id})
+                    SET r.owner_id = $user_id,
+                        r.title = $title,
+                        r.report_json = $report_json,
+                        r.updated_at = $updated_at
+                    RETURN r.session_id AS session_id
+                    """,
+                    session_id=session_id,
+                    user_id=user_id,
+                    title=title,
+                    report_json=json.dumps(report_data),
+                    updated_at=datetime.now().isoformat(),
+                ).single()
+                return bool(record)
+        except Exception as exc:
+            logger.error("Neo4j report save failed: %s", exc)
+            return False
+
+    async def get_user_report(self, session_id: str, user_id: str) -> dict | None:
+        if not self.driver or not self.connected:
+            return None
+        try:
+            with self.driver.session() as session:
+                record = session.run(
+                    """
+                    MATCH (u:User {id: $user_id})-[:HAS_SESSION]->(:ScanSession {session_id: $session_id})
+                          -[:HAS_REPORT]->(r:SavedReport {session_id: $session_id, owner_id: $user_id})
+                    RETURN r
+                    """,
+                    session_id=session_id,
+                    user_id=user_id,
+                ).single()
+                if not record:
+                    return None
+                report = dict(record["r"])
+                report["report_json"] = json.loads(report.get("report_json") or "{}")
+                return report
+        except Exception as exc:
+            logger.error("Neo4j report retrieval failed: %s", exc)
+            return None
         try:
             with self.driver.session() as session:
                 record = session.run(
@@ -486,18 +535,24 @@ class Neo4jClient:
                 name=name,
             )
 
-    async def update_user_password(self, user_id: str, password_hash: str):
+    async def update_user_password(self, user_id: str, password_hash: str, jwt_secret: str):
         if not self.driver:
             return
         with self.driver.session() as session:
             session.run(
                 """
                 MATCH (u:User {id: $id})
-                SET u.password_hash = $password_hash
+                SET u.password_hash = $password_hash,
+                    u.jwt_secret = $jwt_secret
                 """,
                 id=user_id,
                 password_hash=password_hash,
+                jwt_secret=jwt_secret,
             )
+        cached = self._in_memory_users.get(user_id)
+        if cached:
+            cached["password_hash"] = password_hash
+            cached["jwt_secret"] = jwt_secret
 
     async def delete_user(self, user_id: str):
         if not self.driver:
@@ -759,10 +814,11 @@ class Neo4jClient:
                     result = session.run(
                         """
                         MATCH (c:Case)
-                        WHERE c.owner_email = $owner_email OR c.team_members CONTAINS $owner_email
+                        WHERE c.owner_email = $owner_email OR c.team_members CONTAINS $member_token
                         RETURN c ORDER BY c.created_at DESC
                         """,
-                        owner_email=owner_email
+                        owner_email=owner_email,
+                        member_token=json.dumps(owner_email),
                     )
                 else:
                     result = session.run(

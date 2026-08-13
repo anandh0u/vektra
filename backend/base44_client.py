@@ -13,7 +13,8 @@ def get_base44_config():
         "x-api-key": api_key or "",
         "Content-Type": "application/json"
     }
-    return url, headers, bool(app_id and api_key)
+    export_enabled = os.getenv("BASE44_DATA_EXPORT_ENABLED", "false").lower() == "true"
+    return url, headers, bool(app_id and api_key and export_enabled)
 
 async def save_scan_history(
   session_id: str,
@@ -27,7 +28,7 @@ async def save_scan_history(
     logger.warning("Base44: Not configured (missing app ID or API key). Skipping scan history save.")
     return
   try:
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(timeout=15) as client:
       res = await client.post(
         f"{url}/entities/ScanHistory",
         headers=headers,
@@ -62,7 +63,7 @@ async def save_report(
     logger.warning("Base44: Not configured. Skipping saved report.")
     return
   try:
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(timeout=15) as client:
       res = await client.post(
         f"{url}/entities/SavedReport",
         headers=headers,
@@ -85,7 +86,7 @@ async def get_scan_history(limit: int = 10):
     logger.warning("Base44: Not configured. Cannot get scan history.")
     return []
   try:
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(timeout=15) as client:
       res = await client.get(
         f"{url}/entities/ScanHistory",
         headers=headers,
@@ -109,7 +110,7 @@ async def get_saved_report(session_id: str):
     logger.warning("Base44: Not configured. Cannot fetch saved report.")
     return None
   try:
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(timeout=15) as client:
       res = await client.get(
         f"{url}/entities/SavedReport",
         headers=headers,

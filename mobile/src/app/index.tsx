@@ -98,7 +98,7 @@ export default function HomeScreen() {
           allowsFullscreenVideo={true}
           pullToRefreshEnabled={true}
           sharedCookiesEnabled={true}
-          thirdPartyCookiesEnabled={true}
+          thirdPartyCookiesEnabled={false}
           cacheEnabled={true}
           originWhitelist={['https://*']}
           onShouldStartLoadWithRequest={(request) => {

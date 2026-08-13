@@ -9,7 +9,6 @@ import {
   MessageSquare, 
   Play, 
   ExternalLink,
-  Lock,
   ArrowRight,
   TrendingUp,
   FileText
@@ -17,7 +16,7 @@ import {
 import { useVektraStore, getAuthHeaders } from "../store/vektraStore";
 
 export default function Investigate() {
-  const { currentUser, activeCaseId } = useVektraStore();
+  const { currentUser, activeCaseId, setActiveCaseId } = useVektraStore();
   const [files, setFiles] = useState([]);
   const [analyzing, setAnalyzing] = useState(false);
   const [activeStep, setActiveStep] = useState(null);
@@ -27,8 +26,6 @@ export default function Investigate() {
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState([]);
   const [searching, setSearching] = useState(false);
-  const [anchorTx, setAnchorTx] = useState("");
-  const [anchoring, setAnchoring] = useState(false);
 
   // Cases List State
   const [cases, setCases] = useState([]);
@@ -42,19 +39,14 @@ export default function Investigate() {
         setCases(data || []);
         if (data.length > 0 && !selectedCaseId) {
           setSelectedCaseId(data[0].id);
+          setActiveCaseId(data[0].id);
         }
       })
       .catch(console.error);
   }, []);
 
-  // Collaboration Mock States
-  const [notes, setNotes] = useState(
-    "Active Incident Investigation: DevUser privilege escalation trace.\n- Ensure AWS Access keys are rotated.\n- Whitelist specific office IP subnet blocks."
-  );
-  const [comments, setComments] = useState([
-    { id: 1, author: "Analyst Beta", text: "Notice the source IP matches a known VPN node range.", time: "10m ago" },
-    { id: 2, author: "Operator Alpha", text: "I have triggered a temporary revocation of permissions boundary.", time: "5m ago" }
-  ]);
+  const [notes, setNotes] = useState("");
+  const [comments, setComments] = useState([]);
   const [newComment, setNewComment] = useState("");
 
   const handleFileChange = (e) => {
@@ -163,7 +155,6 @@ export default function Investigate() {
         method: "POST",
         headers: { 
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${localStorage.getItem("vektra_token") || ""}`
         },
         body: JSON.stringify({ query: searchQuery }),
       });
@@ -173,38 +164,6 @@ export default function Investigate() {
       console.error(err);
     } finally {
       setSearching(false);
-    }
-  };
-
-  const handleAnchorStellar = async () => {
-    if (!results) return;
-    setAnchoring(true);
-    const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8000";
-
-    try {
-      // Anchoring will anchor audit hash on-chain (costs 2 tokens)
-      const res = await fetch(`${API_BASE}/report/save`, {
-        method: "POST",
-        headers: { 
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${localStorage.getItem("vektra_token") || ""}`
-        },
-        body: JSON.stringify({
-          session_id: results.session_id,
-          policy_text: JSON.stringify(files),
-          verdict: JSON.stringify(results.report)
-        }),
-      });
-      const data = await res.json();
-      if (data.tx_hash) {
-        setAnchorTx(data.tx_hash);
-      } else {
-        setAnchorTx("mock_stellar_hash_9d3a772f10b");
-      }
-    } catch (err) {
-      setAnchorTx("mock_stellar_hash_9d3a772f10b");
-    } finally {
-      setAnchoring(false);
     }
   };
 
@@ -236,7 +195,7 @@ export default function Investigate() {
               <span className="text-xs text-muted font-bold uppercase">Case context:</span>
               <select
                 value={selectedCaseId}
-                onChange={(e) => setSelectedCaseId(e.target.value)}
+                onChange={(e) => { setSelectedCaseId(e.target.value); setActiveCaseId(e.target.value); }}
                 className="bg-transparent border-0 text-xs text-slate-200 focus:outline-none cursor-pointer"
               >
                 <option value="" className="bg-[#0b0e1e]">-- Unassigned --</option>
@@ -430,32 +389,7 @@ export default function Investigate() {
                   </span>
                   <h2 className="text-xl font-bold mt-1">Incident Risk Audit & Forensic Summary</h2>
                 </div>
-                <div className="flex gap-2">
-                  <button
-                    onClick={handleAnchorStellar}
-                    disabled={anchoring}
-                    className="px-3 py-1.5 bg-gradient-to-r from-accent to-primary text-white text-xs font-bold rounded-lg flex items-center gap-1.5 hover:opacity-90 disabled:opacity-50 transition-all shadow-md"
-                  >
-                    {anchoring ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Lock className="h-3.5 w-3.5" />}
-                    Anchor Trail to Stellar
-                  </button>
-                </div>
               </div>
-
-              {anchorTx && (
-                <div className="bg-green-500/10 border border-green-500/20 text-green-500 p-3 rounded-lg text-xs space-y-1">
-                  <p className="font-bold flex items-center gap-2">
-                    <CheckCircle className="h-4 w-4" />
-                    Forensic Proof Anchored to Stellar Testnet Ledger!
-                  </p>
-                  <p className="font-mono break-all flex items-center gap-2 opacity-90 mt-1">
-                    TX Hash: {anchorTx}
-                    <a href={`https://stellar.expert/explorer/testnet/tx/${anchorTx}`} target="_blank" rel="noreferrer" className="inline-flex items-center text-primary hover:underline">
-                      <ExternalLink className="h-3.5 w-3.5 ml-1" />
-                    </a>
-                  </p>
-                </div>
-              )}
 
               {/* Executive Summary */}
               <div className="space-y-2">
@@ -596,7 +530,7 @@ export default function Investigate() {
           <div className="glass-card p-6 border border-border/40 rounded-xl space-y-4">
             <h2 className="text-lg font-bold flex items-center gap-2">
               <Users className="h-5 w-5 text-primary" />
-              Live Presence (3)
+              Current Investigator
             </h2>
             <div className="flex items-center gap-2">
               <div className="relative">
@@ -611,40 +545,15 @@ export default function Investigate() {
               </div>
             </div>
 
-            <div className="flex items-center gap-2 opacity-85">
-              <div className="relative">
-                <div className="w-8 h-8 rounded-full bg-accent/20 flex items-center justify-center font-bold text-xs border border-accent text-accent">
-                  AB
-                </div>
-                <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 rounded-full border-2 border-card" />
-              </div>
-              <div>
-                <p className="text-xs font-bold">Analyst Beta</p>
-                <p className="text-[10px] text-green-500">Editing Incident Notes</p>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2 opacity-70">
-              <div className="relative">
-                <div className="w-8 h-8 rounded-full bg-muted/40 flex items-center justify-center font-bold text-xs border border-border/60 text-text">
-                  OA
-                </div>
-                <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-yellow-500 rounded-full border-2 border-card" />
-              </div>
-              <div>
-                <p className="text-xs font-bold">Operator Alpha</p>
-                <p className="text-[10px] text-yellow-500">Away (5m)</p>
-              </div>
-            </div>
           </div>
 
           {/* Shared Incident Notes */}
           <div className="glass-card p-6 border border-border/40 rounded-xl space-y-4">
             <h2 className="text-lg font-bold flex items-center gap-2">
               <FileText className="h-5 w-5 text-accent" />
-              Shared Notes Workspace
+              Local Notes Workspace
             </h2>
-            <p className="text-[10px] text-muted">Joint notepad synchronized across all live session operators.</p>
+            <p className="text-[10px] text-muted">Local draft only. This text is not synchronized or persisted.</p>
             <textarea
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
@@ -657,7 +566,7 @@ export default function Investigate() {
           <div className="glass-card p-6 border border-border/40 rounded-xl space-y-4">
             <h2 className="text-lg font-bold flex items-center gap-2">
               <MessageSquare className="h-5 w-5 text-primary" />
-              Incident Activity Log
+              Local Discussion Draft
             </h2>
             
             <div className="space-y-3 max-h-60 overflow-y-auto pr-1">

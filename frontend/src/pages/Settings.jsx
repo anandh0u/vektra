@@ -109,7 +109,6 @@ export default function SettingsPage() {
           method: "PATCH",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${localStorage.getItem("vektra_token")}`,
           },
           body: JSON.stringify({ name: profileName }),
         });

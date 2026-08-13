@@ -104,7 +104,7 @@ class EvidenceAgent:
                     "actions": ["iam:CreatePolicyVersion", "sts:AssumeRole"],
                     "resources": ["*"],
                     "ip_addresses": ["192.168.1.100", "54.210.12.33"],
-                    "credentials": ["AKIAIOSFODNN7EXAMPLE"]
+                    "credentials": []
                 },
                 "missing_evidence": ["CloudTrail API event logs surrounding role assumptions", "MFA registration history"],
                 "confidence_score": 85.0
@@ -305,7 +305,7 @@ class IOCExtractionAgent:
                     "ips": ["54.210.12.33"],
                     "domains": ["malicious-traffic-source.net"],
                     "hashes": ["da39a3ee5e6b4b0d3255bfef95601890afd80709"],
-                    "compromised_keys": ["AKIAIOSFODNN7EXAMPLE"],
+                    "compromised_keys": [],
                     "anomalous_activities": ["AssumeRole triggered from unapproved external cloud host IP."]
                 }
             }
@@ -389,7 +389,7 @@ class ContainmentAdvisor:
                         "action": "Revoke IAM User Keys",
                         "target": "DevUser credentials",
                         "priority": "Critical",
-                        "instructions": "Deactivate AWS IAM credentials associated with Access Key AKIAIOSFODNN7EXAMPLE immediately."
+                        "instructions": "Deactivate only credentials identified in the supplied evidence."
                     },
                     {
                         "action": "Apply Deny Boundary Policy",

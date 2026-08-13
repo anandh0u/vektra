@@ -15,13 +15,11 @@ const readStoredUser = () => {
   }
 };
 
-const saveAuthSession = ({ user, token }) => {
-  localStorage.setItem("vektra_token", token);
+const saveAuthSession = ({ user }) => {
   localStorage.setItem("vektra_user", JSON.stringify(user));
 };
 
 const clearAuthSession = () => {
-  localStorage.removeItem("vektra_token");
   localStorage.removeItem("vektra_user");
 };
 
@@ -35,8 +33,7 @@ const parseApiError = async (response, fallback) => {
 };
 
 export const getAuthHeaders = () => {
-  const token = localStorage.getItem("vektra_token");
-  return token ? { Authorization: `Bearer ${token}` } : {};
+  return {};
 };
 
 // Standard sample policies
@@ -185,7 +182,7 @@ const generateUUID = () => {
 export const useVektraStore = create((set, get) => ({
   // User Authentication
   currentUser: readStoredUser(),
-  authToken: localStorage.getItem("vektra_token") || "",
+  authToken: readStoredUser() ? "cookie" : "",
   authNotice: "",
   setAuthNotice: (message) => set({ authNotice: message }),
   activeCaseId: localStorage.getItem("vektra_active_case_id") || "",
@@ -215,7 +212,7 @@ export const useVektraStore = create((set, get) => ({
       }
       const data = await response.json();
       saveAuthSession(data);
-      set({ currentUser: data.user, authToken: data.token, authNotice: "" });
+      set({ currentUser: data.user, authToken: "cookie", authNotice: "" });
       return data;
     } catch (error) {
       clearTimeout(timeoutId);
@@ -243,7 +240,7 @@ export const useVektraStore = create((set, get) => ({
       }
       const data = await response.json();
       saveAuthSession(data);
-      set({ currentUser: data.user, authToken: data.token, authNotice: "" });
+      set({ currentUser: data.user, authToken: "cookie", authNotice: "" });
       return data;
     } catch (error) {
       clearTimeout(timeoutId);
@@ -254,12 +251,6 @@ export const useVektraStore = create((set, get) => ({
     }
   },
   refreshCurrentUser: async () => {
-    const token = localStorage.getItem("vektra_token");
-    if (!token) {
-      clearAuthSession();
-      set({ currentUser: null, authToken: "" });
-      return null;
-    }
     const response = await fetch(`${API_BASE}/api/auth/me`, {
       headers: getAuthHeaders(),
     });
@@ -270,10 +261,11 @@ export const useVektraStore = create((set, get) => ({
     }
     const data = await response.json();
     localStorage.setItem("vektra_user", JSON.stringify(data.user));
-    set({ currentUser: data.user, authToken: token, authNotice: "" });
+    set({ currentUser: data.user, authToken: "cookie", authNotice: "" });
     return data.user;
   },
-  signOut: () => {
+  signOut: async () => {
+    try { await fetch(`${API_BASE}/api/auth/logout`, { method: "POST" }); } catch { /* clear locally */ }
     clearAuthSession();
     set({ currentUser: null, authToken: "", authNotice: "" });
   },
@@ -415,7 +407,6 @@ export const useVektraStore = create((set, get) => ({
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
         },
         body: JSON.stringify({
           policy_text: policyText,
@@ -427,6 +418,9 @@ export const useVektraStore = create((set, get) => ({
 
       if (!response.ok) {
         const message = await parseApiError(response, "Server error occurred during analysis.");
+        if (response.status === 503) {
+          return get().runDirectAnalysis();
+        }
         if (response.status === 401) {
           clearAuthSession();
           set({ currentUser: null, authToken: "", authNotice: "Session expired, please sign in." });
@@ -456,7 +450,7 @@ export const useVektraStore = create((set, get) => ({
 
   // Run Direct Analysis (Fallback for non-workflow mode)
   runDirectAnalysis: async ({ anonymous = false } = {}) => {
-    const { policyText, format, sessionId, currentUser, authToken } = get();
+    const { policyText, format, sessionId, currentUser } = get();
     const expectedTier = currentUser?.tier || "free";
     const expectsAgents = ["pro", "team"].includes(expectedTier);
 
@@ -477,9 +471,9 @@ export const useVektraStore = create((set, get) => ({
     try {
       const response = await fetch(`${API_BASE}/api/analyze`, {
         method: "POST",
+        credentials: anonymous ? "omit" : "include",
         headers: {
           "Content-Type": "application/json",
-          ...(!anonymous && authToken ? { Authorization: `Bearer ${authToken}` } : {}),
         },
         body: JSON.stringify({
           policy_text: policyText,
@@ -699,7 +693,6 @@ export const useVektraStore = create((set, get) => ({
 
   // Account Management & Wallet Upgrades
   rerunAnalysis: async (session_id, policy_text, format_val) => {
-    const { authToken } = get();
     set({
       isAnalyzing: true,
       selectedNodeId: null,
@@ -719,7 +712,6 @@ export const useVektraStore = create((set, get) => ({
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
         },
         body: JSON.stringify({
           session_id: session_id,
