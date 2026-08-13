@@ -388,10 +388,10 @@ export const useVektraStore = create((set, get) => ({
   },
 
   // Run Analysis Pipeline (Workflow Mode)
-  runAnalysis: async () => {
+  runAnalysis: async ({ forceDirect = false } = {}) => {
     const { policyText, format, sessionId, currentUser, authToken } = get();
-    if (!authToken) {
-      return get().runDirectAnalysis();
+    if (!authToken || forceDirect) {
+      return get().runDirectAnalysis({ anonymous: forceDirect });
     }
     const expectedTier = currentUser?.tier || "free";
     const expectsAgents = ["pro", "team"].includes(expectedTier);
@@ -455,7 +455,7 @@ export const useVektraStore = create((set, get) => ({
   },
 
   // Run Direct Analysis (Fallback for non-workflow mode)
-  runDirectAnalysis: async () => {
+  runDirectAnalysis: async ({ anonymous = false } = {}) => {
     const { policyText, format, sessionId, currentUser, authToken } = get();
     const expectedTier = currentUser?.tier || "free";
     const expectsAgents = ["pro", "team"].includes(expectedTier);
@@ -479,7 +479,7 @@ export const useVektraStore = create((set, get) => ({
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
+          ...(!anonymous && authToken ? { Authorization: `Bearer ${authToken}` } : {}),
         },
         body: JSON.stringify({
           policy_text: policyText,

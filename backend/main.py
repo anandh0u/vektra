@@ -530,11 +530,14 @@ async def analyze_policy(
         logger.exception("Graph analysis failed.")
         raise HTTPException(status_code=500, detail=f"Graph analysis failed: {exc}") from exc
 
-    await ensure_neo4j_ready(timeout=6.0)
-    neo4j_client.clear_session(session_id)
-    neo4j_client.write_rules(analysis_result.rules, session_id)
-    neo4j_client.write_edges(analysis_result.edges, session_id)
-    critical_paths = neo4j_client.find_critical_paths(session_id)
+    neo4j_ready = await ensure_neo4j_ready(timeout=6.0)
+    if neo4j_ready:
+        neo4j_client.clear_session(session_id)
+        neo4j_client.write_rules(analysis_result.rules, session_id)
+        neo4j_client.write_edges(analysis_result.edges, session_id)
+        critical_paths = neo4j_client.find_critical_paths(session_id)
+    else:
+        critical_paths = []
 
     run_full_agents = tier in {"pro", "team"}
     if not run_full_agents:
@@ -593,16 +596,20 @@ async def analyze_policy(
     }
 
     user_id = user.get("id") if user else None
-    await neo4j_client.upsert_scan_session(
-        session_id,
-        policy_format,
-        stats,
-        body.policy_text,
-        user_id=user_id,
-    )
-    if user_id:
-        await neo4j_client.increment_scan_count(user_id)
-        await neo4j_client.link_session_to_user(user_id, session_id)
+    if neo4j_ready:
+        try:
+            await neo4j_client.upsert_scan_session(
+                session_id,
+                policy_format,
+                stats,
+                body.policy_text,
+                user_id=user_id,
+            )
+            if user_id:
+                await neo4j_client.increment_scan_count(user_id)
+                await neo4j_client.link_session_to_user(user_id, session_id)
+        except Exception as exc:
+            logger.warning("Analysis completed but Neo4j session persistence failed: %s", exc)
 
     # Save to Base44 (non-blocking)
     asyncio.create_task(

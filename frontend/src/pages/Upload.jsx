@@ -302,7 +302,7 @@ export default function UploadPage() {
     setDemoMode(true);
 
     try {
-      const result = await runAnalysis();
+      const result = await runAnalysis({ forceDirect: true });
       if (result && result.session_id) {
         navigate(`/analyzing/${result.session_id}`);
       } else {
