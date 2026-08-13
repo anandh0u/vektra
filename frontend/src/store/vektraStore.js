@@ -390,6 +390,9 @@ export const useVektraStore = create((set, get) => ({
   // Run Analysis Pipeline (Workflow Mode)
   runAnalysis: async () => {
     const { policyText, format, sessionId, currentUser, authToken } = get();
+    if (!authToken) {
+      return get().runDirectAnalysis();
+    }
     const expectedTier = currentUser?.tier || "free";
     const expectsAgents = ["pro", "team"].includes(expectedTier);
 
@@ -541,6 +544,7 @@ export const useVektraStore = create((set, get) => ({
         conflicts: vulnerabilities,
         stats: responseStats,
       });
+      return { direct: true };
 
     } catch (e) {
       console.error(e);

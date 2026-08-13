@@ -21,6 +21,10 @@ services:
         sync: false
       - key: JWT_SECRET
         sync: false
+      - key: INTERNAL_API_KEY
+        sync: false
+      - key: CORS_ORIGINS
+        value: https://vektra-six.vercel.app
       - key: STELLAR_TREASURY_SECRET
         sync: false
       - key: STELLAR_NETWORK

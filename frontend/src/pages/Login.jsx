@@ -37,8 +37,8 @@ export default function LoginPage() {
       setErrorMsg("Enter a valid email address.");
       return;
     }
-    if (password.length < 6) {
-      setErrorMsg("Password must be at least 6 characters.");
+    if (isSignUp && password.length < 12) {
+      setErrorMsg("Password must be at least 12 characters.");
       return;
     }
 
@@ -195,7 +195,7 @@ export default function LoginPage() {
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Minimum 6 characters"
+                  placeholder={isSignUp ? "Minimum 12 characters" : "Password"}
                   className="w-full bg-[#04050a] border border-[#1e2240] rounded-xl pl-10 pr-4 py-2.5 text-xs text-slate-100 placeholder-muted focus:outline-none focus:border-primary transition-all duration-200"
                 />
               </div>

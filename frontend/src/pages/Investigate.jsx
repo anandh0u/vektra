@@ -163,7 +163,7 @@ export default function Investigate() {
         method: "POST",
         headers: { 
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${localStorage.getItem("token") || ""}`
+          "Authorization": `Bearer ${localStorage.getItem("vektra_token") || ""}`
         },
         body: JSON.stringify({ query: searchQuery }),
       });
@@ -187,7 +187,7 @@ export default function Investigate() {
         method: "POST",
         headers: { 
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${localStorage.getItem("token") || ""}`
+          "Authorization": `Bearer ${localStorage.getItem("vektra_token") || ""}`
         },
         body: JSON.stringify({
           session_id: results.session_id,

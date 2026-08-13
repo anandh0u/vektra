@@ -1,5 +1,4 @@
 import os
-import uuid
 import logging
 import httpx
 from stellar_sdk import (
@@ -10,7 +9,7 @@ from stellar_sdk import (
 logger = logging.getLogger("vektra.stellar")
 
 # Load environment variables
-TREASURY_SECRET = os.getenv("STELLAR_TREASURY_SECRET") or "SDUVEPUP5G3D53VMB66G6222Z64VMLM5RNDS6E3QW2HQWTFLX4PLHVEK"  # fallback mock testnet secret
+TREASURY_SECRET = os.getenv("STELLAR_TREASURY_SECRET", "")
 NETWORK = Network.TESTNET_NETWORK_PASSPHRASE
 HORIZON_URL = "https://horizon-testnet.stellar.org"
 
@@ -19,8 +18,8 @@ server = Server(HORIZON_URL)
 try:
     treasury_keypair = Keypair.from_secret(TREASURY_SECRET)
 except Exception:
-    # Generate a random fallback keypair if the secret is malformed or invalid
-    logger.warning("Stellar treasury secret is not configured or invalid. Using random fallback keypair for testing.")
+    # Keep local analysis available, but never substitute a committed signing key.
+    logger.warning("Stellar treasury is disabled because STELLAR_TREASURY_SECRET is missing or invalid.")
     treasury_keypair = Keypair.random()
 
 NFT_ASSETS = {
@@ -254,6 +253,4 @@ async def anchor_evidence_hash(evidence_name: str, file_hash: str) -> str:
         return response["hash"]
     except Exception as exc:
         logger.error("Failed to anchor evidence hash %s: %s", file_hash, exc)
-        # Fallback mock tx hash for testing/offline mode
-        return "mock_stellar_tx_" + str(uuid.uuid4()).replace("-", "")[:16]
-
+        return ""

@@ -132,8 +132,8 @@ export default function SettingsPage() {
       toast.error("Please enter your current password.");
       return;
     }
-    if (newPw.length < 8) {
-      toast.error("New password must be at least 8 characters.");
+    if (newPw.length < 12) {
+      toast.error("New password must be at least 12 characters.");
       return;
     }
     if (newPw !== confirmPw) {
@@ -360,7 +360,7 @@ export default function SettingsPage() {
                       required
                       value={newPw}
                       onChange={(e) => setNewPw(e.target.value)}
-                      placeholder="Minimum 8 characters"
+                      placeholder="Minimum 12 characters"
                       className="w-full bg-pageBg border border-cardBorder rounded-[6px] px-3.5 py-2 text-xs text-textMain placeholder-muted focus:outline-none focus:border-primary transition-fast"
                     />
                     

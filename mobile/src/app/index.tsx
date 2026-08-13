@@ -12,6 +12,7 @@ import { WebView } from 'react-native-webview';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 const VEKTRA_URL = process.env.EXPO_PUBLIC_WEB_URL || 'https://vektra-six.vercel.app';
+const VEKTRA_ORIGIN = new URL(VEKTRA_URL).origin;
 
 type PageState = 'loading' | 'loaded' | 'error';
 
@@ -100,6 +101,13 @@ export default function HomeScreen() {
           thirdPartyCookiesEnabled={true}
           cacheEnabled={true}
           originWhitelist={['https://*']}
+          onShouldStartLoadWithRequest={(request) => {
+            try {
+              return new URL(request.url).origin === VEKTRA_ORIGIN;
+            } catch {
+              return false;
+            }
+          }}
           mixedContentMode="never"
           setSupportMultipleWindows={false}
           contentInsetAdjustmentBehavior="never"

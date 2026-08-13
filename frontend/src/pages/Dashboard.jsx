@@ -269,13 +269,13 @@ export default function DashboardPage() {
               <div className="glass-card rounded-lg p-4 h-24 flex flex-col justify-between">
                 <span className="text-[10px] text-muted block uppercase tracking-wider font-semibold">Mean Detection (MTTD)</span>
                 <span className="text-2xl font-bold text-primary font-mono">
-                  {analytics?.mttd_hours ?? 4.5} hrs
+                  {analytics?.mttd_hours == null ? "Not enough data" : `${analytics.mttd_hours} hrs`}
                 </span>
               </div>
               <div className="glass-card rounded-lg p-4 h-24 flex flex-col justify-between">
                 <span className="text-[10px] text-muted block uppercase tracking-wider font-semibold">Mean Resolution (MTTR)</span>
                 <span className="text-2xl font-bold text-primary font-mono">
-                  {analytics?.mttr_hours ?? 12.2} hrs
+                  {analytics?.mttr_hours == null ? "Not enough data" : `${analytics.mttr_hours} hrs`}
                 </span>
               </div>
             </div>

@@ -185,8 +185,8 @@ export default function PricingPage() {
   ];
 
   const handleOpenCheckout = (planInfo) => {
-    setSelectedPlan(planInfo);
-    setCheckoutStep("form");
+    void planInfo;
+    toast.error("Paid plans are temporarily unavailable while verified billing is being configured.");
   };
 
   const handleCloseCheckout = () => {
