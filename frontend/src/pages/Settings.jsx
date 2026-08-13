@@ -18,6 +18,7 @@ import {
   LogOut
 } from "lucide-react";
 import toast from "react-hot-toast";
+import { ACCENT_PRESETS, THEME_PRESETS, applyAppearance, loadAppearance } from "../utils/appearance";
 
 export default function SettingsPage() {
   const navigate = useNavigate();
@@ -56,9 +57,7 @@ export default function SettingsPage() {
     credit_warnings: parsedPrefs.credit_warnings ?? true,
   });
 
-  const [currentTheme, setCurrentTheme] = useState(theme || "dark");
-  const [primaryColor, setPrimaryColor] = useState(localStorage.getItem("vektra_color_primary") || "#4C8DFF");
-  const [secondaryColor, setSecondaryColor] = useState(localStorage.getItem("vektra_color_secondary") || "#8A93A6");
+  const [appearance, setAppearance] = useState(() => ({ ...loadAppearance(), theme: theme || loadAppearance().theme }));
 
   useEffect(() => {
     if (currentUser) {
@@ -165,26 +164,24 @@ export default function SettingsPage() {
   };
 
   const handleThemeChange = (newTheme) => {
-    setCurrentTheme(newTheme);
+    const updated = applyAppearance({ ...appearance, theme: newTheme });
+    setAppearance(updated);
     setTheme(newTheme);
-    toast.success(`Theme updated to ${newTheme}`);
+    toast.success("Workspace theme updated");
   };
 
-  const COLOR_PRESETS = [
-    { name: "Operator Blue", primary: "#4C8DFF", secondary: "#8A93A6" },
-    { name: "Cyber Pink", primary: "#D946EF", secondary: "#A78BFA" },
-    { name: "Matrix Emerald", primary: "#10B981", secondary: "#6EE7B7" },
-    { name: "Caution Amber", primary: "#F2A94B", secondary: "#8A93A6" },
-  ];
-
   const handleApplyColors = (prim, sec) => {
-    setPrimaryColor(prim);
-    setSecondaryColor(sec);
-    localStorage.setItem("vektra_color_primary", prim);
-    localStorage.setItem("vektra_color_secondary", sec);
-    document.documentElement.style.setProperty("--color-primary", prim);
-    document.documentElement.style.setProperty("--color-secondary", sec);
-    toast.success("Color preset accent updated!");
+    setAppearance(applyAppearance({ ...appearance, primary: prim, secondary: sec }));
+    toast.success("Accent system updated");
+  };
+
+  const updateAppearance = (patch) => setAppearance(applyAppearance({ ...appearance, ...patch }));
+
+  const resetAppearance = () => {
+    const reset = applyAppearance({ theme: "dark", primary: "#4C8DFF", secondary: "#8B5CF6", density: "comfortable", radius: "soft", effects: "balanced", motion: true });
+    setAppearance(reset);
+    setTheme(reset.theme);
+    toast.success("Appearance reset");
   };
 
   const handleDeleteAccount = async (e) => {
@@ -227,13 +224,13 @@ export default function SettingsPage() {
       <div className="flex-1 flex flex-col min-w-0">
         <TopBar />
 
-        <div className="flex-1 flex min-w-0">
+        <div className="flex-1 flex flex-col md:flex-row min-w-0 overflow-hidden">
           
           {/* Left vertical settings tabs */}
-          <div className="w-60 border-r border-cardBorder bg-[#12161F]/20 p-6 flex flex-col shrink-0 justify-between">
-            <div className="space-y-1.5">
+          <div className="w-full md:w-60 border-b md:border-b-0 md:border-r border-cardBorder bg-cardSurface/20 p-3 md:p-6 flex md:flex-col shrink-0 justify-between overflow-x-auto md:overflow-visible">
+            <div className="flex md:block gap-2 md:space-y-1.5 min-w-max md:min-w-0">
               <span className="text-[10px] font-bold text-muted uppercase tracking-wider block mb-2 px-3">
-                Settings Drawer
+                Settings
               </span>
               {[
                 { id: "profile", label: "Profile Settings", icon: User },
@@ -249,7 +246,7 @@ export default function SettingsPage() {
                   <button
                     key={tab.id}
                     onClick={() => setActiveTab(tab.id)}
-                    className={`flex items-center justify-between w-full px-3 py-2 rounded-lg text-xs font-semibold transition-fast ${
+                    className={`flex items-center justify-between w-auto md:w-full px-3 py-2 rounded-lg text-xs font-semibold transition-fast whitespace-nowrap ${
                       isSelected 
                         ? (tab.red ? "bg-danger/10 text-danger border border-danger/30" : "bg-activeNav text-textMain border border-cardBorder") 
                         : (tab.red ? "text-danger hover:bg-danger/5" : "text-muted hover:bg-cardSurface hover:text-textMain")
@@ -265,7 +262,7 @@ export default function SettingsPage() {
               })}
             </div>
 
-            <div className="border-t border-cardBorder pt-4">
+            <div className="hidden md:block border-t border-cardBorder pt-4">
               <button
                 onClick={handleSignOut}
                 className="flex items-center gap-2.5 w-full px-3 py-2 rounded-lg text-xs font-bold text-danger hover:bg-danger/10 transition-fast"
@@ -277,7 +274,7 @@ export default function SettingsPage() {
           </div>
 
           {/* Right tab panel content */}
-          <div className="flex-1 overflow-y-auto p-4 sm:p-8 max-w-xl">
+          <div className="flex-1 overflow-y-auto p-4 sm:p-8 w-full max-w-4xl">
             
             {/* ── PROFILE TAB ── */}
             {activeTab === "profile" && (
@@ -478,86 +475,24 @@ export default function SettingsPage() {
 
             {/* ── APPEARANCE TAB ── */}
             {activeTab === "appearance" && (
-              <div className="space-y-6">
-                <div>
-                  <h2 className="text-sm font-bold text-textMain uppercase tracking-wider">Theme & Styling</h2>
-                  <p className="text-xs text-muted mt-0.5 font-normal">Customize the visual palette of your workspace.</p>
+              <div className="space-y-7 pb-10">
+                <div className="flex items-start justify-between gap-4">
+                  <div><h2 className="text-lg font-bold text-textMain">Workspace appearance</h2><p className="text-xs text-muted mt-1">A complete visual system, not just a color switch.</p></div>
+                  <button onClick={resetAppearance} className="rounded-lg border border-cardBorder px-3 py-2 text-[10px] font-bold text-muted hover:text-textMain">Reset</button>
                 </div>
 
-                {/* Theme Selector */}
-                <div className="space-y-3">
-                  <label className="text-[9px] font-bold text-muted uppercase tracking-wider block font-mono">UI Color Theme</label>
-                  <div className="grid grid-cols-2 gap-3">
-                    {[
-                      { id: "dark", name: "Default Dark", desc: "Sleek dark graphite layout (Inter)" },
-                      { id: "bluish", name: "Deep Space Navy", desc: "Classic dark blue SOC panels (Outfit)" },
-                      { id: "light", name: "Alabaster White", desc: "Clean bright whitish view (Jakarta)" },
-                      { id: "cyberpunk", name: "Cyberpunk Violet", desc: "Vibrant synthwave scheme (Space Grotesk)" },
-                      { id: "forest", name: "Matrix Terminal", desc: "Obsidian retro terminal (Fira Code)" },
-                    ].map((t) => (
-                      <button
-                        key={t.id}
-                        onClick={() => handleThemeChange(t.id)}
-                        className={`p-3.5 rounded-[6px] border text-left transition-fast ${
-                          currentTheme === t.id 
-                            ? "bg-activeNav border-primary text-textMain" 
-                            : "bg-cardSurface/60 border-cardBorder text-muted hover:text-textMain"
-                        }`}
-                      >
-                        <span className="text-xs font-bold block">{t.name}</span>
-                        <span className="text-[9px] opacity-75 mt-0.5 block">{t.desc}</span>
-                      </button>
-                    ))}
-                  </div>
+                <div className="vektra-surface overflow-hidden p-5" style={{ background: `linear-gradient(135deg, color-mix(in srgb, ${appearance.primary} 16%, var(--bg-surface)), color-mix(in srgb, ${appearance.secondary} 12%, var(--bg-surface)))` }}>
+                  <div className="flex items-center justify-between"><span className="text-[9px] font-bold tracking-[.18em] text-muted">LIVE PREVIEW</span><span className="h-2.5 w-2.5 rounded-full" style={{ background: appearance.primary, boxShadow: `0 0 18px ${appearance.primary}` }} /></div>
+                  <h3 className="vektra-accent-text mt-5 text-2xl font-bold">VEKTRA Intelligence</h3>
+                  <p className="mt-2 max-w-md text-[11px] leading-5 text-muted">Surfaces, signals, spacing, motion, and interaction states update together across the workspace.</p>
+                  <div className="mt-5 grid grid-cols-3 vektra-grid">{["Evidence", "Attack paths", "Agents"].map((label, i) => <div key={label} className="rounded-[var(--ui-radius)] border border-cardBorder bg-pageBg/40 p-3"><span className="text-[9px] text-muted">{label}</span><div className="mt-1 text-sm font-bold">{[94, 7, 4][i]}</div></div>)}</div>
                 </div>
 
-                {/* Color Palette Change */}
-                <div className="space-y-3 border-t border-cardBorder pt-6">
-                  <label className="text-[9px] font-bold text-muted uppercase tracking-wider block font-mono">Primary Preset Accent</label>
-                  <div className="space-y-2">
-                    {COLOR_PRESETS.map((preset, idx) => (
-                      <button
-                        key={idx}
-                        onClick={() => handleApplyColors(preset.primary, preset.secondary)}
-                        className="w-full flex items-center justify-between p-3 rounded-[6px] bg-cardSurface/40 border border-cardBorder hover:bg-cardSurface hover:border-muted/30 transition-fast"
-                      >
-                        <span className="text-xs font-semibold text-textMain">{preset.name}</span>
-                        <div className="flex items-center gap-1.5">
-                          <div className="w-3.5 h-3.5 rounded-full" style={{ backgroundColor: preset.primary }} />
-                          <div className="w-3.5 h-3.5 rounded-full" style={{ backgroundColor: preset.secondary }} />
-                        </div>
-                      </button>
-                    ))}
-                  </div>
+                <section className="space-y-3"><label className="text-[9px] font-bold text-muted uppercase tracking-[.16em]">Foundation theme</label><div className="grid gap-3 sm:grid-cols-2">{THEME_PRESETS.map(t => <button key={t.id} onClick={() => handleThemeChange(t.id)} className={`rounded-xl border p-4 text-left transition-fast ${appearance.theme === t.id ? "border-primary bg-primary/10" : "border-cardBorder bg-cardSurface/50 hover:border-primary/40"}`}><div className="mb-3 flex gap-1.5">{t.colors.map(color => <span key={color} className="h-4 w-4 rounded-full border border-white/10" style={{ background: color }} />)}</div><span className="block text-xs font-bold">{t.name}</span><span className="mt-1 block text-[9px] leading-4 text-muted">{t.description}</span></button>)}</div></section>
 
-                  {/* Custom Color Pickers */}
-                  <div className="grid grid-cols-2 gap-4 border-t border-cardBorder pt-4">
-                    <div className="space-y-1.5">
-                      <span className="text-[9px] font-bold text-muted uppercase tracking-wider block font-mono">Custom Primary Color</span>
-                      <div className="flex items-center gap-2">
-                        <input 
-                          type="color" 
-                          value={primaryColor} 
-                          onChange={(e) => handleApplyColors(e.target.value, secondaryColor)}
-                          className="w-7 h-7 rounded border-0 cursor-pointer bg-transparent" 
-                        />
-                        <span className="text-[10px] font-mono text-muted uppercase">{primaryColor}</span>
-                      </div>
-                    </div>
-                    <div className="space-y-1.5">
-                      <span className="text-[9px] font-bold text-muted uppercase tracking-wider block font-mono">Custom Secondary Color</span>
-                      <div className="flex items-center gap-2">
-                        <input 
-                          type="color" 
-                          value={secondaryColor} 
-                          onChange={(e) => handleApplyColors(primaryColor, e.target.value)}
-                          className="w-7 h-7 rounded border-0 cursor-pointer bg-transparent" 
-                        />
-                        <span className="text-[10px] font-mono text-muted uppercase">{secondaryColor}</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
+                <section className="space-y-3 border-t border-cardBorder pt-6"><label className="text-[9px] font-bold text-muted uppercase tracking-[.16em]">Signal palette</label><div className="grid gap-2 sm:grid-cols-2">{ACCENT_PRESETS.map(preset => <button key={preset.id} onClick={() => handleApplyColors(preset.primary, preset.secondary)} className={`flex items-center justify-between rounded-xl border p-3 ${appearance.primary.toLowerCase() === preset.primary.toLowerCase() ? "border-primary bg-primary/10" : "border-cardBorder bg-cardSurface/40 hover:border-primary/40"}`}><span className="text-xs font-semibold">{preset.name}</span><span className="flex -space-x-1"><span className="h-6 w-6 rounded-full border-2 border-cardSurface" style={{ background: preset.primary }} /><span className="h-6 w-6 rounded-full border-2 border-cardSurface" style={{ background: preset.secondary }} /></span></button>)}</div><div className="grid grid-cols-2 gap-3 pt-2">{[["Primary", "primary"], ["Secondary", "secondary"]].map(([label, key]) => <label key={key} className="rounded-xl border border-cardBorder bg-cardSurface/40 p-3"><span className="block text-[9px] font-bold uppercase text-muted">{label}</span><span className="mt-2 flex items-center gap-2"><input type="color" value={appearance[key]} onChange={e => updateAppearance({ [key]: e.target.value })} className="h-8 w-10 cursor-pointer border-0 bg-transparent" /><code className="text-[10px] text-muted">{appearance[key]}</code></span></label>)}</div></section>
+
+                <section className="space-y-4 border-t border-cardBorder pt-6"><label className="text-[9px] font-bold text-muted uppercase tracking-[.16em]">Interface behavior</label>{[["Density", "density", [["Compact", "compact"], ["Comfortable", "comfortable"], ["Spacious", "spacious"]]], ["Corners", "radius", [["Sharp", "sharp"], ["Soft", "soft"], ["Round", "round"]]], ["Effects", "effects", [["Minimal", "minimal"], ["Balanced", "balanced"], ["Cinematic", "cinematic"]]]].map(([label, key, options]) => <div key={key}><span className="mb-2 block text-[10px] font-semibold">{label}</span><div className="grid grid-cols-3 rounded-xl border border-cardBorder bg-pageBg/40 p-1">{options.map(([name, value]) => <button key={value} onClick={() => updateAppearance({ [key]: value })} className={`rounded-lg px-2 py-2 text-[9px] font-bold ${appearance[key] === value ? "bg-primary text-white" : "text-muted hover:text-textMain"}`}>{name}</button>)}</div></div>)}<button onClick={() => updateAppearance({ motion: !appearance.motion })} className="flex w-full items-center justify-between rounded-xl border border-cardBorder bg-cardSurface/40 p-4 text-left"><span><span className="block text-xs font-bold">Interface motion</span><span className="mt-1 block text-[9px] text-muted">Disable animation for reduced motion or focused analysis.</span></span><span className={`relative h-6 w-11 rounded-full ${appearance.motion ? "bg-primary" : "bg-bgElevated"}`}><span className={`absolute top-1 h-4 w-4 rounded-full bg-white transition-transform ${appearance.motion ? "translate-x-6" : "translate-x-1"}`} /></span></button></section>
               </div>
             )}
 
