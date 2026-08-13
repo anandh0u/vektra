@@ -36,6 +36,7 @@ from backend.auth import create_token, get_current_user, hash_password, verify_p
 from backend.agents.orchestrator import run_agents
 from backend.agents.sarvam_client import SARVAM_MODEL, SARVAM_URL
 from backend.graph.analyzer import build_and_analyze
+from backend.simulation import simulate_policy_change
 from backend.graph.neo4j_client import Neo4jClient
 from backend.parser.iam_parser import parse_iam_policy
 from backend.parser.k8s_parser import parse_k8s_rbac
@@ -105,6 +106,7 @@ class SecurityMiddleware:
             "/api/auth/login": 10,
             "/api/auth/register": 5,
             "/api/analyze": 10,
+            "/api/simulate": 10,
             "/api/workflow/analyze": 10,
             "/api/chat": 30,
             "/api/assistant/message": 30,
@@ -190,6 +192,12 @@ class AnalyzeRequest(BaseModel):
     policy_text: str = Field(min_length=2, max_length=500_000)
     format: str
     session_id: Optional[str] = None
+
+
+class SimulationRequest(BaseModel):
+    current_policy: str = Field(min_length=2, max_length=500_000)
+    proposed_policy: str = Field(min_length=2, max_length=500_000)
+    format: str
 
 
 class RegisterRequest(BaseModel):
@@ -633,6 +641,28 @@ async def analyze_policy(
 
 
 app.add_api_route("/analyze", analyze_policy, methods=["POST"])
+
+
+@app.post("/api/simulate")
+async def simulate_change(body: SimulationRequest, http_request: Request):
+    policy_format = body.format.lower()
+    if policy_format not in {"iam", "k8s"}:
+        raise HTTPException(status_code=400, detail="Invalid format. Supported formats are 'iam' and 'k8s'.")
+    try:
+        result = simulate_policy_change(body.current_policy, body.proposed_policy, policy_format)
+    except Exception as exc:
+        logger.info("Policy simulation input rejected: %s", exc)
+        raise HTTPException(status_code=400, detail=f"Unable to simulate policy change: {exc}") from exc
+
+    user = await resolve_request_user(http_request, required=False)
+    simulation_id = str(uuid.uuid4())
+    result["simulation_id"] = simulation_id
+    result["persisted"] = False
+    if user and await ensure_neo4j_ready(timeout=3.0):
+        result["persisted"] = await neo4j_client.save_simulation(
+            simulation_id, user["id"], policy_format, result
+        )
+    return result
 
 
 @app.post("/api/analyze/rerun")

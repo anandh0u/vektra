@@ -378,6 +378,43 @@ class Neo4jClient:
                 sid=session_id,
             )
 
+    async def save_simulation(
+        self, simulation_id: str, user_id: str, fmt: str, result: dict
+    ) -> bool:
+        if not self.driver or not self.connected:
+            return False
+        try:
+            with self.driver.session() as session:
+                session.run(
+                    """
+                    MATCH (u:User {id: $user_id})
+                    MERGE (s:PolicySimulation {simulation_id: $simulation_id})
+                    SET s.format = $format,
+                        s.created_at = $created_at,
+                        s.verdict = $verdict,
+                        s.risk_delta = $risk_delta,
+                        s.current_risk = $current_risk,
+                        s.proposed_risk = $proposed_risk,
+                        s.introduced_findings = $introduced_findings,
+                        s.resolved_findings = $resolved_findings
+                    MERGE (u)-[:RAN_SIMULATION]->(s)
+                    """,
+                    simulation_id=simulation_id,
+                    user_id=user_id,
+                    format=fmt,
+                    created_at=datetime.now().isoformat(),
+                    verdict=result.get("verdict", "REVIEW"),
+                    risk_delta=result.get("risk_delta", 0),
+                    current_risk=result.get("current", {}).get("risk_score", 0),
+                    proposed_risk=result.get("proposed", {}).get("risk_score", 0),
+                    introduced_findings=json.dumps(result.get("introduced_findings", [])),
+                    resolved_findings=json.dumps(result.get("resolved_findings", [])),
+                )
+            return True
+        except Exception as exc:
+            logger.warning("Neo4j simulation persistence failed: %s", exc)
+            return False
+
     async def session_belongs_to_user(self, session_id: str, user_id: str) -> bool:
         if not self.driver:
             return False

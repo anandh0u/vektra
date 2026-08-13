@@ -18,6 +18,7 @@ import {
   History as HistoryIcon,
   LogOut,
   X
+  ,GitCompareArrows
 } from "lucide-react";
 
 export default function Sidebar() {
@@ -80,6 +81,7 @@ export default function Sidebar() {
     { label: "IAM Analyzer", path: "/analyze", icon: Network, show: hasScan },
     { label: "Vulnerability Scanner", path: "/analyze", icon: Activity, show: hasScan },
     { label: "Policy Analyzer", path: "/", icon: FileCode, show: true },
+    { label: "Change Simulator", path: "/simulator", icon: GitCompareArrows, show: true },
     { label: "Risk Assessment", path: "/risk", icon: ShieldAlert, show: !!currentUser },
     { label: "Compliance", path: "/compliance", icon: ShieldCheck, show: !!currentUser },
     { label: "Reports", path: "/report", icon: FileText, show: hasScan },
