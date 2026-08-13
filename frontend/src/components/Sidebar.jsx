@@ -20,6 +20,7 @@ import {
   X
   ,GitCompareArrows
   ,Radar
+  ,Boxes
 } from "lucide-react";
 
 export default function Sidebar() {
@@ -74,6 +75,7 @@ export default function Sidebar() {
   const totalCredits = tier === "free" ? 5 : (tier === "pro" ? 200 : 1000);
 
   const navItems = [
+    { label: "Platform Modules", path: "/platform", icon: Boxes, show: true },
     { label: "Living Security Twin", path: "/twin", icon: Radar, show: true },
     { label: "Dashboard", path: "/dashboard", icon: LayoutDashboard, show: !!currentUser },
     { label: "Cases", path: "/cases", icon: Briefcase, show: !!currentUser },

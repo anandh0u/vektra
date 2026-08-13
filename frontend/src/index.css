@@ -20,6 +20,10 @@
   
   --color-primary: var(--signal-blue);
   --color-secondary: var(--text-muted);
+  --accent-secondary: #8b5cf6;
+  --ui-radius: 12px;
+  --ui-gap: 1rem;
+  --surface-opacity: 0.88;
 }
 
 /* Bluish Theme (Deep Space Navy) */
@@ -94,14 +98,41 @@
   --color-secondary: var(--text-muted);
 }
 
+[data-theme="aurora"] {
+  --bg-base: #061014;
+  --bg-surface: #0a1820;
+  --bg-elevated: #102733;
+  --signal-blue: #2dd4bf;
+  --alert-red: #fb7185;
+  --warn-amber: #fbbf24;
+  --text-primary: #f0fdfa;
+  --text-muted: #86aab3;
+  --border-hairline: #173b46;
+  --font-display: 'Space Grotesk', sans-serif;
+  --font-code: 'JetBrains Mono', monospace;
+  --color-primary: var(--signal-blue);
+  --color-secondary: #a78bfa;
+}
+
+[data-density="compact"] { --ui-gap: .65rem; }
+[data-density="comfortable"] { --ui-gap: 1rem; }
+[data-density="spacious"] { --ui-gap: 1.4rem; }
+[data-radius="sharp"] { --ui-radius: 4px; }
+[data-radius="soft"] { --ui-radius: 12px; }
+[data-radius="round"] { --ui-radius: 20px; }
+[data-effects="minimal"] { --surface-opacity: .98; }
+[data-effects="balanced"] { --surface-opacity: .88; }
+[data-effects="cinematic"] { --surface-opacity: .72; }
+
 @layer base {
   body {
     @apply bg-pageBg text-textMain antialiased;
     font-family: var(--font-display);
     font-size: 14px;
     line-height: 1.5;
-    background-image: radial-gradient(at 0% 0%, rgba(59, 130, 246, 0.05) 0px, transparent 50%),
-                      radial-gradient(at 50% 0%, rgba(139, 92, 246, 0.03) 0px, transparent 50%);
+    background-image: radial-gradient(at 0% 0%, color-mix(in srgb, var(--color-primary) 12%, transparent) 0px, transparent 48%),
+                      radial-gradient(at 90% 0%, color-mix(in srgb, var(--accent-secondary) 8%, transparent) 0px, transparent 45%);
+    background-attachment: fixed;
   }
   
   [data-theme="light"] body, [data-theme="whitish"] body {
@@ -119,6 +150,32 @@
   code, pre {
     font-family: var(--font-code);
   }
+}
+
+@layer components {
+  .vektra-surface {
+    border: 1px solid var(--border-hairline);
+    border-radius: var(--ui-radius);
+    background: color-mix(in srgb, var(--bg-surface) calc(var(--surface-opacity) * 100%), transparent);
+    box-shadow: 0 18px 60px rgba(0, 0, 0, .16);
+    backdrop-filter: blur(18px) saturate(150%);
+  }
+  .vektra-grid {
+    gap: var(--ui-gap);
+  }
+  .vektra-accent-text {
+    background: linear-gradient(110deg, var(--color-primary), var(--accent-secondary));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+}
+
+[data-motion="off"] *, [data-motion="off"] *::before, [data-motion="off"] *::after {
+  animation-duration: .001ms !important;
+  animation-iteration-count: 1 !important;
+  scroll-behavior: auto !important;
+  transition-duration: .001ms !important;
 }
 
 /* Glassmorphism custom components */

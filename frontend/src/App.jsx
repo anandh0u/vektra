@@ -21,6 +21,8 @@ import ForensicTimeline from "./pages/ForensicTimeline";
 import CasesPage from "./pages/Cases";
 import SimulatorPage from "./pages/Simulator";
 import SecurityTwin from "./pages/SecurityTwin";
+import { applyAppearance, loadAppearance } from "./utils/appearance";
+import PlatformPage from "./pages/Platform";
 
 function ProtectedRoute({ children }) {
   const { currentUser } = useVektraStore();
@@ -34,14 +36,7 @@ export default function App() {
   const { refreshCurrentUser } = useVektraStore();
 
   useEffect(() => {
-    const savedTheme = localStorage.getItem("vektra_theme") || "dark";
-    document.documentElement.setAttribute("data-theme", savedTheme);
-    
-    // Apply custom primary/secondary colors if set
-    const savedPrimary = localStorage.getItem("vektra_color_primary");
-    const savedSecondary = localStorage.getItem("vektra_color_secondary");
-    if (savedPrimary) document.documentElement.style.setProperty("--color-primary", savedPrimary);
-    if (savedSecondary) document.documentElement.style.setProperty("--color-secondary", savedSecondary);
+    applyAppearance(loadAppearance());
 
     // Wake up backend in background on load
     const API_BASE =
@@ -62,6 +57,7 @@ export default function App() {
         <Route path="/pricing" element={<PricingPage />} />
         <Route path="/simulator" element={<SimulatorPage />} />
         <Route path="/twin" element={<SecurityTwin />} />
+        <Route path="/platform" element={<PlatformPage />} />
 
         {/* Upload Landing Page */}
         <Route path="/" element={<UploadPage />} />
