@@ -1,8 +1,8 @@
 import React, { useState, useRef, useEffect } from "react";
 import Sidebar from "../components/Sidebar";
 import TopBar from "../components/TopBar";
-import { Send, Loader2, Bot, Trash2, Sparkles, Terminal, Calendar, Shield } from "lucide-react";
-import { apiFetch, getApiBase } from "../store/vektraStore";
+import { Send, Loader2, Bot, Trash2, Sparkles, Terminal, Calendar, Shield, Square } from "lucide-react";
+import { apiFetch, getApiBase, useVektraStore } from "../store/vektraStore";
 
 const ASSISTANT_COMMANDS = [
   { text: "/search access key", icon: Terminal, query: "/search access key" },
@@ -18,23 +18,54 @@ export default function ChatbotPage() {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const scrollRef = useRef(null);
+  const abortRef = useRef(null);
+  const { refreshCurrentUser } = useVektraStore();
+
+  const appendAssistantText = (content) => {
+    setHistory((current) => {
+      const next = [...current];
+      const last = next[next.length - 1];
+      if (last?.role === "assistant" && last.streaming) {
+        next[next.length - 1] = { role: "assistant", content };
+      } else {
+        next.push({ role: "assistant", content });
+      }
+      return next;
+    });
+  };
 
   const sendToAssistant = async (text) => {
     if (!text.trim() || loading) return;
     
-    // Add user message
+    const conversation = history
+      .filter((message) => !message.streaming)
+      .slice(-10)
+      .map(({ role, content }) => ({ role, content }));
     const userMsg = { role: "user", content: text };
-    setHistory((prev) => [...prev, userMsg]);
+    setHistory((prev) => [...prev, userMsg, { role: "assistant", content: "", streaming: true }]);
     setLoading(true);
     setInput("");
+    const controller = new AbortController();
+    abortRef.current = controller;
 
     try {
-      const res = await apiFetch(`${getApiBase()}/api/assistant/message`, {
+      const isCommand = text.trim().startsWith("/");
+      const endpoint = isCommand ? "/api/assistant/message" : "/api/chat";
+      const body = isCommand
+        ? { prompt: text }
+        : {
+            message: text,
+            policy_context: "VEKTRA conversational security workspace. Use available conversation context and never claim an action was executed unless evidence confirms it.",
+            session_id: globalThis.crypto.randomUUID(),
+            history: conversation,
+          };
+      const res = await apiFetch(`${getApiBase()}${endpoint}`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ prompt: text })
+        body: JSON.stringify(body),
+        signal: controller.signal,
       });
       if (!res.ok) {
         let detail = "The assistant service is temporarily unavailable.";
@@ -46,16 +77,47 @@ export default function ChatbotPage() {
         }
         throw new Error(detail);
       }
-      const data = await res.json();
-      
-      setHistory((prev) => [...prev, { role: "assistant", content: data.response }]);
+      if (isCommand) {
+        const data = await res.json();
+        appendAssistantText(data.response);
+      } else {
+        const reader = res.body?.getReader();
+        if (!reader) throw new Error("Streaming is not supported by this browser.");
+        const decoder = new TextDecoder();
+        let buffer = "";
+        let responseText = "";
+
+        while (true) {
+          const { value, done } = await reader.read();
+          buffer += decoder.decode(value || new Uint8Array(), { stream: !done });
+          const lines = buffer.split("\n");
+          buffer = lines.pop() || "";
+          for (const line of lines) {
+            if (!line.startsWith("data: ")) continue;
+            try {
+              const event = JSON.parse(line.slice(6));
+              if (event.response) {
+                responseText += event.response;
+                appendAssistantText(responseText);
+              }
+            } catch {
+              // Wait for the next complete server-sent event.
+            }
+          }
+          if (done) break;
+        }
+        if (!responseText) throw new Error("The assistant returned an empty response. Please retry.");
+        refreshCurrentUser().catch(() => {});
+      }
     } catch (error) {
-      setHistory((prev) => [
-        ...prev,
-        { role: "assistant", content: error.message || "I could not reach the VEKTRA assistant service. Check your connection and try again." }
-      ]);
+      appendAssistantText(
+        error.name === "AbortError"
+          ? "Response stopped. You can revise your question or try again."
+          : error.message || "I could not reach the VEKTRA assistant service. Check your connection and try again."
+      );
     } finally {
       setLoading(false);
+      abortRef.current = null;
     }
   };
 
@@ -65,10 +127,13 @@ export default function ChatbotPage() {
   };
 
   const clearChat = () => {
+    abortRef.current?.abort();
     setHistory([
       { role: "assistant", content: "Conversation cleared. Ready for your security commands." }
     ]);
   };
+
+  useEffect(() => () => abortRef.current?.abort(), []);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -200,14 +265,23 @@ export default function ChatbotPage() {
               placeholder="e.g. /search, /timeline, /remediate, /report..."
               className="flex-1 bg-cardSurface border border-cardBorder rounded-[6px] px-4 py-2.5 text-xs text-textMain placeholder-muted focus:outline-none focus:border-primary transition-fast"
             />
-            <button
-              type="submit"
-              disabled={loading || !input.trim()}
-              className="h-10 bg-primary hover:bg-primary/95 disabled:opacity-50 text-white px-5 rounded-[6px] text-xs font-semibold transition-fast border border-primary/20 flex items-center gap-1.5 shadow-sm"
-            >
-              {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
-              Send
-            </button>
+            {loading ? (
+              <button
+                type="button"
+                onClick={() => abortRef.current?.abort()}
+                className="h-10 bg-danger/10 text-danger border border-danger/30 px-5 rounded-[6px] text-xs font-semibold flex items-center gap-1.5"
+              >
+                <Square className="w-3.5 h-3.5 fill-current" /> Stop
+              </button>
+            ) : (
+              <button
+                type="submit"
+                disabled={!input.trim()}
+                className="h-10 bg-primary hover:bg-primary/95 disabled:opacity-50 text-white px-5 rounded-[6px] text-xs font-semibold transition-fast border border-primary/20 flex items-center gap-1.5 shadow-sm"
+              >
+                <Send className="w-3.5 h-3.5" /> Send
+              </button>
+            )}
           </form>
         </main>
       </div>
