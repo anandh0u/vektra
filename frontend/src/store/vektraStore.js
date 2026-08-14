@@ -6,6 +6,12 @@ const API_BASE =
     ? window.location.origin
     : "http://localhost:8000");
 
+// Authentication is cookie-based. Explicit credentials are required whenever
+// the frontend and API use different origins (local development, preview APIs,
+// or split production hosting). Callers can still opt out with credentials: "omit".
+export const apiFetch = (url, options = {}) => fetch(url, { credentials: "include", ...options });
+export const getApiBase = () => API_BASE;
+
 const readStoredUser = () => {
   try {
     return JSON.parse(localStorage.getItem("vektra_user") || "null");
@@ -199,7 +205,7 @@ export const useVektraStore = create((set, get) => ({
     const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
     
     try {
-      const response = await fetch(`${API_BASE}/api/auth/register`, {
+      const response = await apiFetch(`${API_BASE}/api/auth/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name, email, password }),
@@ -227,7 +233,7 @@ export const useVektraStore = create((set, get) => ({
     const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
     
     try {
-      const response = await fetch(`${API_BASE}/api/auth/login`, {
+      const response = await apiFetch(`${API_BASE}/api/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
@@ -251,21 +257,35 @@ export const useVektraStore = create((set, get) => ({
     }
   },
   refreshCurrentUser: async () => {
-    const response = await fetch(`${API_BASE}/api/auth/me`, {
-      headers: getAuthHeaders(),
-    });
-    if (!response.ok) {
-      clearAuthSession();
-      set({ currentUser: null, authToken: "", authNotice: "Session expired, please sign in." });
-      return null;
+    const hadCachedUser = Boolean(readStoredUser());
+    try {
+      const response = await apiFetch(`${API_BASE}/api/auth/me`, {
+        headers: getAuthHeaders(),
+      });
+      if (!response.ok) {
+        clearAuthSession();
+        set({
+          currentUser: null,
+          authToken: "",
+          authNotice: hadCachedUser ? "Session expired, please sign in." : "",
+        });
+        return null;
+      }
+      const data = await response.json();
+      localStorage.setItem("vektra_user", JSON.stringify(data.user));
+      set({ currentUser: data.user, authToken: "cookie", authNotice: "" });
+      return data.user;
+    } catch {
+      // A temporary API outage must not erase a valid cached session. The next
+      // protected request will still be validated by the server-side cookie.
+      if (hadCachedUser) {
+        set({ authNotice: "We could not verify your session. Check your connection and retry." });
+      }
+      return get().currentUser;
     }
-    const data = await response.json();
-    localStorage.setItem("vektra_user", JSON.stringify(data.user));
-    set({ currentUser: data.user, authToken: "cookie", authNotice: "" });
-    return data.user;
   },
   signOut: async () => {
-    try { await fetch(`${API_BASE}/api/auth/logout`, { method: "POST" }); } catch { /* clear locally */ }
+    try { await apiFetch(`${API_BASE}/api/auth/logout`, { method: "POST" }); } catch { /* clear locally */ }
     clearAuthSession();
     set({ currentUser: null, authToken: "", authNotice: "" });
   },
@@ -403,7 +423,7 @@ export const useVektraStore = create((set, get) => ({
     });
 
     try {
-      const response = await fetch(`${API_BASE}/api/workflow/analyze`, {
+      const response = await apiFetch(`${API_BASE}/api/workflow/analyze`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -469,7 +489,7 @@ export const useVektraStore = create((set, get) => ({
     });
 
     try {
-      const response = await fetch(`${API_BASE}/api/analyze`, {
+      const response = await apiFetch(`${API_BASE}/api/analyze`, {
         method: "POST",
         credentials: anonymous ? "omit" : "include",
         headers: {
@@ -618,7 +638,7 @@ export const useVektraStore = create((set, get) => ({
       }));
 
       // Send to SSE endpoint
-      const response = await fetch(`${API_BASE}/api/chat`, {
+      const response = await apiFetch(`${API_BASE}/api/chat`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -708,7 +728,7 @@ export const useVektraStore = create((set, get) => ({
     });
 
     try {
-      const response = await fetch(`${API_BASE}/api/analyze/rerun`, {
+      const response = await apiFetch(`${API_BASE}/api/analyze/rerun`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -770,7 +790,7 @@ export const useVektraStore = create((set, get) => ({
   },
 
   updateProfile: async (name) => {
-    const response = await fetch(`${API_BASE}/api/auth/profile`, {
+    const response = await apiFetch(`${API_BASE}/api/auth/profile`, {
       method: "PATCH",
       headers: {
         "Content-Type": "application/json",
@@ -788,7 +808,7 @@ export const useVektraStore = create((set, get) => ({
   },
 
   changePassword: async (currentPassword, newPassword) => {
-    const response = await fetch(`${API_BASE}/api/auth/change-password`, {
+    const response = await apiFetch(`${API_BASE}/api/auth/change-password`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -803,7 +823,7 @@ export const useVektraStore = create((set, get) => ({
   },
 
   updateNotifications: async (prefs) => {
-    const response = await fetch(`${API_BASE}/api/auth/notifications`, {
+    const response = await apiFetch(`${API_BASE}/api/auth/notifications`, {
       method: "PATCH",
       headers: {
         "Content-Type": "application/json",
@@ -824,7 +844,7 @@ export const useVektraStore = create((set, get) => ({
   },
 
   deleteAccount: async (confirmText) => {
-    const response = await fetch(`${API_BASE}/api/auth/account`, {
+    const response = await apiFetch(`${API_BASE}/api/auth/account`, {
       method: "DELETE",
       headers: {
         "Content-Type": "application/json",
@@ -841,7 +861,7 @@ export const useVektraStore = create((set, get) => ({
   },
 
   upgradeWalletPlan: async (plan) => {
-    const response = await fetch(`${API_BASE}/api/wallet/upgrade`, {
+    const response = await apiFetch(`${API_BASE}/api/wallet/upgrade`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -863,7 +883,7 @@ export const useVektraStore = create((set, get) => ({
   },
 
   fetchWalletTransactions: async () => {
-    const response = await fetch(`${API_BASE}/api/wallet/transactions`, {
+    const response = await apiFetch(`${API_BASE}/api/wallet/transactions`, {
       headers: getAuthHeaders(),
     });
     if (!response.ok) {
