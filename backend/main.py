@@ -35,7 +35,7 @@ _ensure_backend_package_importable()
 
 from backend.auth import JWT_EXPIRY_HOURS, create_token, get_current_user, hash_password, verify_password
 from backend.agents.orchestrator import run_agents
-from backend.agents.sarvam_client import SARVAM_MODEL, SARVAM_URL
+from backend.agents.sarvam_client import SARVAM_MODEL, SARVAM_URL, chat_text
 from backend.graph.analyzer import build_and_analyze
 from backend.simulation import simulate_policy_change
 from backend.graph.neo4j_client import Neo4jClient
@@ -1251,12 +1251,20 @@ async def assistant_message(body: AssistantMessageRequest, http_request: Request
         
     sarvam_key = os.getenv("SARVAM_API_KEY")
     system_prompt = "You are the VEKTRA Security Assistant. Explain vulnerabilities, write least-privilege remedies, and suggest CloudTrail queries. Be precise, transparent about uncertainty, and never claim an action was performed when you only recommended it."
-    data = await chat_json(system_prompt, body.prompt, api_key=sarvam_key)
-    
-    if data and isinstance(data, dict):
-        response_text = data.get("response") or data.get("content") or json.dumps(data)
-    else:
-        response_text = str(data) if data else "I am here to help you audit cloud security trails. You can query RAG context using `/search <query>`."
+    try:
+        response_text = await asyncio.wait_for(
+            chat_text(system_prompt, body.prompt, api_key=sarvam_key),
+            timeout=22.0,
+        )
+    except asyncio.TimeoutError:
+        logger.warning("Sarvam assistant response timed out.")
+        response_text = None
+
+    if not response_text:
+        response_text = (
+            "The AI provider is taking longer than expected. I can still run `/search <query>`, "
+            "`/timeline`, `/remediate`, or `/report`. Please retry your question shortly."
+        )
         
     return {"response": response_text}
 
