@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from "react";
 import Sidebar from "../components/Sidebar";
 import TopBar from "../components/TopBar";
 import { Send, Loader2, Bot, Trash2, Sparkles, Terminal, Calendar, Shield } from "lucide-react";
+import { apiFetch, getApiBase } from "../store/vektraStore";
 
 const ASSISTANT_COMMANDS = [
   { text: "/search access key", icon: Terminal, query: "/search access key" },
@@ -27,24 +28,31 @@ export default function ChatbotPage() {
     setLoading(true);
     setInput("");
 
-    const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8000";
-
     try {
-      const res = await fetch(`${API_BASE}/api/assistant/message`, {
+      const res = await apiFetch(`${getApiBase()}/api/assistant/message`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({ prompt: text })
       });
-      if (!res.ok) throw new Error(`Assistant request failed (${res.status})`);
+      if (!res.ok) {
+        let detail = "The assistant service is temporarily unavailable.";
+        try {
+          const errorBody = await res.json();
+          detail = errorBody.detail || detail;
+        } catch {
+          // Keep the safe fallback when the server does not return JSON.
+        }
+        throw new Error(detail);
+      }
       const data = await res.json();
       
       setHistory((prev) => [...prev, { role: "assistant", content: data.response }]);
-    } catch {
+    } catch (error) {
       setHistory((prev) => [
         ...prev,
-        { role: "assistant", content: "I could not reach the VEKTRA assistant service. Check your connection and try again." }
+        { role: "assistant", content: error.message || "I could not reach the VEKTRA assistant service. Check your connection and try again." }
       ]);
     } finally {
       setLoading(false);
