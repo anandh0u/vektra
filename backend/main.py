@@ -878,7 +878,7 @@ async def chat_sse(
                             yield f"data: {json.dumps({'response': payload})}\n\n"
         except Exception as exc:
             logger.warning("Sarvam chat stream failed: %s", exc)
-            error_msg = "\n[Error streaming from Sarvam: " + str(exc) + "]"
+            error_msg = "\n[The AI provider stream is temporarily unavailable. Please retry.]"
             yield f"data: {json.dumps({'response': error_msg})}\n\n"
 
     return StreamingResponse(stream(), media_type="text/event-stream")
