@@ -222,7 +222,7 @@ class ReportAgent:
                 "recommendations": [
                     "Apply strict boundary policy constraints (`PermissionsBoundary`) limiting role upgrades.",
                     "Implement IP-restricted IAM policies via `aws:SourceIp` context conditions.",
-                    "Anchor this report checksum to the compliance ledger (Stellar network) for unalterable record-keeping."
+                    "Record this report checksum in the case integrity log for later verification."
                 ]
             }
         state.report_output = data
@@ -470,7 +470,7 @@ class ExecutiveSummaryAgent:
                 ],
                 "strategic_mitigations": [
                     "Mandated multi-factor authentication (MFA) across all identity vectors.",
-                    "Implementation of continuous compliance ledger reporting via Stellar testnet hashes."
+                    "Implementation of continuous compliance integrity reporting with signed audit records."
                 ]
             }
         state.executive_summary_output = data

@@ -83,6 +83,12 @@ class Neo4jClient:
                     IF NOT EXISTS FOR (s:ScanSession) REQUIRE s.session_id IS UNIQUE
                     """
                 )
+                session.run(
+                    """
+                    CREATE CONSTRAINT payment_order_id_unique
+                    IF NOT EXISTS FOR (p:Payment) REQUIRE p.order_id IS UNIQUE
+                    """
+                )
         except Exception as exc:
             logger.error("Neo4j constraint setup failed: %s", exc)
 
@@ -199,7 +205,6 @@ class Neo4jClient:
             "last_scan_date": today,
             "created_at": now,
             "jwt_secret": jwt_secret,
-            "stellar_public_key": user.get("stellar_public_key", ""),
             "credits_balance": user.get("credits_balance", 0),
             "credits_reset_date": today,
         }
@@ -219,7 +224,6 @@ class Neo4jClient:
                           last_scan_date: $today,
                           created_at: $now,
                           jwt_secret: $jwt_secret,
-                          stellar_public_key: $stellar_public_key,
                           credits_balance: $credits_balance,
                           credits_reset_date: $today
                         })
@@ -232,7 +236,6 @@ class Neo4jClient:
                         today=today,
                         now=now,
                         jwt_secret=jwt_secret,
-                        stellar_public_key=user.get("stellar_public_key", ""),
                         credits_balance=user.get("credits_balance", 0),
                         tier=user.get("tier", "free"),
                     )
@@ -245,16 +248,6 @@ class Neo4jClient:
         self._in_memory_users[user["email"]] = user_data
         self._in_memory_users[user_id] = user_data
         return user_data
-
-    async def purge_stored_wallet_secrets(self) -> None:
-        """Remove legacy plaintext wallet seeds; VEKTRA must never retain user private keys."""
-        if not self.driver or not self.connected:
-            return
-        try:
-            with self.driver.session() as session:
-                session.run("MATCH (u:User) REMOVE u.stellar_secret_key")
-        except Exception as exc:
-            logger.error("Failed to purge legacy wallet secrets: %s", exc)
 
     async def get_user_by_email(self, email: str):
         if self.driver and self.connected:
@@ -521,6 +514,80 @@ class Neo4jClient:
                 id=user_id,
                 credits=credits,
             )
+
+    async def create_billing_order(self, user_id: str, order: dict) -> None:
+        if not self.driver:
+            raise RuntimeError("Billing storage is unavailable.")
+        with self.driver.session() as session:
+            session.run(
+                """
+                MATCH (u:User {id: $user_id})
+                CREATE (p:Payment {
+                    order_id: $order_id, amount: $amount, currency: $currency,
+                    plan: $plan, credits: $credits, status: 'created',
+                    created_at: $created_at
+                })
+                CREATE (u)-[:MADE_PAYMENT]->(p)
+                """,
+                user_id=user_id,
+                **order,
+            )
+
+    async def get_billing_order(self, order_id: str) -> dict | None:
+        if not self.driver:
+            return None
+        with self.driver.session() as session:
+            record = session.run(
+                """
+                MATCH (u:User)-[:MADE_PAYMENT]->(p:Payment {order_id: $order_id})
+                RETURN p, u.id AS user_id
+                """,
+                order_id=order_id,
+            ).single()
+            if not record:
+                return None
+            return {**dict(record["p"]), "user_id": record["user_id"]}
+
+    async def fulfill_billing_order(self, order_id: str, payment_id: str) -> dict | None:
+        """Credit a verified order exactly once and return the resulting account state."""
+        if not self.driver:
+            raise RuntimeError("Billing storage is unavailable.")
+        now = datetime.now().isoformat()
+        with self.driver.session() as session:
+            record = session.run(
+                """
+                MATCH (u:User)-[:MADE_PAYMENT]->(p:Payment {order_id: $order_id})
+                WHERE p.status = 'created' OR p.payment_id = $payment_id
+                WITH u, p, p.status = 'created' AS should_fulfill
+                SET p.status = 'paid', p.payment_id = $payment_id,
+                    p.paid_at = CASE WHEN should_fulfill THEN $now ELSE p.paid_at END,
+                    u.credits_balance = CASE WHEN should_fulfill
+                        THEN coalesce(u.credits_balance, 0) + p.credits
+                        ELSE u.credits_balance END,
+                    u.tier = CASE WHEN should_fulfill AND p.plan IN ['pro', 'team']
+                        THEN p.plan ELSE u.tier END
+                RETURN u.credits_balance AS credits, u.tier AS tier,
+                       p.credits AS purchased_credits, should_fulfill AS fulfilled
+                """,
+                order_id=order_id,
+                payment_id=payment_id,
+                now=now,
+            ).single()
+            return dict(record) if record else None
+
+    async def list_billing_transactions(self, user_id: str, limit: int = 20) -> list[dict]:
+        if not self.driver:
+            return []
+        with self.driver.session() as session:
+            result = session.run(
+                """
+                MATCH (:User {id: $user_id})-[:MADE_PAYMENT]->(p:Payment)
+                RETURN p ORDER BY coalesce(p.paid_at, p.created_at) DESC LIMIT $limit
+                """,
+                user_id=user_id,
+                limit=limit,
+            )
+            return [dict(record["p"]) for record in result]
 
     async def update_user_profile(self, user_id: str, name: str):
         if not self.driver:
@@ -918,7 +985,7 @@ class Neo4jClient:
                         device: $device,
                         source: $source,
                         size_bytes: $size_bytes,
-                        stellar_tx_hash: $stellar_tx_hash
+                        integrity_hash: $integrity_hash
                     })
                     CREATE (c)-[:HAS_EVIDENCE]->(e)
                     RETURN e
@@ -935,7 +1002,7 @@ class Neo4jClient:
                     device=evidence.get("device", ""),
                     source=evidence.get("source", ""),
                     size_bytes=evidence.get("size_bytes", 0),
-                    stellar_tx_hash=evidence.get("stellar_tx_hash", "")
+                    integrity_hash=evidence.get("integrity_hash", evidence.get("sha256", ""))
                 )
                 record = result.single()
                 if record:

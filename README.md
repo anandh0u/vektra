@@ -64,7 +64,7 @@ FastAPI application and workflow API
         |
         +--> Neo4j AuraDB relationship memory
         +--> Sarvam AI reasoning (optional)
-        +--> Stellar evidence anchoring (optional)
+        +--> Razorpay verified billing
 ```
 
 ### Technology stack
@@ -74,7 +74,7 @@ FastAPI application and workflow API
 - **AI:** Sarvam AI `sarvam-m` through its OpenAI-compatible chat-completions API.
 - **Mobile:** Expo and React Native.
 - **Delivery:** GitHub Actions, Vercel, and Render.
-- **Optional integrity layer:** Stellar testnet evidence anchoring and usage credits.
+- **Verified billing:** Razorpay Orders, server-side signature validation, captured-payment confirmation, and idempotent credit fulfillment.
 
 ## Quick start
 
@@ -157,6 +157,9 @@ JWT_SECRET=replace-with-at-least-32-random-characters
 INTERNAL_API_KEY=replace-with-a-separate-random-secret
 CORS_ORIGINS=http://localhost:5173
 VITE_API_URL=http://localhost:8000
+RAZORPAY_KEY_ID=
+RAZORPAY_KEY_SECRET=
+RAZORPAY_WEBHOOK_SECRET=
 ```
 
 Important boundaries:
@@ -164,6 +167,9 @@ Important boundaries:
 - `JWT_SECRET` and `INTERNAL_API_KEY` must be separate values.
 - Production CORS must list only trusted application origins.
 - Neo4j credentials remain server-side and must never use a `VITE_` prefix.
+- Razorpay secret and webhook keys are server-only. Only the public key ID is returned with a server-created order.
+- Configure the Razorpay webhook URL as `https://vektra.onrender.com/api/billing/webhook` and subscribe to `payment.captured`.
+- Enable automatic capture in Razorpay. VEKTRA fulfills an order only after the payment is captured and its signature, order, amount, and currency are verified.
 - Customer or attacker-controlled content must not automatically become trusted permanent memory or training data.
 
 ## Verification
@@ -221,6 +227,9 @@ The included `render.yaml` defines the FastAPI deployment. Production requires:
 - `JWT_SECRET`
 - `INTERNAL_API_KEY`
 - `CORS_ORIGINS`, set to the deployed frontend origin
+- `RAZORPAY_KEY_ID`
+- `RAZORPAY_KEY_SECRET`
+- `RAZORPAY_WEBHOOK_SECRET`
 
 If a separate Render frontend is used, set `VITE_API_URL` to the backend service URL.
 

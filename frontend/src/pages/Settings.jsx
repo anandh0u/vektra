@@ -12,7 +12,6 @@ import {
   ChevronRight, 
   Check, 
   ShieldAlert,
-  Copy,
   Sparkles,
   Palette,
   LogOut
@@ -215,8 +214,6 @@ export default function SettingsPage() {
     ? currentUser.name.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase()
     : "U";
 
-  const pkey = currentUser?.stellar_public_key || "G...";
-
   return (
     <div className="flex h-screen bg-pageBg text-textMain overflow-hidden font-sans select-none">
       <Sidebar />
@@ -235,7 +232,7 @@ export default function SettingsPage() {
               {[
                 { id: "profile", label: "Profile Settings", icon: User },
                 { id: "security", label: "Security Console", icon: Lock },
-                { id: "wallet", label: "Wallet Console", icon: Wallet },
+                { id: "wallet", label: "Billing & Credits", icon: Wallet },
                 { id: "notifications", label: "Notification Setup", icon: Bell },
                 { id: "appearance", label: "UI Appearance", icon: Palette },
                 { id: "danger", label: "Danger Workspace", icon: Trash2, red: true }
@@ -393,30 +390,21 @@ export default function SettingsPage() {
               </div>
             )}
 
-            {/* ── WALLET TAB ── */}
+            {/* ── BILLING TAB ── */}
             {activeTab === "wallet" && (
               <div className="space-y-6">
                 <div>
-                  <h2 className="text-sm font-bold text-textMain uppercase tracking-wider">Wallet Connection</h2>
-                  <p className="text-xs text-muted mt-0.5 font-normal">Manage keys and credits allowance.</p>
+                  <h2 className="text-sm font-bold text-textMain uppercase tracking-wider">Billing & Credits</h2>
+                  <p className="text-xs text-muted mt-0.5 font-normal">Manage Razorpay billing and your usage allowance.</p>
                 </div>
 
                 <div className="bg-cardSurface border border-cardBorder rounded-[6px] p-5 space-y-4">
                   <div className="flex justify-between items-center">
-                    <span className="text-[9px] font-bold text-muted uppercase tracking-wider">Stellar Public Address</span>
-                    <button 
-                      onClick={() => {
-                        navigator.clipboard.writeText(pkey);
-                        toast.success("Copied to clipboard");
-                      }}
-                      className="text-muted hover:text-textMain transition-fast"
-                      title="Copy Address"
-                    >
-                      <Copy className="w-3.5 h-3.5" />
-                    </button>
+                    <span className="text-[9px] font-bold text-muted uppercase tracking-wider">Payment Provider</span>
+                    <span className="text-[10px] font-bold text-primary">RAZORPAY</span>
                   </div>
                   <span className="font-mono text-xs text-textMain block truncate bg-pageBg p-2.5 rounded-[6px] border border-cardBorder">
-                    {pkey}
+                    Payment details are entered only in Razorpay Checkout and are never stored by VEKTRA.
                   </span>
 
                   <div className="grid grid-cols-2 gap-4 border-t border-cardBorder pt-4 text-xs font-semibold text-textMain">
@@ -435,7 +423,7 @@ export default function SettingsPage() {
                   to="/wallet"
                   className="inline-flex items-center justify-center gap-1.5 bg-cardSurface border border-cardBorder hover:border-muted/30 rounded-[6px] px-4 py-2.5 text-xs font-bold text-textMain transition-fast"
                 >
-                  View Wallet Keys
+                  View Billing & Payment History
                   <ChevronRight className="w-4 h-4 text-primary" />
                 </Link>
               </div>

@@ -10,7 +10,6 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@stellar/stellar-sdk": "^12.0.0",
     "date-fns": "^3.6.0",
     "framer-motion": "^12.42.2",
     "lucide-react": "^1.23.0",

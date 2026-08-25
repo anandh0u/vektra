@@ -554,7 +554,7 @@ export default function UploadPage() {
             <span className="text-[11px] font-mono tracking-widest font-semibold text-muted">AWS</span>
             <span className="text-[11px] font-mono tracking-widest font-semibold text-muted">Kubernetes</span>
             <span className="text-[11px] font-mono tracking-widest font-semibold text-muted">Neo4j</span>
-            <span className="text-[11px] font-mono tracking-widest font-semibold text-muted">Stellar</span>
+            <span className="text-[11px] font-mono tracking-widest font-semibold text-muted">Razorpay</span>
           </div>
         </div>
 
