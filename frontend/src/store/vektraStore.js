@@ -182,7 +182,7 @@ roleRef:
   apiGroup: rbac.authorization.k8s.io`;
 
 const generateUUID = () => {
-  return "session-" + Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+  return `session-${globalThis.crypto.randomUUID()}`;
 };
 
 export const useVektraStore = create((set, get) => ({

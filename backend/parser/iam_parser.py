@@ -169,11 +169,54 @@ def _parse_role_document(doc: Dict[str, Any], index: int) -> List[Rule]:
 
 
 def _strip_comments(text: str) -> str:
-    # Strip /* ... */ multi-line comments
-    text = re.sub(r"/\*.*?\*/", "", text, flags=re.DOTALL)
-    # Strip // ... single-line comments (except when part of a URL like https://)
-    text = re.sub(r"(?<!:)\/\/.*", "", text)
-    return text
+    """Remove JSON-style comments in linear time while preserving strings."""
+    output: List[str] = []
+    index = 0
+    in_string = False
+    escaped = False
+
+    while index < len(text):
+        char = text[index]
+        following = text[index + 1] if index + 1 < len(text) else ""
+
+        if in_string:
+            output.append(char)
+            if escaped:
+                escaped = False
+            elif char == "\\":
+                escaped = True
+            elif char == '"':
+                in_string = False
+            index += 1
+            continue
+
+        if char == '"':
+            in_string = True
+            output.append(char)
+            index += 1
+            continue
+
+        if char == "/" and following == "*":
+            index += 2
+            while index < len(text):
+                if text[index] == "\n":
+                    output.append("\n")
+                if text[index] == "*" and index + 1 < len(text) and text[index + 1] == "/":
+                    index += 2
+                    break
+                index += 1
+            continue
+
+        if char == "/" and following == "/":
+            index += 2
+            while index < len(text) and text[index] not in "\r\n":
+                index += 1
+            continue
+
+        output.append(char)
+        index += 1
+
+    return "".join(output)
 
 
 def parse_iam_policy(policy_text: str) -> List[Rule]:

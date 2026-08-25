@@ -5,8 +5,19 @@ import react from '@vitejs/plugin-react'
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '');
   let apiUrl = env.VITE_API_URL || '';
-  if (apiUrl.includes('vektra.onrender.com')) {
-    apiUrl = apiUrl.replace('vektra.onrender.com', 'vektra-backend.onrender.com');
+  if (apiUrl) {
+    try {
+      const parsedApiUrl = new URL(apiUrl);
+      if (!['http:', 'https:'].includes(parsedApiUrl.protocol)) {
+        throw new Error('Unsupported API URL protocol.');
+      }
+      if (parsedApiUrl.hostname === 'vektra.onrender.com') {
+        parsedApiUrl.hostname = 'vektra-backend.onrender.com';
+        apiUrl = parsedApiUrl.toString();
+      }
+    } catch {
+      throw new Error('VITE_API_URL must be an absolute HTTP(S) URL.');
+    }
   }
 
   return {

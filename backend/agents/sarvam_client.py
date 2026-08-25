@@ -104,3 +104,36 @@ async def chat_json(system_prompt: str, user_prompt: str, api_key: Optional[str]
         logger.warning("Sarvam agent call failed: %s", exc)
         return None
 
+
+async def chat_text(system_prompt: str, user_prompt: str, api_key: Optional[str] = None) -> Optional[str]:
+    """Return a plain-text Sarvam response for interactive assistant requests."""
+    resolved_key = get_api_key(api_key)
+    if not resolved_key:
+        return None
+
+    try:
+        client = get_async_client()
+        response = await client.post(
+            SARVAM_URL,
+            headers={
+                "api-subscription-key": resolved_key,
+                "Content-Type": "application/json",
+            },
+            json={
+                "model": SARVAM_MODEL,
+                "temperature": 0.2,
+                "reasoning_effort": None,
+                "max_tokens": 768,
+                "messages": [
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt},
+                ],
+            },
+        )
+        response.raise_for_status()
+        data = response.json()
+        content = data["choices"][0]["message"].get("content")
+        return content.strip() if isinstance(content, str) and content.strip() else None
+    except Exception as exc:
+        logger.warning("Sarvam text chat failed: %s", exc)
+        return None
