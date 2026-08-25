@@ -9,4 +9,3 @@ python-dotenv==1.2.2
 pydantic==2.13.2
 bcrypt==5.0.0
 pyjwt==2.13.0
-stellar-sdk==10.0.0

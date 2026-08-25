@@ -45,7 +45,7 @@ from backend import workflow_steps
 from backend.base44_client import (
     save_scan_history,
 )
-from backend import stellar_client
+from backend import razorpay_client
 from backend.credits import check_and_deduct_credits, CREDIT_COSTS, DAILY_CREDITS
 from backend.agents.rag_engine import global_rag_engine
 from backend.agents.forensics_agents import run_forensic_pipeline
@@ -59,8 +59,7 @@ logger = logging.getLogger("vektra.main")
 async def lifespan(_app: FastAPI):
     schedule_neo4j_verify()
     workflow_steps.neo4j = neo4j_client
-    if await ensure_neo4j_ready(timeout=6.0):
-        await neo4j_client.purge_stored_wallet_secrets()
+    await ensure_neo4j_ready(timeout=6.0)
     yield
     neo4j_client.close()
 
@@ -120,6 +119,8 @@ class SecurityMiddleware:
             "/api/chat": 30,
             "/api/assistant/message": 30,
             "/api/forensics/investigate": 5,
+            "/api/billing/orders": 10,
+            "/api/billing/verify": 10,
         }
         if normalized_path in limited_paths:
             client = scope.get("client") or ("unknown", 0)
@@ -301,6 +302,12 @@ class UpgradeRequest(BaseModel):
     plan: str = Field(min_length=1, max_length=20)
 
 
+class PaymentVerifyRequest(BaseModel):
+    razorpay_order_id: str = Field(min_length=1, max_length=100)
+    razorpay_payment_id: str = Field(min_length=1, max_length=100)
+    razorpay_signature: str = Field(min_length=32, max_length=256)
+
+
 class RerunRequest(BaseModel):
     session_id: str
     policy_text: str
@@ -325,7 +332,6 @@ def public_user(user: dict) -> dict:
         "scans_today": user.get("scans_today", 0),
         "last_scan_date": user.get("last_scan_date"),
         "created_at": user.get("created_at"),
-        "stellar_public_key": user.get("stellar_public_key"),
         "credits_balance": user.get("credits_balance", 0),
         "notification_preferences": user.get("notification_preferences"),
     }
@@ -411,23 +417,12 @@ async def register(body: RegisterRequest, background_tasks: BackgroundTasks, res
     if existing:
         raise HTTPException(status_code=400, detail="Email is already registered.")
 
-    # Generate Stellar key pair locally (instant)
-    try:
-        from stellar_sdk import Keypair
-        keypair = Keypair.random()
-        public_key = keypair.public_key
-        secret_key = keypair.secret
-    except Exception:
-        public_key = "G" + str(uuid.uuid4()).replace("-", "")[:55]
-        secret_key = "S" + str(uuid.uuid4()).replace("-", "")[:55]
-
     try:
         created = await neo4j_client.create_user(
             {
                 "name": name,
                 "email": email,
                 "password_hash": hash_password(password),
-                "stellar_public_key": public_key,
                 "credits_balance": DAILY_CREDITS.get("free", 5),
                 "tier": "free",
             }
@@ -435,21 +430,6 @@ async def register(body: RegisterRequest, background_tasks: BackgroundTasks, res
     except Exception as exc:
         logger.exception("User registration failed.")
         raise HTTPException(status_code=503, detail="User storage is unavailable.") from exc
-
-    # Set up wallet trustlines and assets asynchronously in background
-    async def setup_stellar_bg(pub_key: str, sec_key: str):
-        if pub_key.startswith("G") and len(pub_key) > 50 and not sec_key.startswith("S" + pub_key[1:5]):
-            try:
-                async with httpx.AsyncClient(timeout=30) as client:
-                    res = await client.get(f"https://friendbot.stellar.org/?addr={pub_key}")
-                    res.raise_for_status()
-                await stellar_client.setup_user_trustlines(pub_key, sec_key)
-                await stellar_client.mint_tier_nft(pub_key, "free")
-                await stellar_client.issue_credits(pub_key, DAILY_CREDITS.get("free", 5))
-            except Exception as e:
-                logger.error("Failed to setup Stellar wallet in background for %s: %s", pub_key, e)
-
-    background_tasks.add_task(setup_stellar_bg, public_key, secret_key)
 
     token = create_token(created["id"], created["email"], created.get("tier", "free"), created["jwt_secret"])
     set_session_cookie(response, http_request, token)
@@ -465,21 +445,6 @@ async def login(body: LoginRequest, background_tasks: BackgroundTasks, response:
     if not user or not verify_password(body.password, user.get("password_hash", "")):
         raise HTTPException(status_code=401, detail="Invalid credentials.")
 
-    # Sync wallet balance from Stellar asynchronously in background
-    async def sync_balance_bg(u_id: str, pub_key: str):
-        try:
-            balance_data = await stellar_client.get_wallet_balance(pub_key)
-            credits_val = balance_data.get("credits", 0)
-            nft_tier = balance_data.get("nft_tier", "free")
-            
-            await neo4j_client.update_credits(u_id, credits_val)
-            await neo4j_client.update_user_tier(u_id, nft_tier)
-        except Exception:
-            logger.warning("Stellar balance sync failed in background.")
-
-    if user.get("stellar_public_key") and not user["stellar_public_key"].startswith("G"):
-        background_tasks.add_task(sync_balance_bg, user["id"], user["stellar_public_key"])
-
     token = create_token(user["id"], user["email"], user.get("tier", "free"), user["jwt_secret"])
     set_session_cookie(response, http_request, token)
     return {"user": public_user(user)}
@@ -489,21 +454,6 @@ async def login(body: LoginRequest, background_tasks: BackgroundTasks, response:
 async def me(http_request: Request, background_tasks: BackgroundTasks):
     user = await resolve_request_user(http_request, required=True)
     
-    # Sync wallet balance from Stellar in background
-    async def sync_balance_bg(u_id: str, pub_key: str):
-        try:
-            balance_data = await stellar_client.get_wallet_balance(pub_key)
-            credits_val = balance_data.get("credits", 0)
-            nft_tier = balance_data.get("nft_tier", "free")
-            
-            await neo4j_client.update_credits(u_id, credits_val)
-            await neo4j_client.update_user_tier(u_id, nft_tier)
-        except Exception:
-            pass
-
-    if user.get("stellar_public_key") and not user["stellar_public_key"].startswith("G"):
-        background_tasks.add_task(sync_balance_bg, user["id"], user["stellar_public_key"])
-
     return {"user": public_user(user)}
 
 
@@ -1088,88 +1038,119 @@ async def get_report(session_id: str, http_request: Request):
 @app.get("/api/wallet")
 async def get_wallet(http_request: Request):
     user = await resolve_request_user(http_request, required=True)
-    try:
-        balance_data = await stellar_client.get_wallet_balance(user["stellar_public_key"])
-        credits_val = balance_data.get("credits", 0)
-        nft_tier = balance_data.get("nft_tier", "free")
-        
-        # Sync Neo4j
-        if credits_val != user.get("credits_balance") or nft_tier != user.get("tier"):
-            user["credits_balance"] = credits_val
-            user["tier"] = nft_tier
-            await neo4j_client.update_credits(user["id"], credits_val)
-            await neo4j_client.update_user_tier(user["id"], nft_tier)
-    except Exception:
-        balance_data = {
-            "credits": user.get("credits_balance", 0),
-            "nft_tier": user.get("tier", "free"),
-            "xlm": 0,
-            "public_key": user.get("stellar_public_key")
-        }
-
     return {
-        "public_key": balance_data["public_key"],
-        "credits": balance_data["credits"],
-        "nft_tier": balance_data["nft_tier"],
-        "xlm": balance_data["xlm"],
+        "credits": user.get("credits_balance", 0),
+        "tier": user.get("tier", "free"),
         "credit_costs": CREDIT_COSTS,
-        "daily_allowance": DAILY_CREDITS.get(balance_data["nft_tier"], 5),
-        "reset_time": "midnight IST"
+        "daily_allowance": DAILY_CREDITS.get(user.get("tier", "free"), 5),
+        "reset_time": "midnight IST",
+        "billing_provider": "razorpay",
+        "billing_configured": razorpay_client.is_configured(),
     }
+
+
+PAYMENT_PLANS = {
+    "pro": {"amount": 99_900, "currency": "INR", "credits": 200, "label": "VEKTRA Pro"},
+    "team": {"amount": 249_900, "currency": "INR", "credits": 1000, "label": "VEKTRA Team"},
+}
 
 
 @app.post("/api/wallet/upgrade")
 async def upgrade_wallet(body: UpgradeRequest, http_request: Request):
-    await resolve_request_user(http_request, required=True)
-    raise HTTPException(
-        status_code=503,
-        detail="Plan upgrades are temporarily unavailable until verified payment processing is configured.",
+    user = await resolve_request_user(http_request, required=True)
+    plan = body.plan.lower()
+    plan_data = PAYMENT_PLANS.get(plan)
+    if not plan_data:
+        raise HTTPException(status_code=400, detail="Select a valid paid plan.")
+    if not razorpay_client.is_configured():
+        raise HTTPException(status_code=503, detail="Razorpay billing is not configured yet.")
+    receipt = f"vektra-{user['id'][:8]}-{uuid.uuid4().hex[:12]}"
+    try:
+        order = await razorpay_client.create_order(
+            amount=plan_data["amount"],
+            currency=plan_data["currency"],
+            receipt=receipt,
+            notes={"vektra_user_id": user["id"], "plan": plan},
+        )
+        await neo4j_client.create_billing_order(user["id"], {
+            "order_id": order["id"],
+            "amount": plan_data["amount"],
+            "currency": plan_data["currency"],
+            "plan": plan,
+            "credits": plan_data["credits"],
+            "created_at": datetime.now().isoformat(),
+        })
+    except httpx.HTTPError as exc:
+        logger.warning("Razorpay order creation failed: %s", type(exc).__name__)
+        raise HTTPException(status_code=502, detail="Payment provider is temporarily unavailable.") from exc
+    return {
+        "key_id": razorpay_client.public_key_id(),
+        "order_id": order["id"],
+        "amount": plan_data["amount"],
+        "currency": plan_data["currency"],
+        "name": "VEKTRA",
+        "description": plan_data["label"],
+        "prefill": {"name": user.get("name", ""), "email": user.get("email", "")},
+    }
+
+
+async def verify_and_fulfill_payment(order_id: str, payment_id: str, signature: str | None = None) -> dict:
+    stored = await neo4j_client.get_billing_order(order_id)
+    if not stored:
+        raise HTTPException(status_code=404, detail="Payment order not found.")
+    if signature is not None and not razorpay_client.verify_payment_signature(order_id, payment_id, signature):
+        raise HTTPException(status_code=400, detail="Payment verification failed.")
+    try:
+        payment = await razorpay_client.fetch_payment(payment_id)
+    except httpx.HTTPError as exc:
+        raise HTTPException(status_code=502, detail="Could not confirm payment status.") from exc
+    if (
+        payment.get("order_id") != order_id
+        or payment.get("status") != "captured"
+        or int(payment.get("amount", -1)) != int(stored["amount"])
+        or payment.get("currency") != stored["currency"]
+    ):
+        raise HTTPException(status_code=409, detail="Payment has not been captured for this order.")
+    result = await neo4j_client.fulfill_billing_order(order_id, payment_id)
+    if not result:
+        raise HTTPException(status_code=409, detail="Payment order could not be fulfilled.")
+    return result
+
+
+@app.post("/api/billing/verify")
+async def verify_billing_payment(body: PaymentVerifyRequest, http_request: Request):
+    user = await resolve_request_user(http_request, required=True)
+    stored = await neo4j_client.get_billing_order(body.razorpay_order_id)
+    if not stored or stored.get("user_id") != user["id"]:
+        raise HTTPException(status_code=404, detail="Payment order not found.")
+    return await verify_and_fulfill_payment(
+        body.razorpay_order_id, body.razorpay_payment_id, body.razorpay_signature
     )
+
+
+@app.post("/api/billing/webhook")
+async def razorpay_webhook(http_request: Request):
+    raw_body = await http_request.body()
+    signature = http_request.headers.get("X-Razorpay-Signature", "")
+    if not razorpay_client.verify_webhook_signature(raw_body, signature):
+        raise HTTPException(status_code=400, detail="Invalid webhook signature.")
+    payload = json.loads(raw_body)
+    if payload.get("event") == "payment.captured":
+        payment = payload.get("payload", {}).get("payment", {}).get("entity", {})
+        order_id, payment_id = payment.get("order_id"), payment.get("id")
+        if order_id and payment_id:
+            try:
+                await verify_and_fulfill_payment(order_id, payment_id)
+            except HTTPException as exc:
+                if exc.status_code != 404:
+                    raise
+    return {"status": "ok"}
 
 
 @app.get("/api/wallet/transactions")
 async def get_wallet_transactions(http_request: Request):
     user = await resolve_request_user(http_request, required=True)
-    public_key = user.get("stellar_public_key")
-    if not public_key:
-        return {"transactions": []}
-
-    try:
-        url = f"https://horizon-testnet.stellar.org/accounts/{public_key}/payments?limit=20&order=desc"
-        async with httpx.AsyncClient(timeout=10) as client:
-            res = await client.get(url)
-            res.raise_for_status()
-            data = res.json()
-            
-            transactions = []
-            for record in data.get("_embedded", {}).get("records", []):
-                tx_type = "credits_issued"
-                amount = float(record.get("amount", 0))
-                asset_code = record.get("asset_code")
-                from_addr = record.get("from")
-                
-                if asset_code == "VEKTRACRED":
-                    if from_addr == public_key:
-                        tx_type = "credits_spent"
-                    else:
-                        tx_type = "credits_issued"
-                elif asset_code in {"VEKTRAFREE", "VEKTRAPRO", "VEKTRATEAM"}:
-                    tx_type = "nft_minted"
-                else:
-                    continue
-
-                transactions.append({
-                    "type": tx_type,
-                    "amount": int(amount) if amount.is_integer() else amount,
-                    "memo": record.get("paging_token", "Horizon Payment"),
-                    "created_at": record.get("created_at"),
-                    "tx_hash": record.get("transaction_hash"),
-                    "stellar_explorer_url": f"https://stellar.expert/explorer/testnet/tx/{record.get('transaction_hash')}"
-                })
-            return {"transactions": transactions}
-    except Exception as exc:
-        logger.warning("Failed to fetch Stellar transactions: %s", exc)
-        return {"transactions": []}
+    return {"transactions": await neo4j_client.list_billing_transactions(user["id"])}
 
 
 @app.post("/api/forensics/investigate")
@@ -1390,9 +1371,6 @@ async def add_case_evidence_endpoint(case_id: str, body: EvidenceCreateRequest, 
     sha1_hash = hashlib.sha1(content_bytes).hexdigest()
     md5_hash = hashlib.md5(content_bytes).hexdigest()
     
-    # Anchor to Stellar testnet blockchain
-    tx_hash = await stellar_client.anchor_evidence_hash(body.filename, sha256_hash)
-    
     evidence_data = {
         "filename": body.filename,
         "content_type": body.content_type,
@@ -1403,13 +1381,12 @@ async def add_case_evidence_endpoint(case_id: str, body: EvidenceCreateRequest, 
         "device": body.device,
         "source": body.source,
         "size_bytes": len(content_bytes),
-        "stellar_tx_hash": tx_hash
+        "integrity_hash": sha256_hash,
     }
     
     evidence_node = await neo4j_client.add_case_evidence(case_id, evidence_data)
-    anchor_status = "anchored to Stellar" if tx_hash else "stored; Stellar anchoring unavailable"
     await neo4j_client.add_case_activity(
-        case_id, user["email"], "evidence_uploaded", f"Evidence file '{body.filename}' uploaded and {anchor_status}."
+        case_id, user["email"], "evidence_uploaded", f"Evidence file '{body.filename}' uploaded with a SHA-256 integrity record."
     )
     
     # Add to global RAG engine automatically
@@ -1510,6 +1487,9 @@ app.add_api_route("/report/{session_id}",   get_report,            methods=["GET
 app.add_api_route("/wallet",                get_wallet,            methods=["GET"])
 app.add_api_route("/wallet/upgrade",        upgrade_wallet,        methods=["POST"])
 app.add_api_route("/wallet/transactions",   get_wallet_transactions, methods=["GET"])
+app.add_api_route("/billing/orders",         upgrade_wallet,        methods=["POST"])
+app.add_api_route("/billing/verify",         verify_billing_payment, methods=["POST"])
+app.add_api_route("/billing/webhook",        razorpay_webhook,       methods=["POST"])
 app.add_api_route("/workflow/analyze",      trigger_workflow,      methods=["POST"])
 app.add_api_route("/workflow/status/{session_id}", workflow_status, methods=["GET"])
 app.add_api_route("/forensics/investigate", forensics_investigate, methods=["POST"])

@@ -36,7 +36,6 @@ export default defineConfig(({ mode }) => {
             if (!id.includes('node_modules')) return;
             if (id.includes('reactflow') || id.includes('zustand')) return 'graph-vendor';
             if (id.includes('recharts')) return 'charts-vendor';
-            if (id.includes('@stellar') || id.includes('stellar-sdk')) return 'stellar-vendor';
             if (id.includes('react')) return 'react-vendor';
           },
         },

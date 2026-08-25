@@ -17,7 +17,6 @@ import {
   Activity, 
   Upload, 
   Loader2, 
-  ExternalLink,
   ShieldCheck
 } from "lucide-react";
 
@@ -524,19 +523,12 @@ export default function CasesPage() {
                                 <div><strong>Uploaded:</strong> <span className="text-slate-200">{new Date(ev.upload_time).toLocaleString()}</span></div>
                               </div>
 
-                              {ev.stellar_tx_hash && !ev.stellar_tx_hash.startsWith("mock") && (
+                              {ev.integrity_hash && (
                                 <div className="pt-2 border-t border-[#1e2240]/40 flex items-center justify-between">
                                   <span className="text-primary flex items-center gap-1 font-bold text-[9px] uppercase">
-                                    <ShieldCheck className="w-3.5 h-3.5" /> Stellar Blockchain Anchored
+                                    <ShieldCheck className="w-3.5 h-3.5" /> SHA-256 Integrity Recorded
                                   </span>
-                                  <a
-                                    href={`https://stellar.expert/explorer/testnet/tx/${ev.stellar_tx_hash}`}
-                                    target="_blank"
-                                    rel="noreferrer"
-                                    className="flex items-center gap-1 text-primary hover:underline font-bold text-[9px] uppercase"
-                                  >
-                                    Verify Ledger <ExternalLink className="w-2.5 h-2.5" />
-                                  </a>
+                                  <span className="font-mono text-[9px] text-muted">{ev.integrity_hash.slice(0, 16)}…</span>
                                 </div>
                               )}
                             </div>

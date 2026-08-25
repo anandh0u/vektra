@@ -1,9 +1,4 @@
 from datetime import date
-import asyncio
-import logging
-from backend import stellar_client
-
-logger = logging.getLogger("vektra.credits")
 
 CREDIT_COSTS = {
     "basic_scan":    1,
@@ -55,27 +50,8 @@ async def check_and_deduct_credits(
     # Deduct from Neo4j (fast, real-time)
     await neo4j_client.update_credits(user["id"], new_balance)
     
-    # Deduct from Stellar (async, for blockchain record)
-    # Fire and forget — don't block
-    if user.get("stellar_public_key") and user.get("stellar_secret_key"):
-        asyncio.create_task(
-            deduct_stellar_credits_bg(
-                user["stellar_public_key"],
-                user["stellar_secret_key"],
-                cost,
-                f"vektra_{action}"
-            )
-        )
-        
     return {
         "allowed": True,
         "remaining": new_balance,
         "cost": cost
     }
-
-async def deduct_stellar_credits_bg(public_key: str, secret_key: str, amount: int, memo: str):
-    try:
-        await stellar_client.deduct_credits(public_key, secret_key, amount, memo)
-        logger.info("Successfully deducted %s credits from Stellar wallet %s in background.", amount, public_key)
-    except Exception as exc:
-        logger.error("Failed to deduct %s credits from Stellar wallet %s in background: %s", amount, public_key, exc)

@@ -153,7 +153,7 @@ export default function HistoryPage() {
                   Scan Registry Logs
                 </h1>
                 <p className="mt-0.5 text-xs text-muted">
-                  View and manage historical policy scans anchored to your Stellar operator key.
+                  View and manage historical policy scans linked to your VEKTRA account.
                 </p>
               </div>
             </div>

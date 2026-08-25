@@ -860,7 +860,7 @@ export const useVektraStore = create((set, get) => ({
     return await response.json();
   },
 
-  upgradeWalletPlan: async (plan) => {
+  createPaymentOrder: async (plan) => {
     const response = await apiFetch(`${API_BASE}/api/wallet/upgrade`, {
       method: "POST",
       headers: {
@@ -872,10 +872,25 @@ export const useVektraStore = create((set, get) => ({
     if (!response.ok) {
       throw new Error(await parseApiError(response, "Failed to upgrade plan."));
     }
+    return await response.json();
+  },
+
+  verifyPayment: async (payment) => {
+    const response = await apiFetch(`${API_BASE}/api/billing/verify`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...getAuthHeaders(),
+      },
+      body: JSON.stringify(payment),
+    });
+    if (!response.ok) {
+      throw new Error(await parseApiError(response, "Payment verification failed."));
+    }
     const data = await response.json();
     const current = get().currentUser;
     if (current) {
-      const updated = { ...current, tier: plan, credits_balance: data.credits };
+      const updated = { ...current, tier: data.tier, credits_balance: data.credits };
       set({ currentUser: updated });
       localStorage.setItem("vektra_user", JSON.stringify(updated));
     }
